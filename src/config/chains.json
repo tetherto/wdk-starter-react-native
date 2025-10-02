@@ -1,0 +1,82 @@
+{
+	"ethereum": {
+		"chainId": 1,
+		"blockchain": "ethereum",
+		"provider": "https://mainnet.gateway.tenderly.co/5ahCFnNLRewF8rrcfUeMgB",
+		"bundlerUrl": "https://api.candide.dev/public/v3/ethereum",
+		"paymasterUrl": "https://api.candide.dev/public/v3/ethereum",
+		"paymasterAddress": "0x8b1f6cb5d062aa2ce8d581942bbb960420d875ba",
+		"entrypointAddress": "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
+		"transferMaxFee": 5000000,
+		"swapMaxFee": 5000000,
+		"bridgeMaxFee": 5000000,
+		"paymasterToken": {
+			"address": "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+		}
+	},
+	"arbitrum": {
+		"chainId": 42161,
+		"blockchain": "arbitrum",
+		"provider": "https://arbitrum.gateway.tenderly.co/2wrWp7EsJ2USX9wZk5wZ6D",
+		"bundlerUrl": "https://api.candide.dev/public/v3/arbitrum",
+		"paymasterUrl": "https://api.candide.dev/public/v3/arbitrum",
+		"paymasterAddress": "0x8b1f6cb5d062aa2ce8d581942bbb960420d875ba",
+		"entrypointAddress": "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
+		"transferMaxFee": 5000000,
+		"swapMaxFee": 5000000,
+		"bridgeMaxFee": 5000000,
+		"paymasterToken": {
+			"address": "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9"
+		}
+	},
+	"polygon": {
+		"chainId": 137,
+		"blockchain": "polygon",
+		"provider": "https://polygon.gateway.tenderly.co/FokiC9Iw8wtr3icZeNtGq",
+		"bundlerUrl": "https://api.candide.dev/public/v3/polygon",
+		"paymasterUrl": "https://api.candide.dev/public/v3/polygon",
+		"paymasterAddress": "0x8b1f6cb5d062aa2ce8d581942bbb960420d875ba",
+		"entrypointAddress": "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
+		"transferMaxFee": 5000000,
+		"swapMaxFee": 5000000,
+		"bridgeMaxFee": 5000000,
+		"paymasterToken": {
+			"address": "0xc2132d05d31c914a87c6611c10748aeb04b58e8f"
+		},
+		"safeModulesVersion": "0.3.0"
+	},
+	"ton": {
+		"tonApiClient": {
+			"url": "https://tonapi.io"
+		},
+		"tonClient": {
+			"url": "https://toncenter.com/api/v2/jsonRPC"
+		},
+		"paymasterToken": {
+			"address": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+		},
+		"transferMaxFee": 1000000000
+	},
+	"bitcoin": {
+		"host": "api.ordimint.com",
+		"port": 50001
+	},
+	"spark": {
+		"network": "MAINNET"
+	},
+	"tron": {
+		"chainId": 3448148188,
+		"provider": "https://trongrid.io",
+		"gasFreeProvider": "https://gasfree.io",
+		"apiKey": "75d7a666-9edf-4301-96a9-01a2d17500ea",
+		"apiSecret": "g6glyFa2Ksb_YRZjOSk5JdQBd27dsyi11f23m89c4IU",
+		"serviceProvider": "TKtWbdzEq5ss9vTS9kwRhBp5mXmBfBns3E",
+		"verifyingContract": "THQGuFzL87ZqhxkgqYEryRAd7gqFqL5rdc",
+		"transferMaxFee": 10000000,
+		"swapMaxFee": 1000000,
+		"bridgeMaxFee": 1000000,
+		"paymasterToken": {
+			"address": "TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf"
+		}
+	}
+}

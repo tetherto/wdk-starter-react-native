@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "schema": [
+    {
+      "id": 0,
+      "name": "@wdk-secret-manager/command-workletStart",
+      "request": {
+        "name": "@wdk-secret-manager/command-workletStart-request",
+        "stream": false
+      },
+      "response": {
+        "name": "@wdk-secret-manager/command-workletStart-response",
+        "stream": false
+      },
+      "version": 1
+    },
+    {
+      "id": 1,
+      "name": "@wdk-secret-manager/command-workletStop",
+      "request": {
+        "name": "@wdk-secret-manager/command-workletStop-request",
+        "stream": false
+      },
+      "response": {
+        "name": "@wdk-secret-manager/command-workletStop-response",
+        "stream": false
+      },
+      "version": 1
+    },
+    {
+      "id": 2,
+      "name": "@wdk-secret-manager/command-generateAndEncrypt",
+      "request": {
+        "name": "@wdk-secret-manager/command-generateAndEncrypt-request",
+        "stream": false
+      },
+      "response": {
+        "name": "@wdk-secret-manager/command-generateAndEncrypt-response",
+        "stream": false
+      },
+      "version": 1
+    },
+    {
+      "id": 3,
+      "name": "@wdk-secret-manager/command-decrypt",
+      "request": {
+        "name": "@wdk-secret-manager/command-decrypt-request",
+        "stream": false
+      },
+      "response": {
+        "name": "@wdk-secret-manager/command-decrypt-response",
+        "stream": false
+      },
+      "version": 1
+    },
+    {
+      "id": 4,
+      "name": "@wdk-secret-manager/command-log",
+      "request": {
+        "name": "@wdk-secret-manager/command-log-request",
+        "send": true
+      },
+      "version": 1
+    }
+  ]
+}
