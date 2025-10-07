@@ -3,7 +3,7 @@ import { ChevronLeft, Filter } from 'lucide-react-native';
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Transaction, TransactionList } from 'react-native-wdk-ui';
+import { Transaction, TransactionList } from '@tetherto/wdk-uikit-react-native';
 import { assetConfig } from '../config/assets';
 import { useWallet } from '../contexts/wallet-context';
 

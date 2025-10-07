@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "react-native-wdk-starter",
-    "slug": "react-native-wdk-starter",
+    "name": "wdk-starter-react-native",
+    "slug": "wdk-starter-react-native",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "reactnativewdkstarter",
+    "scheme": "wdkstarterreactnative",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.reactnativewdkstarter",
+      "bundleIdentifier": "com.anonymous.wdkstarterreactnative",
       "infoPlist": {
         "UIStatusBarStyle": "UIStatusBarStyleLightContent",
         "UIViewControllerBasedStatusBarAppearance": false,
@@ -25,7 +25,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.reactnativewdkstarter",
+      "package": "com.anonymous.wdkstarterreactnative",
       "statusBar": {
         "style": "light",
         "backgroundColor": "#000000"

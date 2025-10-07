@@ -1,4 +1,4 @@
-import { HRPC as wdkManagerHRPC } from '@wdk/bare';
+import { HRPC as wdkManagerHRPC } from '@tetherto/pear-wrk-wdk';
 import { Worklet } from 'react-native-bare-kit';
 import HRPC from '../../spec/hrpc';
 import { getEnum } from '../../spec/schema';

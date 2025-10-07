@@ -10,7 +10,7 @@ import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-get-random-values';
 import 'react-native-reanimated';
-import { ThemeProvider } from 'react-native-wdk-ui';
+import { ThemeProvider } from '@tetherto/wdk-uikit-react-native';
 
 if (typeof global.Buffer === 'undefined') {
   // @ts-ignore

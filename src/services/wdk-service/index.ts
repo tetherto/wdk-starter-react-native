@@ -1,10 +1,10 @@
-import { HRPC as WdkManager } from '@wdk/bare';
-import wdkWorkletBundle from '@wdk/bare/bundle/wdk-worklet.mobile.bundle.js';
+import { HRPC as WdkManager } from '@tetherto/pear-wrk-wdk';
+import wdkWorkletBundle from '@tetherto/pear-wrk-wdk/bundle/wdk-worklet.mobile.bundle.js';
 import b4a from 'b4a';
 import * as bip39 from 'bip39';
 import Decimal from 'decimal.js';
-import { PricingProvider } from 'lib-wallet-pricing-provider';
-import { BitfinexPricingClient } from 'lib-wallet-pricing-provider-bitfinex-http';
+import { PricingProvider } from '@tetherto/wdk-pricing-provider';
+import { BitfinexPricingClient } from '@tetherto/wdk-pricing-provider-bitfinex-http';
 import config from '../../config/chains.json';
 import workletBundle from '../../wdk-secret-manager-worklet.bundle.js';
 import { BareWorkletApi, InstanceEnum } from './bare-api';
@@ -623,7 +623,7 @@ class WDKService {
                 {
                   method: 'GET',
                   headers: {
-                    'X-API-KEY': process.env.EXPO_PUBLIC_WDK_KEY!,
+                    'X-API-KEY': process.env.EXPO_PUBLIC_WDK_INDEXER_API_KEY!,
                   },
                 }
               );
@@ -700,7 +700,7 @@ class WDKService {
                 {
                   method: 'GET',
                   headers: {
-                    'X-API-KEY': process.env.EXPO_PUBLIC_WDK_KEY!,
+                    'X-API-KEY': process.env.EXPO_PUBLIC_WDK_INDEXER_API_KEY!,
                   },
                 }
               );

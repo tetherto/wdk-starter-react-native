@@ -21,7 +21,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Balance } from 'react-native-wdk-ui';
+import { Balance } from '@tetherto/wdk-uikit-react-native';
 import { assetConfig } from '../config/assets';
 import { useWallet } from '../contexts/wallet-context';
 

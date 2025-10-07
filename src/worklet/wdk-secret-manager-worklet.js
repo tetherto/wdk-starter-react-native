@@ -2,7 +2,7 @@ const HRPC = require('../spec/hrpc');
 
 const b4a = require('b4a');
 const { getEnum } = require('../spec/schema');
-const { WdkSecretManager } = require('@wdk/wdk-secret-manager');
+const { WdkSecretManager } = require('@tetherto/wdk-secret-manager');
 // eslint-disable-next-line no-undef
 const { IPC } = BareKit;
 

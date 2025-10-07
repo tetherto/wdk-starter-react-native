@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { QRCode } from 'react-native-wdk-ui';
+import { QRCode } from '@tetherto/wdk-uikit-react-native';
 
 export default function ReceiveQRCodeScreen() {
   const insets = useSafeAreaInsets();

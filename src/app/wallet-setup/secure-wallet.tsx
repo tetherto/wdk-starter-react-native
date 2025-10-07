@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { getUniqueId } from 'react-native-device-info';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SeedPhrase } from 'react-native-wdk-ui';
+import { SeedPhrase } from '@tetherto/wdk-uikit-react-native';
 import { WDKService } from '../../services/wdk-service';
 
 export default function SecureWalletScreen() {

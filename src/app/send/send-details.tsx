@@ -16,7 +16,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CryptoAddressInput } from 'react-native-wdk-ui';
+import { CryptoAddressInput } from '@tetherto/wdk-uikit-react-native';
 import { useWallet } from '../../contexts/wallet-context';
 import { WDKService } from '../../services/wdk-service';
 import { AssetTicker, NetworkType } from '../../services/wdk-service/types';

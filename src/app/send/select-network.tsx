@@ -5,7 +5,7 @@ import { ArrowLeft } from 'lucide-react-native';
 import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { NetworkSelector, type Network } from 'react-native-wdk-ui';
+import { NetworkSelector, type Network } from '@tetherto/wdk-uikit-react-native';
 
 export default function SelectNetworkScreen() {
   const insets = useSafeAreaInsets();

@@ -1,191 +1,171 @@
-# React Native WDK Starter 🚀
+# @tetherto/wdk-starter-react-native
 
-A production-ready React Native starter application demonstrating how to build a
-complete wallet using WDK (Wallet Development Kit). This starter serves as a
-foundation for developers who want to move quickly from idea to implementation
-without rebuilding common wallet functionality from scratch.
+A production-ready Expo + React Native starter showing how to build a multi-chain wallet using WDK via BareKit worklets, and secure secret management. It includes background worklets, wallet creation/import flows, balances, transactions, and a modular service layer.
 
-## Features
+Click below to see the wallet in action:
 
-### Core Wallet Functionality
+[![Demo Video](assets/docs/demo-thumbnail.png)](assets/docs/demo.mp4)
 
-- ✅ Multi-wallet management with Redux state management
-- ✅ Wallet creation and import capabilities
-- ✅ Real-time balance tracking and updates
-- ✅ Transaction history and management
-- ✅ Multi-network support (Bitcoin, Ethereum, Solana)
-- ✅ Secure secret management integration
+## 🔍 About WDK
 
-### UI Components
+This repository is part of the [**WDK (Wallet Development Kit)**](https://wallet.tether.io/) project, which empowers developers to build secure, non-custodial wallets with unified blockchain access, stateless architecture, and complete user control. 
 
-- ✅ Professional wallet interface with themed components
-- ✅ Interactive wallet cards with status indicators
-- ✅ Action buttons for send/receive/swap operations
-- ✅ Transaction list with detailed information
-- ✅ Settings and wallet management screens
+For detailed documentation about the complete WDK ecosystem, visit [docs.wallet.tether.io](https://docs.wallet.tether.io).
 
-### WDK Integration
+## 🌟 Features
 
-- ✅ WDK bare integration for core wallet operations
-- ✅ WDK Secret Manager for secure key management
-- ✅ WDK React Native Passkey support
-- ✅ Modular service architecture for easy customization
+### Multi-Chain Support
+- **Bitcoin**: SegWit native transfers
+- **Ethereum**: Transactions with gas fees sponsorship
+- **Polygon**: Transactions with gas fees sponsorship  
+- **Arbitrum**: Transactions with gas fees sponsorship
+- **TON**: Native transfers
 
-## Quick Start
-
-1. **Install dependencies**
-
-   ```bash
-   npm install
-   ```
-
-2. **Start the development server**
-
-   ```bash
-   npx expo start
-   ```
-
-3. **Run on your preferred platform**
-   - **iOS Simulator**: Press `i` in the terminal or scan QR with Expo Go
-   - **Android Emulator**: Press `a` in the terminal or scan QR with Expo Go
-   - **Web**: Press `w` in the terminal
-
-## Project Structure
-
-```
-react-native-wdk-starter/
-├── app/                          # Expo Router pages
-│   ├── (tabs)/                  # Tab navigation screens
-│   │   ├── index.tsx           # Main wallet screen
-│   │   └── explore.tsx         # Settings screen
-│   └── _layout.tsx             # Root layout with providers
-├── components/                   # Reusable UI components
-│   └── wallet/                  # Wallet-specific components
-│       ├── WalletCard.tsx      # Individual wallet display
-│       ├── WalletActionButton.tsx # Action buttons
-│       └── TransactionItem.tsx  # Transaction list item
-├── store/                       # Redux store and state management
-│   ├── slices/                 # Redux slices
-│   ├── services/               # API and WDK services
-│   └── types/                  # TypeScript type definitions
-└── ...
-```
-
-## Key Components
+### Multi-Token Support
+- **BTC**: Native transfers
+- **USD₮**: Transactions with gas fees sponsorship
+- **XAU₮**: Transactions with gas fees sponsorship
 
 ### Wallet Management
+- **Secure Seed Generation**: Cryptographically secure entropy generation
+- **Seed Import**: Import existing 12-word mnemonic phrases
+- **Encrypted Storage**: Secure key storage via [`@tetherto/wdk-secret-manager`](https://github.com/tetherto/wdk-secret-manager)
+- **Multi-Account Support**: Derive multiple accounts from single seed
 
-- **WalletCard**: Interactive wallet display with balance, network info, and
-  status
-- **WalletActionButton**: Consistent action buttons for wallet operations
-- **TransactionItem**: Detailed transaction display with status and metadata
+### Asset Management
+- **Multi-Token Support**: BTC, USD₮, XAU₮ with native token support
+- **Real-Time Balances**: Live balance updates via [WDK Indexer](https://indexer.wallet.tether.io/)
+- **Transaction History**: Complete transaction tracking and history
+- **Price Conversion**: Real-time fiat pricing via Bitfinex provider
 
-### State Management
+### User Experience
+- **QR Code Scanner**: Scan addresses and payment requests via camera
+- **Send/Receive Flows**: Intuitive transfer interfaces
+- **Network Selection**: Choose optimal network for each transaction
+- **Token Selection**: Multi-token transfer support
+- **Activity Feed**: Real-time transaction monitoring
 
-- **Redux Toolkit**: Modern Redux with TypeScript support
-- **WalletSlice**: Complete wallet state management
-- **Async Actions**: Background wallet operations and API calls
+## 🧱 Platform Prerequisites
 
-### WDK Services
+- Node.js 18+
+- iOS: Xcode toolchain; Android: SDK + NDK (see `app.json` build properties)
+- `npx` for bundling worklets via `bare-pack`
 
-- **WDKService**: Core integration with WDK libraries
-- **WalletService**: High-level wallet operation APIs
-- **Modular Architecture**: Easy to extend and customize
+## ⬇️ Installation
 
-## Customization
-
-### Adding New Networks
-
-```typescript
-// In store/services/wdkService.ts
-static getSupportedNetworks(): string[] {
-  return ['bitcoin', 'ethereum', 'solana', 'your-network'];
-}
+```bash
+npm install
 ```
 
-### Extending Wallet Types
+## 🔑 Environment Setup
 
-```typescript
-// In store/types/wallet.types.ts
-export interface Wallet {
-  // Add your custom properties
-  customField?: string;
-}
+**Required:** Before running the app, you should create an environment file:
+
+```bash
+# Copy the example environment file
+cp .env.example .env
+
+# Edit .env and replace PUT_WDK_API_KEY_HERE with your actual API key
+# EXPO_PUBLIC_WDK_INDEXER_API_KEY=your_actual_api_key_here
 ```
 
-### Custom UI Components
+**Note:** The WDK Indexer API key is used for balance and transaction API requests. Even if not mandatory for development, read how you can obtain your WDK Indexer API key in the [WDK docs](https://docs.wallet.tether.io/). 
 
-All components use themed styling and can be easily customized:
+## 🚀 Run
 
-```typescript
-// Example: Custom wallet card styling
-const customStyles = StyleSheet.create({
-  customWalletCard: {
-    // Your custom styles
-  },
-});
+Generate the Secret Manager worklet bundle (needed after fresh clone or changes):
+
+```bash
+npm run gen:bundle
 ```
 
-## TODOs for Production
+Then start the app:
 
-The starter includes TODO comments marking areas that need actual WDK
-implementation:
+```bash
+# iOS simulator
+npm run ios
 
-- [ ] Replace mock data with real WDK API calls
-- [ ] Implement actual transaction broadcasting
-- [ ] Add proper error handling and retry logic
-- [ ] Implement secure storage for wallet data
-- [ ] Add biometric authentication
-- [ ] Implement proper backup and recovery flows
-- [ ] Add comprehensive testing suite
-- [ ] Configure production security settings
+# Android emulator/device
+npm run android
+```
 
-## Available Scripts
+## 📁 Project Structure
 
-- `npm start` - Start Expo development server
-- `npm run android` - Run on Android device/emulator
-- `npm run ios` - Run on iOS device/simulator
-- `npm run web` - Run in web browser
-- `npm run lint` - Run ESLint
+```
+src/
+├── app/                         # Screens (Expo Router)
+├── components/                  # UI components
+├── config/                      # Chains/networks config
+├── contexts/                    # React contexts
+├── services/
+│   └── wdk-service/             # Worklet + HRPC + wallet orchestration
+├── spec/                        # HRPC/schema (copied for reference)
+├── worklet/                     # Secret manager worklet entry
+└── wdk-secret-manager-worklet.bundle.js  # Generated bundle
+```
 
-## Dependencies
+## 🌐 Supported Networks & Operations
 
-### Core WDK Libraries
+### Bitcoin (BTC)
+- **Address Resolution**: SegWit addresses (native)
+- **Balance Fetching**: ✅ Supported
+- **Transaction History**: ✅ Supported  
+- **Sending**: ✅ Native SegWit transfers
+- **Receiving**: ✅ Native SegWit addresses
 
-- `@wdk/bare` - Core WDK functionality
-- `@wdk/wdk-secret-manager` - Secure key management
-- `@wdk/react-native-passkey-internal` - Passkey authentication
-- `@wdk/react-native-ui` - WDK UI components
+### Tether USD (USD₮)
+- **Networks**: Ethereum, Polygon, Arbitrum, TON
+- **Address Resolution**: ✅ All supported networks
+- **Balance Fetching**: ✅ All supported networks
+- **Transaction History**: ✅ All supported networks
+- **Sending**: ✅ Account Abstraction (EVM networks), Native (TON)
+- **Receiving**: ✅ All supported networks
 
-### State Management
+### Tether Gold (XAU₮)
+- **Networks**: Ethereum
+- **Address Resolution**: ✅ Ethereum
+- **Balance Fetching**: ✅ Ethereum
+- **Transaction History**: ✅ Ethereum
+- **Sending**: ✅ Ethereum
+- **Receiving**: ✅ Ethereum
 
-- `@reduxjs/toolkit` - Modern Redux toolkit
-- `react-redux` - React Redux bindings
+### Additional Networks (Coming Soon)
+- **Spark**: Support Planned
+- **TRON**: Support Planned
+- **Solana**: Support Planned
 
-### Navigation & UI
+## ⚙️ Polyfills
 
-- `expo-router` - File-based navigation
-- `@react-navigation/native` - Navigation core
-- `expo` - Expo SDK
+See `metro.config.js` for:
+- Polyfills: stream, buffer, crypto, net/tls, url, http/https/http2, zlib, path, `nice-grpc`→web, `sodium-universal`→javascript, querystring, events
 
-## Contributing
+## 🧪 Available Scripts
 
-This starter is designed to be a foundation for your wallet application. Feel
-free to:
+- `start` – expo start --dev-client
+- `android` – expo run:android
+- `ios` – expo run:ios
+- `web` – expo start --web
+- `gen:bundle` – build secret manager worklet bundle
+- `prebuild`, `prebuild:clean` – native project generation
+- `lint`, `lint:fix`, `format`, `format:check`
 
-1. Fork the repository
-2. Add your customizations
-3. Share improvements with the community
-4. Report issues and suggest enhancements
+## 🔗 Version & Compatibility
 
-## License
+- Expo ~54, React Native 0.81.4, React 19
+- Reanimated ~4.1; New Architecture enabled (`app.json`)
+- Android minSdkVersion 29; build properties configured via `expo-build-properties`
 
-This project is intended as a demonstration and starter template. Please ensure
-you comply with all relevant licenses when using WDK libraries and dependencies
-in production.
+## 📜 License
 
----
+This project is licensed under the Apache-2.0 - see the [LICENSE](LICENSE) file for details.
 
-**Built with ❤️ using WDK (Wallet Development Kit)**
+## 🤝 Contributing
 
-For more information about WDK, visit the official documentation.
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+- Read the [code of conduct](CODE_OF_CONDUCT.md)
+- See [contributing guide](CONTRIBUTING.md)
+
+## 🆘 Support
+
+For support, please open an issue on the GitHub repository.
