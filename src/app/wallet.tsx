@@ -1,5 +1,5 @@
 import { BalanceLoader } from '@/components/BalanceLoader';
-import { useWallet } from '@tetherto/wdk-react-native-provider';
+import { AssetTicker, useWallet } from '@tetherto/wdk-react-native-provider';
 import { Balance } from '@tetherto/wdk-uikit-react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -23,13 +23,37 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { assetConfig } from '../config/assets';
+import { AssetConfig, assetConfig } from '../config/assets';
+import { FiatCurrency, pricingService } from '../services/pricing-service';
+
+type AggregatedBalance = ({
+  denomination: string;
+  balance: number;
+  usdValue: number;
+  config: AssetConfig;
+} | null)[];
+
+type Transaction = {
+  id: number;
+  type: string;
+  asset: string;
+  token: string;
+  amount: string;
+  icon: any;
+  iconColor: string;
+  blockchain: string;
+  hash: string;
+  fiatAmount: string;
+  currency: FiatCurrency;
+};
 
 export default function WalletScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { wallet, isLoading, isUnlocked, refreshWalletBalance } = useWallet();
   const [refreshing, setRefreshing] = useState(false);
+  const [aggregatedBalances, setAggregatedBalances] = useState<AggregatedBalance>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   const hasWallet = !!wallet;
 
@@ -41,37 +65,45 @@ export default function WalletScreen() {
   }, [hasWallet, isUnlocked, router]);
 
   // Calculate aggregated balances by denomination
-  const aggregatedBalances = useMemo(() => {
+  const getAggregatedBalances = async () => {
     if (!wallet?.accountData?.balances) return [];
 
-    const balanceMap = new Map<string, { balance: number; fiatValue: number }>();
+    const balanceMap = new Map<string, { balance: number }>();
 
-    // Sum up balances and fiat values by denomination across all networks
+    // Sum up balances by denomination across all networks
     wallet.accountData.balances.forEach(balance => {
-      const current = balanceMap.get(balance.denomination) || { balance: 0, fiatValue: 0 };
+      const current = balanceMap.get(balance.denomination) || { balance: 0 };
       balanceMap.set(balance.denomination, {
         balance: current.balance + parseFloat(balance.value),
-        fiatValue: current.fiatValue + parseFloat(balance.fiatValue),
       });
     });
 
-    // Convert to array with asset info and filter out zero/negative balances
-    return Array.from(balanceMap.entries())
-      .map(([denomination, { balance: totalBalance, fiatValue: totalFiatValue }]) => {
+    const promises = Array.from(balanceMap.entries()).map(
+      async ([denomination, { balance: totalBalance }]) => {
         const config = assetConfig[denomination];
         if (!config) return null;
+
+        // Calculate fiat value using pricing service
+        const fiatValue = await pricingService.getFiatValue(
+          totalBalance,
+          denomination as AssetTicker,
+          FiatCurrency.USD
+        );
 
         return {
           denomination,
           balance: totalBalance,
-          usdValue: totalFiatValue,
+          usdValue: fiatValue,
           config,
         };
-      })
+      }
+    );
+
+    return (await Promise.all(promises))
       .filter(Boolean)
       .filter(asset => asset && asset.balance > 0) // Only show tokens with positive balance
       .sort((a, b) => (b?.usdValue || 0) - (a?.usdValue || 0)); // Sort by USD value descending
-  }, [wallet?.accountData?.balances]);
+  };
 
   // Calculate total portfolio value
   const totalPortfolioValue = useMemo(() => {
@@ -103,7 +135,7 @@ export default function WalletScreen() {
   ];
 
   // Get real transactions from wallet data
-  const transactions = useMemo(() => {
+  const getTransactions = async () => {
     if (!wallet?.accountData?.transactions) return [];
 
     // Get the wallet's own addresses for comparison
@@ -111,34 +143,41 @@ export default function WalletScreen() {
       ? Object.values(wallet.accountData.addressMap).map(addr => addr?.toLowerCase())
       : [];
 
-    // Sort transactions by timestamp (newest first) and take the first 3
-    return wallet.accountData.transactions
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, 3)
-      .map((tx, index) => {
-        const fromAddress = tx.from?.toLowerCase();
-        const isSent = walletAddresses.includes(fromAddress);
-        const amount = parseFloat(tx.amount);
-        const config = assetConfig[tx.token];
+    const result = await Promise.all(
+      wallet.accountData.transactions
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 3)
+        .map(async (tx, index) => {
+          const fromAddress = tx.from?.toLowerCase();
+          const isSent = walletAddresses.includes(fromAddress);
+          const amount = parseFloat(tx.amount);
+          const config = assetConfig[tx.token];
 
-        return {
-          id: index + 1,
-          type: isSent ? 'sent' : 'received',
-          asset: config?.name || tx.token.toUpperCase(),
-          token: tx.token,
-          amount: `${amount} ${tx.token === 'usdt' ? 'USD₮' : tx.token.toUpperCase()}`,
-          icon: isSent ? ArrowUpRight : ArrowDownLeft,
-          iconColor: isSent ? '#FF3B30' : '#4CAF50',
-          blockchain: tx.blockchain,
-          hash: tx.transactionHash,
-          fiatAmount: tx.fiatAmount.toLocaleString('en-US', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          }),
-          currency: tx.fiatCurrency,
-        };
-      });
-  }, [wallet?.accountData?.transactions, wallet?.accountData?.addressMap]);
+          // Calculate fiat amount using pricing service
+          const fiatAmount = await pricingService.getFiatValue(
+            amount,
+            tx.token as AssetTicker,
+            FiatCurrency.USD
+          );
+
+          return {
+            id: index + 1,
+            type: isSent ? 'sent' : 'received',
+            asset: config?.name || tx.token.toUpperCase(),
+            token: tx.token,
+            amount: `${amount} ${tx.token === 'usdt' ? 'USD₮' : tx.token.toUpperCase()}`,
+            icon: isSent ? ArrowUpRight : ArrowDownLeft,
+            iconColor: isSent ? '#FF3B30' : '#4CAF50',
+            blockchain: tx.blockchain,
+            hash: tx.transactionHash,
+            fiatAmount: fiatAmount.toLocaleString(),
+            currency: FiatCurrency.USD,
+          };
+        })
+    );
+
+    return result;
+  };
 
   const handleSendPress = () => {
     router.push('/send/select-token');
@@ -180,6 +219,16 @@ export default function WalletScreen() {
       setRefreshing(false);
     }
   };
+
+  useEffect(() => {
+    getAggregatedBalances().then(setAggregatedBalances);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wallet?.accountData?.balances]);
+
+  useEffect(() => {
+    getTransactions().then(setTransactions);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wallet?.accountData?.transactions, wallet?.accountData?.addressMap]);
 
   return (
     <View style={styles.container}>

@@ -1,4 +1,3 @@
-import { Buffer } from '@craftzdog/react-native-buffer';
 import { DarkTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { WalletProvider, WDKService } from '@tetherto/wdk-react-native-provider';
 import { ThemeProvider } from '@tetherto/wdk-uikit-react-native';
@@ -8,30 +7,9 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import 'react-native-get-random-values';
 import 'react-native-reanimated';
-
-if (typeof global.Buffer === 'undefined') {
-  // @ts-ignore
-  global.Buffer = Buffer;
-}
-
-// Set up stream polyfill
-if (typeof global.process === 'undefined') {
-  // @ts-ignore
-  global.process = require('process');
-}
-
-// Initialize crypto polyfill after Buffer and process are available
-if (typeof global.crypto === 'undefined') {
-  try {
-    const crypto = require('react-native-crypto');
-    // @ts-ignore
-    global.crypto = crypto;
-  } catch (e) {
-    console.warn('Failed to load crypto polyfill:', e);
-  }
-}
+import chains from '../config/chains.json';
+import { pricingService } from '../services/pricing-service';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -51,8 +29,12 @@ export default function RootLayout() {
         // Initialize WDK services early in app lifecycle
         await WDKService.initialize();
         console.log('WDK Services initialized in app layout');
+
+        // Initialize pricing service
+        await pricingService.initialize();
+        console.log('Pricing service initialized in app layout');
       } catch (error) {
-        console.error('Failed to initialize WDK services in app layout:', error);
+        console.error('Failed to initialize services in app layout:', error);
       } finally {
         SplashScreen.hideAsync();
       }
@@ -72,6 +54,7 @@ export default function RootLayout() {
         <WalletProvider
           config={{
             indexerApiKey: process.env.EXPO_PUBLIC_WDK_INDEXER_API_KEY!,
+            chains: chains,
           }}
         >
           <NavigationThemeProvider value={CustomDarkTheme}>

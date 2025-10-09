@@ -60,7 +60,6 @@ export default function SettingsScreen() {
       polygon: 'Polygon',
       arbitrum: 'Arbitrum',
       ton: 'TON',
-      spark: 'Spark',
     };
     return names[network] || network;
   };

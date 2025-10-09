@@ -61,9 +61,6 @@
 		"host": "api.ordimint.com",
 		"port": 50001
 	},
-	"spark": {
-		"network": "MAINNET"
-	},
 	"tron": {
 		"chainId": 3448148188,
 		"provider": "https://trongrid.io",

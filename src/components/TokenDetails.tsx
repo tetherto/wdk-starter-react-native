@@ -34,7 +34,6 @@ const NETWORK_COLORS: Record<string, string> = {
   optimism: '#FF0420',
   bitcoin: '#F7931A',
   ton: '#0098EA',
-  spark: '#FF6B35',
 };
 
 const NETWORK_NAMES: Record<string, string> = {
@@ -45,7 +44,6 @@ const NETWORK_NAMES: Record<string, string> = {
   optimism: 'Optimism',
   bitcoin: 'Bitcoin',
   ton: 'TON',
-  spark: 'Spark',
 };
 
 export function TokenDetails({ walletId, tokenData, onSendPress }: TokenDetailsProps) {

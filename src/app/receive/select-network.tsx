@@ -34,7 +34,6 @@ export default function ReceiveSelectNetworkScreen() {
     tron: 'Tron Network',
     solana: 'Solana Network',
     bitcoin: 'Native Bitcoin Network',
-    spark: 'Spark Network',
     lightning: 'Lightning Network',
   };
 

@@ -1,19 +1,21 @@
-import { useWallet } from '@tetherto/wdk-react-native-provider';
+import { AssetTicker, useWallet } from '@tetherto/wdk-react-native-provider';
 import { Transaction, TransactionList } from '@tetherto/wdk-uikit-react-native';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, Filter } from 'lucide-react-native';
-import React, { useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { assetConfig } from '../config/assets';
+import { FiatCurrency, pricingService } from '../services/pricing-service';
 
 export default function ActivityScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { wallet } = useWallet();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
-  // Transform wallet transactions to display format
-  const transactions: Transaction[] = useMemo(() => {
+  // Transform wallet transactions to display format with fiat values
+  const getTransactionsWithFiatValues = async () => {
     if (!wallet?.accountData?.transactions) return [];
 
     // Get the wallet's own addresses for comparison
@@ -21,30 +23,44 @@ export default function ActivityScreen() {
       ? Object.values(wallet.accountData.addressMap).map(addr => addr?.toLowerCase())
       : [];
 
-    // Sort transactions by timestamp (newest first)
-    return wallet.accountData.transactions
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .map((tx, index) => {
-        const fromAddress = tx.from?.toLowerCase();
-        const isSent = walletAddresses.includes(fromAddress);
-        const amount = parseFloat(tx.amount);
-        const config = assetConfig[tx.token as keyof typeof assetConfig];
-        const fiatAmount = tx.fiatAmount;
-        const fiatCurrency = tx.fiatCurrency;
+    // Sort transactions by timestamp (newest first) and calculate fiat values
+    const result = await Promise.all(
+      wallet.accountData.transactions
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .map(async (tx, index) => {
+          const fromAddress = tx.from?.toLowerCase();
+          const isSent = walletAddresses.includes(fromAddress);
+          const amount = parseFloat(tx.amount);
+          const config = assetConfig[tx.token as keyof typeof assetConfig];
 
-        return {
-          id: `${tx.transactionHash}-${index}`,
-          type: isSent ? ('sent' as const) : ('received' as const),
-          token: config?.name || tx.token.toUpperCase(),
-          amount: `${amount} ${tx.token === 'usdt' ? 'USD₮' : tx.token.toUpperCase()}`,
-          fiatAmount: fiatAmount.toLocaleString('en-US', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          }),
-          fiatCurrency: fiatCurrency,
-          network: tx.blockchain,
-        };
-      });
+          // Calculate fiat amount using pricing service
+          const fiatAmount = await pricingService.getFiatValue(
+            amount,
+            tx.token as AssetTicker,
+            FiatCurrency.USD
+          );
+
+          return {
+            id: `${tx.transactionHash}-${index}`,
+            type: isSent ? ('sent' as const) : ('received' as const),
+            token: config?.name || tx.token.toUpperCase(),
+            amount: `${amount} ${tx.token === 'usdt' ? 'USD₮' : tx.token.toUpperCase()}`,
+            fiatAmount: fiatAmount.toLocaleString('en-US', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            }),
+            fiatCurrency: FiatCurrency.USD,
+            network: tx.blockchain,
+          };
+        })
+    );
+
+    return result;
+  };
+
+  useEffect(() => {
+    getTransactionsWithFiatValues().then(setTransactions);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wallet?.accountData?.transactions, wallet?.accountData?.addressMap]);
 
   const handleBack = () => {

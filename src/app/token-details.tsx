@@ -1,3 +1,4 @@
+import { assetConfig } from '@/config/assets';
 import { useWallet } from '@tetherto/wdk-react-native-provider';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
@@ -17,26 +18,6 @@ export default function TokenDetailsScreen() {
   };
 
   // Asset configuration (same as in wallet.tsx)
-  const assetConfig = {
-    btc: {
-      name: 'Bitcoin',
-      icon: require('../../assets/images/tokens/bitcoin-btc-logo.png'),
-      color: '#F7931A',
-      priceUSD: 97000,
-    },
-    usdt: {
-      name: 'USD₮',
-      icon: require('../../assets/images/tokens/tether-usdt-logo.png'),
-      color: '#26A17B',
-      priceUSD: 1,
-    },
-    xaut: {
-      name: 'XAU₮',
-      icon: require('../../assets/images/tokens/tether-gold-xaut-logo.png'),
-      color: '#FFD700',
-      priceUSD: 2650,
-    },
-  };
 
   const tokenSymbol = params.token?.toLowerCase() as keyof typeof assetConfig;
   const tokenConfig = tokenSymbol ? assetConfig[tokenSymbol] : null;
@@ -48,9 +29,11 @@ export default function TokenDetailsScreen() {
     }
 
     // Filter balances for this specific token
-    const tokenBalances = wallet.accountData.balances.filter(
-      balance => balance.denomination === tokenSymbol
-    );
+    const tokenBalances = wallet.accountData.balances.filter(balance => {
+      console.log('balance', balance);
+
+      return balance.denomination === tokenSymbol;
+    });
 
     // Calculate total balance and network breakdown
     let totalBalance = 0;

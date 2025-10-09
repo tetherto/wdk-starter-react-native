@@ -97,15 +97,27 @@ export default function SendDetailsScreen() {
     return assetMap[tokenId?.toLowerCase()] || AssetTicker.USDT;
   }, []);
 
-  // Get token price in USD
-  const getTokenPrice = useCallback((tokenId: string): number => {
-    const priceMap: Record<string, number> = {
-      btc: 97000,
-      usdt: 1,
-      xaut: 2650,
-    };
-    return priceMap[tokenId?.toLowerCase()] || 1;
-  }, []);
+  // Get token price in USD from wallet balance data
+  // TODO: get token price from pricing provider
+  const getTokenPrice = useCallback(
+    (tokenId: string): number => {
+      if (!wallet?.accountData?.balances) return 0;
+
+      // Find the balance entry for this token to get the exchange rate
+      const balanceEntry = wallet.accountData.balances.find(
+        b => b.denomination === tokenId?.toLowerCase()
+      );
+
+      if (!balanceEntry) return 0;
+
+      const tokenAmount = parseFloat(balanceEntry.value) || 1;
+      const fiatValue = parseFloat(balanceEntry.fiatValue) || 0;
+
+      // Calculate price per token
+      return tokenAmount > 0 ? fiatValue / tokenAmount : 0;
+    },
+    [wallet?.accountData?.balances]
+  );
 
   // Pre-calculate fee immediately when screen loads
   const preCalculateGasFee = useCallback(async () => {

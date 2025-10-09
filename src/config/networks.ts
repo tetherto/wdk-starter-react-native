@@ -66,14 +66,6 @@ export const networkConfigs: Record<NetworkType, Network> = {
     icon: require('../../assets/images/chains/bitcoin-btc-logo.png'),
     color: '#F7931A',
   },
-  [NetworkType.SPARK]: {
-    id: 'spark',
-    name: 'Spark',
-    gasLevel: 'Low',
-    gasColor: '#34C759',
-    icon: require('../../assets/images/chains/spark-logo.png'),
-    color: '#FF6B35',
-  },
   [NetworkType.LIGHTNING]: {
     id: 'lightning',
     name: 'Lightning',

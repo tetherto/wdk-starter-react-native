@@ -11,6 +11,7 @@
     "lint:fix": "expo lint --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
     "prebuild": "expo prebuild",
     "prebuild:clean": "expo prebuild --clean",
     "gen:bundle": "npx bare-pack --target ios-arm64 --target ios-arm64-simulator --target ios-x64-simulator --target android-arm --target android-arm64 --target android-ia32 --target android-x64 --linked --out src/wdk-secret-manager-worklet.bundle.js src/worklet/wdk-secret-manager-worklet.js"
@@ -28,7 +29,7 @@
     "@tetherto/wdk-pricing-provider": "github:tetherto/wdk-pricing-provider#v1.0.0-beta.1",
     "@tetherto/wdk-pricing-bitfinex-http": "github:tetherto/wdk-pricing-bitfinex-http#v1.0.0-beta.1",
     "@tetherto/wdk-secret-manager": "github:tetherto/wdk-secret-manager#v1.0.0-beta.1",
-    "@tetherto/wdk-uikit-react-native": "github:tetherto/wdk-uikit-react-native#fedf184de40f040c1f2e976ba6d135f491f4872e",
+    "@tetherto/wdk-uikit-react-native": "github:tetherto/wdk-uikit-react-native#v1.0.0-beta.1",
     "@tetherto/wdk-react-native-provider": "file:modules/wdk-react-native-provider",
     "b4a": "^1.7.2",
     "bip39": "^3.1.0",

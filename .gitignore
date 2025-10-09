@@ -44,3 +44,4 @@ app-example
 /android
 
 .env
+.npmrc

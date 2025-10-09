@@ -6,10 +6,7 @@ const config = getDefaultConfig(__dirname);
 const { transformer, resolver } = config;
 
 // Add library modules to watchFolders
-const watchFolders = [
-  path.resolve(__dirname, 'modules/wdk-react-native-provider'),
-  path.resolve(__dirname, 'modules/wdk-uikit-react-native'),
-];
+const watchFolders = [path.resolve(__dirname, 'modules/wdk-react-native-provider')];
 
 config.watchFolders = watchFolders;
 
@@ -26,7 +23,6 @@ config.resolver = {
   nodeModulesPaths: [
     path.resolve(__dirname, 'node_modules'),
     path.resolve(__dirname, 'modules/wdk-react-native-provider/node_modules'),
-    path.resolve(__dirname, 'modules/wdk-uikit-react-native/node_modules'),
   ],
   alias: {
     '@': path.resolve(__dirname, 'src'),

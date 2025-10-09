@@ -1,7 +1,8 @@
-import { FiatCurrency, useWallet } from '@tetherto/wdk-react-native-provider';
+import { FiatCurrency, pricingService } from '@/services/pricing-service';
+import { AssetTicker, useWallet } from '@tetherto/wdk-react-native-provider';
 import { useRouter } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
-import React, { useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Asset, assetConfig } from '../config/assets';
@@ -10,29 +11,24 @@ export default function AssetsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { wallet } = useWallet();
+  const [assets, setAssets] = useState<Asset[]>([]);
 
   // Calculate aggregated balances by denomination from real wallet data
-  const assets: Asset[] = useMemo(() => {
+  const getAssetsWithFiatValue = async () => {
     if (!wallet?.accountData?.balances) return [];
 
-    const balanceMap = new Map<
-      string,
-      { balance: number; fiatValue: number; fiatCurrency: FiatCurrency }
-    >();
+    const balanceMap = new Map<string, { balance: number }>();
 
-    // Sum up balances and fiat values by denomination across all networks
+    // Sum up balances by denomination across all networks
     wallet.accountData.balances.forEach(balance => {
-      const current = balanceMap.get(balance.denomination) || { balance: 0, fiatValue: 0 };
+      const current = balanceMap.get(balance.denomination) || { balance: 0 };
       balanceMap.set(balance.denomination, {
         balance: current.balance + parseFloat(balance.value),
-        fiatValue: current.fiatValue + parseFloat(balance.fiatValue),
-        fiatCurrency: balance.currency,
       });
     });
 
-    // Convert to Asset array with real data
-    const assetList = Array.from(balanceMap.entries())
-      .map(([denomination, { balance: totalBalance, fiatValue: totalFiatValue, fiatCurrency }]) => {
+    const promises = Array.from(balanceMap.entries()).map(
+      async ([denomination, { balance: totalBalance }]) => {
         const config = assetConfig[denomination];
         if (!config) return null;
 
@@ -43,6 +39,13 @@ export default function AssetsScreen() {
               ? 'XAU₮'
               : denomination.toUpperCase();
 
+        // Calculate fiat value using pricing service
+        const fiatValue = await pricingService.getFiatValue(
+          totalBalance,
+          denomination as AssetTicker,
+          FiatCurrency.USD
+        );
+
         return {
           id: denomination,
           name: config.name,
@@ -51,15 +54,18 @@ export default function AssetsScreen() {
             minimumFractionDigits: 2,
             maximumFractionDigits: 6,
           })} ${symbol}`,
-          value: `${totalFiatValue.toLocaleString('en-US', {
+          value: `${fiatValue.toLocaleString('en-US', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
-          })} ${fiatCurrency}`,
+          })} ${FiatCurrency.USD}`,
           icon: config.icon,
           color: config.color,
         };
-      })
-      .filter(Boolean) as Asset[];
+      }
+    );
+
+    // Convert to Asset array with real data and calculate fiat values
+    const assetList = (await Promise.all(promises)).filter(Boolean) as Asset[];
 
     // Sort by USD value descending
     return assetList.sort((a, b) => {
@@ -67,11 +73,16 @@ export default function AssetsScreen() {
       const bValue = parseFloat(b.value.replace(/[$,]/g, ''));
       return bValue - aValue;
     });
-  }, [wallet?.accountData?.balances]);
+  };
 
   const handleBack = () => {
     router.back();
   };
+
+  useEffect(() => {
+    getAssetsWithFiatValue().then(setAssets);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wallet?.accountData?.balances]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
