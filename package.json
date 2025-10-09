@@ -28,7 +28,7 @@
     "@tetherto/wdk-pricing-provider": "github:tetherto/wdk-pricing-provider#v1.0.0-beta.1",
     "@tetherto/wdk-pricing-bitfinex-http": "github:tetherto/wdk-pricing-bitfinex-http#v1.0.0-beta.1",
     "@tetherto/wdk-secret-manager": "github:tetherto/wdk-secret-manager#v1.0.0-beta.1",
-    "@tetherto/wdk-uikit-react-native": "file:modules/wdk-uikit-react-native",
+    "@tetherto/wdk-uikit-react-native": "github:tetherto/wdk-uikit-react-native#fedf184de40f040c1f2e976ba6d135f491f4872e",
     "@tetherto/wdk-react-native-provider": "file:modules/wdk-react-native-provider",
     "b4a": "^1.7.2",
     "bip39": "^3.1.0",
