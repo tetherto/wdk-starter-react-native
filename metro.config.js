@@ -5,6 +5,14 @@ const config = getDefaultConfig(__dirname);
 
 const { transformer, resolver } = config;
 
+// Add library modules to watchFolders
+const watchFolders = [
+  path.resolve(__dirname, 'modules/wdk-react-native-provider'),
+  path.resolve(__dirname, 'modules/wdk-uikit-react-native'),
+];
+
+config.watchFolders = watchFolders;
+
 config.transformer = {
   ...transformer,
   babelTransformerPath: require.resolve('react-native-svg-transformer'),
@@ -14,11 +22,20 @@ config.resolver = {
   ...resolver,
   assetExts: resolver.assetExts.filter(ext => ext !== 'svg'),
   sourceExts: [...resolver.sourceExts, 'svg'],
+  // Ensure module paths include root node_modules
+  nodeModulesPaths: [
+    path.resolve(__dirname, 'node_modules'),
+    path.resolve(__dirname, 'modules/wdk-react-native-provider/node_modules'),
+    path.resolve(__dirname, 'modules/wdk-uikit-react-native/node_modules'),
+  ],
   alias: {
     '@': path.resolve(__dirname, 'src'),
   },
   extraNodeModules: {
     ...resolver.extraNodeModules,
+    // Force React and React Native to resolve from root node_modules
+    react: path.resolve(__dirname, 'node_modules/react'),
+    'react-native': path.resolve(__dirname, 'node_modules/react-native'),
     stream: require.resolve('stream-browserify'),
     buffer: require.resolve('@craftzdog/react-native-buffer'),
     crypto: require.resolve('react-native-crypto'),

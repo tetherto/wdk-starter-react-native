@@ -1,10 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useWallet } from '@tetherto/wdk-react-native-provider';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, Info, Shield, Trash2, Wallet } from 'lucide-react-native';
 import React from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useWallet } from '../contexts/wallet-context';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();

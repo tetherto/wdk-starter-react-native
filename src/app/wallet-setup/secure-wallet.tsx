@@ -1,3 +1,5 @@
+import { WDKService } from '@tetherto/wdk-react-native-provider';
+import { SeedPhrase } from '@tetherto/wdk-uikit-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { AlertCircle, ChevronLeft, CloudUpload, Copy } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
@@ -13,8 +15,6 @@ import {
 } from 'react-native';
 import { getUniqueId } from 'react-native-device-info';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SeedPhrase } from '@tetherto/wdk-uikit-react-native';
-import { WDKService } from '../../services/wdk-service';
 
 export default function SecureWalletScreen() {
   const router = useRouter();

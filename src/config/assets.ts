@@ -1,4 +1,4 @@
-import { NetworkType } from '@/services/wdk-service/types';
+import { NetworkType } from '@tetherto/wdk-react-native-provider';
 
 export interface AssetConfig {
   name: string;

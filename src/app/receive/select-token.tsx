@@ -1,5 +1,6 @@
 import { assetConfig } from '@/config/assets';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useWallet } from '@tetherto/wdk-react-native-provider';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Search, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -14,7 +15,6 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useWallet } from '../../contexts/wallet-context';
 
 interface Token {
   id: string;

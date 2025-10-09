@@ -1,7 +1,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Wallet } from '@/services/wdk-service/types';
+import { Wallet } from '@tetherto/wdk-react-native-provider';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 

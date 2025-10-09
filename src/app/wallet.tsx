@@ -1,4 +1,6 @@
 import { BalanceLoader } from '@/components/BalanceLoader';
+import { useWallet } from '@tetherto/wdk-react-native-provider';
+import { Balance } from '@tetherto/wdk-uikit-react-native';
 import { useRouter } from 'expo-router';
 import {
   ArrowDownLeft,
@@ -21,9 +23,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Balance } from '@tetherto/wdk-uikit-react-native';
 import { assetConfig } from '../config/assets';
-import { useWallet } from '../contexts/wallet-context';
 
 export default function WalletScreen() {
   const insets = useSafeAreaInsets();

@@ -1,9 +1,8 @@
-import { Wallet } from '@/services/wdk-service/types';
+import { Wallet, useWallet } from '@tetherto/wdk-react-native-provider';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useWallet } from '../../contexts/wallet-context';
 
 export default function CompleteScreen() {
   const router = useRouter();

@@ -1,3 +1,4 @@
+import { useWallet } from '@tetherto/wdk-react-native-provider';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Upload } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -14,7 +15,6 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useWallet } from '../../contexts/wallet-context';
 
 const avatarOptions = [
   { id: 1, emoji: '₿', color: '#FF9500' },

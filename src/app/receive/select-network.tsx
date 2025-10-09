@@ -1,11 +1,11 @@
 import { assetConfig } from '@/config/assets';
 import { Network, networkConfigs } from '@/config/networks';
+import { useWallet } from '@tetherto/wdk-react-native-provider';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import React, { useCallback, useMemo } from 'react';
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useWallet } from '../../contexts/wallet-context';
 
 interface NetworkOption extends Network {
   address?: string;

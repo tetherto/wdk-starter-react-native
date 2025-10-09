@@ -1,7 +1,7 @@
+import { useWallet } from '@tetherto/wdk-react-native-provider';
 import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import { useWallet } from '../contexts/wallet-context';
 
 export default function Index() {
   const { wallet, isInitialized, isUnlocked, initializeWDK } = useWallet();

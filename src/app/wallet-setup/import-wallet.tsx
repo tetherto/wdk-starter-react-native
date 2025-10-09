@@ -1,3 +1,4 @@
+import { SeedPhrase } from '@tetherto/wdk-uikit-react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, Download, FileText, ScanText } from 'lucide-react-native';
@@ -13,7 +14,6 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SeedPhrase } from '@tetherto/wdk-uikit-react-native';
 
 export default function ImportWalletScreen() {
   const router = useRouter();

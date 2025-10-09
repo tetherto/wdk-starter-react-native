@@ -1,3 +1,10 @@
+import {
+  AssetTicker,
+  NetworkType,
+  useWallet,
+  WDKService,
+} from '@tetherto/wdk-react-native-provider';
+import { CryptoAddressInput } from '@tetherto/wdk-uikit-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -16,10 +23,6 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CryptoAddressInput } from '@tetherto/wdk-uikit-react-native';
-import { useWallet } from '../../contexts/wallet-context';
-import { WDKService } from '../../services/wdk-service';
-import { AssetTicker, NetworkType } from '../../services/wdk-service/types';
 
 export default function SendDetailsScreen() {
   const insets = useSafeAreaInsets();

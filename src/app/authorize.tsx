@@ -1,9 +1,9 @@
+import { useWallet } from '@tetherto/wdk-react-native-provider';
 import { useRouter } from 'expo-router';
 import { Fingerprint, Lock, Shield } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useWallet } from '../contexts/wallet-context';
 
 export default function AuthorizeScreen() {
   const insets = useSafeAreaInsets();

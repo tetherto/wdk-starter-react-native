@@ -6,8 +6,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useWallet } from '@tetherto/wdk-react-native-provider';
 import { AssetSelector, type Token } from '@tetherto/wdk-uikit-react-native';
-import { useWallet } from '../../contexts/wallet-context';
 
 const RECENT_TOKENS_KEY = 'recent_tokens';
 const MAX_RECENT_TOKENS = 4;

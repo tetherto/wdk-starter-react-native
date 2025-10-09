@@ -13,7 +13,8 @@
       "infoPlist": {
         "UIStatusBarStyle": "UIStatusBarStyleLightContent",
         "UIViewControllerBasedStatusBarAppearance": false,
-        "NSFaceIDUsageDescription": "This app uses Face ID to secure your wallet and authenticate transactions."
+        "NSFaceIDUsageDescription": "This app uses Face ID to secure your wallet and authenticate transactions.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {

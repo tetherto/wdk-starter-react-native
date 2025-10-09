@@ -1,11 +1,10 @@
-import { FiatCurrency } from '@/services/wdk-service/types';
+import { FiatCurrency, useWallet } from '@tetherto/wdk-react-native-provider';
 import { useRouter } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 import React, { useMemo } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Asset, assetConfig } from '../config/assets';
-import { useWallet } from '../contexts/wallet-context';
 
 export default function AssetsScreen() {
   const insets = useSafeAreaInsets();

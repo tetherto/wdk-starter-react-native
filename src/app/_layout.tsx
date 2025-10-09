@@ -1,7 +1,7 @@
-import { WalletProvider } from '@/contexts/wallet-context';
-import { WDKService } from '@/services/wdk-service';
 import { Buffer } from '@craftzdog/react-native-buffer';
 import { DarkTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
+import { WalletProvider, WDKService } from '@tetherto/wdk-react-native-provider';
+import { ThemeProvider } from '@tetherto/wdk-uikit-react-native';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -10,7 +10,6 @@ import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-get-random-values';
 import 'react-native-reanimated';
-import { ThemeProvider } from '@tetherto/wdk-uikit-react-native';
 
 if (typeof global.Buffer === 'undefined') {
   // @ts-ignore
@@ -70,7 +69,11 @@ export default function RootLayout() {
           primaryColor: '#FF6501',
         }}
       >
-        <WalletProvider>
+        <WalletProvider
+          config={{
+            indexerApiKey: process.env.EXPO_PUBLIC_WDK_INDEXER_API_KEY!,
+          }}
+        >
           <NavigationThemeProvider value={CustomDarkTheme}>
             <View style={{ flex: 1, backgroundColor: '#121212' }}>
               <Stack

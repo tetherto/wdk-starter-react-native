@@ -1,3 +1,4 @@
+import { QRCode } from '@tetherto/wdk-uikit-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Copy, Share, X } from 'lucide-react-native';
 import React, { useCallback } from 'react';
@@ -11,7 +12,6 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { QRCode } from '@tetherto/wdk-uikit-react-native';
 
 export default function ReceiveQRCodeScreen() {
   const insets = useSafeAreaInsets();
