@@ -7,6 +7,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { assetConfig } from '../config/assets';
 import { FiatCurrency, pricingService } from '../services/pricing-service';
+import formatAmount from '@/utils/format-amount';
 
 export default function ActivityScreen() {
   const insets = useSafeAreaInsets();
@@ -45,10 +46,7 @@ export default function ActivityScreen() {
             type: isSent ? ('sent' as const) : ('received' as const),
             token: config?.name || tx.token.toUpperCase(),
             amount: `${amount} ${tx.token === 'usdt' ? 'USD₮' : tx.token.toUpperCase()}`,
-            fiatAmount: fiatAmount.toLocaleString('en-US', {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            }),
+            fiatAmount: formatAmount(fiatAmount),
             fiatCurrency: FiatCurrency.USD,
             network: tx.blockchain,
           };

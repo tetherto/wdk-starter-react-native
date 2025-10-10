@@ -2,12 +2,14 @@ import { assetConfig } from '@/config/assets';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useWallet } from '@tetherto/wdk-react-native-provider';
+import { AssetTicker, useWallet } from '@tetherto/wdk-react-native-provider';
 import { AssetSelector, type Token } from '@tetherto/wdk-uikit-react-native';
+import { FiatCurrency, pricingService } from '@/services/pricing-service';
+import formatAmount from '@/utils/format-amount';
 
 const RECENT_TOKENS_KEY = 'recent_tokens';
 const MAX_RECENT_TOKENS = 4;
@@ -52,6 +54,7 @@ export default function SelectTokenScreen() {
   // Get the scanned address from params (passed from QR scanner)
   const { scannedAddress } = params as { scannedAddress?: string };
   const [recentTokens, setRecentTokens] = useState<string[]>([]);
+  const [tokens, setTokens] = useState<Token[]>([]);
 
   useEffect(() => {
     const loadRecentTokens = async () => {
@@ -61,71 +64,93 @@ export default function SelectTokenScreen() {
     loadRecentTokens();
   }, []);
 
-  // Calculate token balances from wallet data
-  const tokens: Token[] = useMemo(() => {
-    if (!wallet?.accountData?.balances || !wallet?.enabledAssets) {
-      return [];
-    }
-
-    // Group balances by denomination
-    const balanceMap = new Map<string, number>();
-
-    wallet.accountData.balances.forEach(balance => {
-      const currentTotal = balanceMap.get(balance.denomination) || 0;
-      balanceMap.set(balance.denomination, currentTotal + parseFloat(balance.value));
-    });
-
-    // Convert to Token array with real balances
-    const tokensWithBalances: Token[] = [];
-
-    // Only process enabled assets that we have configuration for
-    wallet.enabledAssets.forEach(assetSymbol => {
-      const config = assetConfig[assetSymbol as keyof typeof assetConfig];
-      if (!config) return;
-
-      const totalBalance = balanceMap.get(assetSymbol) || 0;
-      const usdValue = totalBalance * config.priceUSD;
-
-      tokensWithBalances.push({
-        id: assetSymbol,
-        symbol:
-          assetSymbol === 'usdt'
-            ? 'USD₮'
-            : assetSymbol === 'xaut'
-              ? 'XAU₮'
-              : assetSymbol.toUpperCase(),
-        name: config.name,
-        balance: totalBalance.toLocaleString('en-US', {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: assetSymbol === 'btc' ? 8 : 6,
-        }),
-        balanceUSD: `$${usdValue.toLocaleString('en-US', {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })}`,
-        icon: config.icon,
-        color: config.color,
-        hasBalance: totalBalance > 0,
-      });
-    });
-
-    // Sort by USD value (highest first), but keep tokens with 0 balance at the end
-    return tokensWithBalances.sort((a, b) => {
-      const aValue = parseFloat(a.balanceUSD.replace(/[$,]/g, ''));
-      const bValue = parseFloat(b.balanceUSD.replace(/[$,]/g, ''));
-
-      // If both have 0 balance, sort alphabetically
-      if (aValue === 0 && bValue === 0) {
-        return a.name.localeCompare(b.name);
+  // Calculate token balances from wallet data with fiat values
+  useEffect(() => {
+    const calculateTokensWithFiatValues = async () => {
+      if (!wallet?.accountData?.balances || !wallet?.enabledAssets) {
+        console.log('No wallet data available', {
+          hasWallet: !!wallet,
+          hasAccountData: !!wallet?.accountData,
+          hasBalances: !!wallet?.accountData?.balances,
+          hasEnabledAssets: !!wallet?.enabledAssets,
+        });
+        setTokens([]);
+        return;
       }
 
-      // If one has 0 balance, put it at the end
-      if (aValue === 0) return 1;
-      if (bValue === 0) return -1;
+      // Group balances by denomination
+      const balanceMap = new Map<string, number>();
 
-      // Otherwise sort by value (highest first)
-      return bValue - aValue;
-    });
+      wallet.accountData.balances.forEach(balance => {
+        const currentTotal = balanceMap.get(balance.denomination) || 0;
+        balanceMap.set(balance.denomination, currentTotal + parseFloat(balance.value));
+      });
+
+      // Convert to Token array with real balances
+      const tokensWithBalances: Token[] = [];
+
+      // Only process enabled assets that we have configuration for
+      for (const assetSymbol of wallet.enabledAssets) {
+        const config = assetConfig[assetSymbol as keyof typeof assetConfig];
+        if (!config) continue;
+
+        const totalBalance = balanceMap.get(assetSymbol) || 0;
+
+        // Calculate fiat value using pricing service
+        let usdValue = 0;
+        try {
+          usdValue = await pricingService.getFiatValue(
+            totalBalance,
+            assetSymbol as AssetTicker,
+            FiatCurrency.USD
+          );
+        } catch (error) {
+          console.error(`Error calculating fiat value for ${assetSymbol}:`, error);
+          // Fallback to 0 if pricing service fails
+          usdValue = 0;
+        }
+
+        tokensWithBalances.push({
+          id: assetSymbol,
+          symbol:
+            assetSymbol === 'usdt'
+              ? 'USD₮'
+              : assetSymbol === 'xaut'
+                ? 'XAU₮'
+                : assetSymbol.toUpperCase(),
+          name: config.name,
+          balance: formatAmount(totalBalance, {
+            maximumFractionDigits: assetSymbol === 'btc' ? 8 : 6,
+          }),
+          balanceUSD: `${formatAmount(usdValue)} USD`,
+          icon: config.icon,
+          color: config.color,
+          hasBalance: totalBalance > 0,
+        });
+      }
+
+      // Sort by USD value (highest first), but keep tokens with 0 balance at the end
+      const sortedTokens = tokensWithBalances.sort((a, b) => {
+        const aValue = parseFloat(a.balanceUSD.replace(/[$,]/g, ''));
+        const bValue = parseFloat(b.balanceUSD.replace(/[$,]/g, ''));
+
+        // If both have 0 balance, sort alphabetically
+        if (aValue === 0 && bValue === 0) {
+          return a.name.localeCompare(b.name);
+        }
+
+        // If one has 0 balance, put it at the end
+        if (aValue === 0) return 1;
+        if (bValue === 0) return -1;
+
+        // Otherwise sort by value (highest first)
+        return bValue - aValue;
+      });
+
+      setTokens(sortedTokens);
+    };
+
+    calculateTokensWithFiatValues();
   }, [wallet?.accountData?.balances, wallet?.enabledAssets]);
 
   const handleSelectToken = useCallback(

@@ -6,6 +6,7 @@ import React, { useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Asset, assetConfig } from '../config/assets';
+import formatAmount from '@/utils/format-amount';
 
 export default function AssetsScreen() {
   const insets = useSafeAreaInsets();
@@ -50,14 +51,8 @@ export default function AssetsScreen() {
           id: denomination,
           name: config.name,
           symbol,
-          amount: `${totalBalance.toLocaleString('en-US', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 6,
-          })} ${symbol}`,
-          value: `${fiatValue.toLocaleString('en-US', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })} ${FiatCurrency.USD}`,
+          amount: `${formatAmount(totalBalance)} ${symbol}`,
+          value: `${formatAmount(fiatValue)} ${FiatCurrency.USD}`,
           icon: config.icon,
           color: config.color,
         };

@@ -1,3 +1,4 @@
+import formatAmount from '@/utils/format-amount';
 import {
   AssetTicker,
   NetworkType,
@@ -414,7 +415,7 @@ export default function SendDetailsScreen() {
                 ) : gasEstimate.fee !== undefined ? (
                   <>
                     <Text style={styles.gasAmount}>
-                      {gasEstimate.fee.toLocaleString('en-US', {
+                      {formatAmount(gasEstimate.fee, {
                         minimumFractionDigits: tokenSymbol === 'BTC' ? 8 : 6,
                         maximumFractionDigits: tokenSymbol === 'BTC' ? 8 : 6,
                       })}{' '}
@@ -425,11 +426,7 @@ export default function SendDetailsScreen() {
                           : tokenSymbol}
                     </Text>
                     <Text style={styles.gasUsd}>
-                      ≈ $
-                      {(gasEstimate.fee * getTokenPrice(tokenId)).toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                      ≈ ${formatAmount(gasEstimate.fee * getTokenPrice(tokenId))}
                     </Text>
                   </>
                 ) : (

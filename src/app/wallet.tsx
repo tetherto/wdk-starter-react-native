@@ -25,6 +25,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AssetConfig, assetConfig } from '../config/assets';
 import { FiatCurrency, pricingService } from '../services/pricing-service';
+import formatAmount from '@/utils/format-amount';
 
 type AggregatedBalance = ({
   denomination: string;
@@ -170,7 +171,7 @@ export default function WalletScreen() {
             iconColor: isSent ? '#FF3B30' : '#4CAF50',
             blockchain: tx.blockchain,
             hash: tx.transactionHash,
-            fiatAmount: fiatAmount.toLocaleString(),
+            fiatAmount: formatAmount(fiatAmount),
             currency: FiatCurrency.USD,
           };
         })
@@ -271,7 +272,7 @@ export default function WalletScreen() {
           <View style={{ margin: 12 }}>
             <Balance
               value={totalPortfolioValue}
-              currency="EUR"
+              currency="USD"
               isLoading={isLoading}
               Loader={BalanceLoader}
             />
@@ -310,19 +311,10 @@ export default function WalletScreen() {
                   </View>
                   <View style={styles.assetBalance}>
                     <Text style={styles.assetAmount}>
-                      {asset.balance.toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 6,
-                      })}{' '}
+                      {formatAmount(asset.balance)}{' '}
                       {asset.denomination === 'usdt' ? 'USD₮' : asset.denomination.toUpperCase()}
                     </Text>
-                    <Text style={styles.assetValue}>
-                      $
-                      {asset.usdValue.toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </Text>
+                    <Text style={styles.assetValue}>{formatAmount(asset.usdValue)} USD</Text>
                   </View>
                 </TouchableOpacity>
               );

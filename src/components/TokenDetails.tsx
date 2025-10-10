@@ -1,3 +1,4 @@
+import formatAmount from '@/utils/format-amount';
 import { Send } from 'lucide-react-native';
 import React from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -50,8 +51,7 @@ export function TokenDetails({ walletId, tokenData, onSendPress }: TokenDetailsP
     if (balance < 0.000001) return `< 0.000001 ${symbol}`;
 
     const decimals = symbol === 'BTC' ? 8 : 6;
-    return `${balance.toLocaleString(undefined, {
-      minimumFractionDigits: 2,
+    return `${formatAmount(balance, {
       maximumFractionDigits: decimals,
     })} ${symbol}`;
   };
@@ -59,10 +59,7 @@ export function TokenDetails({ walletId, tokenData, onSendPress }: TokenDetailsP
   const formatUSDValue = (usdValue: number): string => {
     if (usdValue === 0) return '$0.00';
     if (usdValue < 0.01) return '< $0.01';
-    return `$${usdValue.toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
+    return `$${formatAmount(usdValue)}`;
   };
 
   const handleSend = (network?: string) => {
@@ -96,7 +93,7 @@ export function TokenDetails({ walletId, tokenData, onSendPress }: TokenDetailsP
         <Text style={styles.totalValue}>{formatUSDValue(tokenData.totalUSDValue)}</Text>
         {tokenData.priceUSD > 0 && (
           <Text style={styles.priceLabel}>
-            ${tokenData.priceUSD.toLocaleString()} per {tokenData.symbol}
+            ${formatAmount(tokenData.priceUSD)} per {tokenData.symbol}
           </Text>
         )}
       </View>
