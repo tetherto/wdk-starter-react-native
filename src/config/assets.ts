@@ -39,7 +39,7 @@ export const assetConfig: Record<string, AssetConfig> = {
   },
   xaut: {
     name: 'XAU₮',
-    icon: require('../../assets/images/tokens/tether-gold-xaut-logo.png'),
+    icon: require('../../assets/images/tokens/tether-xaut-logo.png'),
     color: '#ffffff',
     supportedNetworks: [NetworkType.ETHEREUM],
   },
