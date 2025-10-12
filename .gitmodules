@@ -1,0 +1,3 @@
+[submodule "packages/wdk-react-native-provider"]
+	path = packages/wdk-react-native-provider
+	url = git@github.com:ndrkltsk/wdk-react-native-provider.git
