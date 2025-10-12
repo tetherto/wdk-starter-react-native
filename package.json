@@ -25,12 +25,12 @@
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.1.8",
     "@reduxjs/toolkit": "^2.9.0",
-    "@tetherto/pear-wrk-wdk": "github:tetherto/pear-wrk-wdk#62b097f5c67279c6e7fe226644de9bf288010a0a",
-    "@tetherto/wdk-pricing-provider": "^1.0.0-beta.1",
+    "@tetherto/pear-wrk-wdk": "github:noxtton/wdk-bare-internal#v0.1.4",
     "@tetherto/wdk-pricing-bitfinex-http": "^1.0.0-beta.1",
-    "@tetherto/wdk-secret-manager": "^1.0.0-beta.1",
+    "@tetherto/wdk-pricing-provider": "^1.0.0-beta.1",
+    "@tetherto/wdk-react-native-provider": "file:packages/wdk-react-native-provider",
+    "@tetherto/wdk-secret-manager": "github:hakaari/wdk-secret-manager#998fde9b32b94dfb47793d7339098b33ccf6db2c",
     "@tetherto/wdk-uikit-react-native": "github:tetherto/wdk-uikit-react-native#v1.0.0-beta.1",
-    "@tetherto/wdk-react-native-provider": "file:modules/wdk-react-native-provider",
     "b4a": "^1.7.2",
     "bip39": "^3.1.0",
     "browserify-zlib": "^0.2.0",
@@ -60,9 +60,7 @@
     "path-browserify": "^1.0.1",
     "process": "^0.11.10",
     "querystring-es3": "^0.2.1",
-    "react": "19.1.0",
     "react-dom": "19.1.0",
-    "react-native": "0.81.4",
     "react-native-bare-kit": "^0.8.14",
     "react-native-chart-kit": "^6.12.0",
     "react-native-crypto": "^2.2.1",
@@ -97,5 +95,9 @@
     "react-native-svg-transformer": "^1.5.1",
     "sharp-cli": "^5.2.0",
     "typescript": "~5.9.2"
+  },
+  "peerDependencies": {
+    "react": "19.1.0",
+    "react-native": "0.81.4"
   }
 }
