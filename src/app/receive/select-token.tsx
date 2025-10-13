@@ -115,29 +115,14 @@ export default function ReceiveSelectTokenScreen() {
       const updatedRecent = await addToRecentTokens(token.name);
       setRecentTokens(updatedRecent);
 
-      // Check if token has multiple supported networks
-      const tokenConfig = assetConfig[token.id];
-      if (tokenConfig && tokenConfig.supportedNetworks.length > 1) {
-        router.push({
-          pathname: '/receive/select-network',
-          params: {
-            tokenId: token.id,
-            tokenSymbol: token.symbol,
-            tokenName: token.name,
-          },
-        });
-      } else {
-        // For single-chain tokens, go directly to QR code
-        router.push({
-          pathname: '/receive/details',
-          params: {
-            tokenId: token.id,
-            tokenSymbol: token.symbol,
-            tokenName: token.name,
-            network: token.name,
-          },
-        });
-      }
+      router.push({
+        pathname: '/receive/select-network',
+        params: {
+          tokenId: token.id,
+          tokenSymbol: token.symbol,
+          tokenName: token.name,
+        },
+      });
     },
     [router]
   );
