@@ -51,7 +51,7 @@ export default function AssetsScreen() {
           id: denomination,
           name: config.name,
           symbol,
-          amount: `${formatAmount(totalBalance)} ${symbol}`,
+          amount: `${totalBalance} ${symbol}`,
           value: `${formatAmount(fiatValue)} ${FiatCurrency.USD}`,
           icon: config.icon,
           color: config.color,
@@ -72,6 +72,18 @@ export default function AssetsScreen() {
 
   const handleBack = () => {
     router.back();
+  };
+
+  const handleAssetPress = (asset: Asset) => {
+    if (!wallet?.id) return;
+
+    router.push({
+      pathname: '/token-details',
+      params: {
+        walletId: wallet.id,
+        token: asset.id,
+      },
+    });
   };
 
   useEffect(() => {
@@ -99,7 +111,7 @@ export default function AssetsScreen() {
       >
         {assets.length > 0 ? (
           assets.map(asset => (
-            <TouchableOpacity key={asset.id} style={styles.assetRow}>
+            <TouchableOpacity key={asset.id} style={styles.assetRow} onPress={() => handleAssetPress(asset)}>
               <View style={styles.assetInfo}>
                 <View style={[styles.assetIcon, { backgroundColor: asset.color }]}>
                   {typeof asset.icon === 'string' ? (
