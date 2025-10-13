@@ -9,6 +9,7 @@ import { CryptoAddressInput } from '@tetherto/wdk-uikit-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { FiatCurrency, pricingService } from '@/services/pricing-service';
 import {
   Alert,
   Keyboard,
@@ -68,6 +69,7 @@ export default function SendDetailsScreen() {
     txId?: { fee: string; hash: string };
     error?: string;
   } | null>(null);
+  const [tokenPrice, setTokenPrice] = useState<number>(0);
 
   // Handle scanned address from QR scanner
   useEffect(() => {
@@ -83,6 +85,10 @@ export default function SendDetailsScreen() {
       polygon: NetworkType.POLYGON,
       arbitrum: NetworkType.ARBITRUM,
       bitcoin: NetworkType.SEGWIT,
+      lightning: NetworkType.LIGHTNING,
+      ton: NetworkType.TON,
+      tron: NetworkType.TRON,
+      solana: NetworkType.SOLANA,
     };
     return networkMap[networkId] || NetworkType.ETHEREUM;
   }, []);
@@ -97,27 +103,21 @@ export default function SendDetailsScreen() {
     return assetMap[tokenId?.toLowerCase()] || AssetTicker.USDT;
   }, []);
 
-  // Get token price in USD from wallet balance data
-  // TODO: get token price from pricing provider
-  const getTokenPrice = useCallback(
-    (tokenId: string): number => {
-      if (!wallet?.accountData?.balances) return 0;
+  // Calculate token price using pricing service
+  useEffect(() => {
+    const calculateTokenPrice = async () => {
+      try {
+        const assetTicker = getAssetTicker(tokenId);
+        const price = await pricingService.getFiatValue(1, assetTicker, FiatCurrency.USD);
+        setTokenPrice(price);
+      } catch (error) {
+        console.error('Failed to get token price:', error);
+        setTokenPrice(0);
+      }
+    };
 
-      // Find the balance entry for this token to get the exchange rate
-      const balanceEntry = wallet.accountData.balances.find(
-        b => b.denomination === tokenId?.toLowerCase()
-      );
-
-      if (!balanceEntry) return 0;
-
-      const tokenAmount = parseFloat(balanceEntry.value) || 1;
-      const fiatValue = parseFloat(balanceEntry.fiatValue) || 0;
-
-      // Calculate price per token
-      return tokenAmount > 0 ? fiatValue / tokenAmount : 0;
-    },
-    [wallet?.accountData?.balances]
-  );
+    calculateTokenPrice();
+  }, [tokenId, getAssetTicker]);
 
   // Pre-calculate fee immediately when screen loads
   const preCalculateGasFee = useCallback(async () => {
@@ -128,14 +128,26 @@ export default function SendDetailsScreen() {
       const assetTicker = getAssetTicker(tokenId);
 
       // Use dummy values for pre-calculation
-      // For EVM networks, use any valid EVM address; for Bitcoin, use any valid address
-      const dummyRecipient =
-        networkType === NetworkType.SEGWIT
-          ? 'bc1qraj47d6py592h6rufwkuf8m2xeljdqn34474l3'
-          : '0xdAC17F958D2ee523a2206206994597C13D831ec7';
+      // Each network type requires a valid address format for that specific network
+      const dummyRecipientMap: Record<NetworkType, string> = {
+        [NetworkType.SEGWIT]: 'bc1qraj47d6py592h6rufwkuf8m2xeljdqn34474l3',
+        [NetworkType.LIGHTNING]: 'bc1qraj47d6py592h6rufwkuf8m2xeljdqn34474l3',
+        [NetworkType.ETHEREUM]: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+        [NetworkType.POLYGON]: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+        [NetworkType.ARBITRUM]: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+        [NetworkType.TON]: 'EQDtFpEwcFAEcRe5mLVh2N6C0x-_hJEM7W61_JLnSF74p4q2',
+        [NetworkType.TRON]: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
+        [NetworkType.SOLANA]: '11111111111111111111111111111111',
+      };
 
-      // Use 1 as dummy amount (doesn't affect gas cost for EVM chains)
-      const dummyAmount = 1;
+      const dummyRecipient = dummyRecipientMap[networkType];
+
+      // Bitcoin requires a smaller dummy amount due to UTXO requirements
+      // Use 0.00001 BTC (1000 satoshis) which is above the dust limit
+      const dummyAmount =
+        networkType === NetworkType.SEGWIT || networkType === NetworkType.LIGHTNING
+          ? 0.00001
+          : 1;
 
       const gasFee = await WDKService.quoteSendByNetwork(
         networkType,
@@ -148,11 +160,35 @@ export default function SendDetailsScreen() {
       setGasEstimate({ fee: gasFee, loading: false });
     } catch (error) {
       console.error('Gas fee pre-calculation failed:', error);
-      setGasEstimate({
-        fee: undefined,
-        loading: false,
-        error: error instanceof Error ? error.message : 'Failed to calculate fee',
-      });
+      const networkType = getNetworkType(networkId);
+      const isBitcoinNetwork = networkType === NetworkType.SEGWIT || networkType === NetworkType.LIGHTNING;
+      const assetTicker = getAssetTicker(tokenId);
+
+      // For Bitcoin, insufficient balance during pre-calculation is expected if wallet has no BTC
+      if (isBitcoinNetwork && error instanceof Error && error.message.includes('Insufficient balance')) {
+        setGasEstimate({
+          fee: undefined,
+          loading: false,
+          error: 'Enter amount to see fee estimate',
+        });
+      } else if (
+        error instanceof Error &&
+        error.message.includes('callData reverts') &&
+        assetTicker === AssetTicker.XAUT
+      ) {
+        // XAUT is not supported by the current paymaster configuration
+        setGasEstimate({
+          fee: undefined,
+          loading: false,
+          error: 'Gas estimation not available for XAUT',
+        });
+      } else {
+        setGasEstimate({
+          fee: undefined,
+          loading: false,
+          error: error instanceof Error ? error.message : 'Failed to calculate fee',
+        });
+      }
     }
   }, [networkId, tokenId, getNetworkType, getAssetTicker]);
 
@@ -232,6 +268,47 @@ export default function SendDetailsScreen() {
     [inputMode, tokenBalance, tokenBalanceUSD, tokenSymbol]
   );
 
+  // Calculate fee dynamically for Bitcoin when amount changes
+  const calculateFeeForAmount = useCallback(
+    async (amount: string) => {
+      if (!amount || parseFloat(amount) <= 0) return;
+
+      const networkType = getNetworkType(networkId);
+      const isBitcoinNetwork = networkType === NetworkType.SEGWIT || networkType === NetworkType.LIGHTNING;
+
+      // Only recalculate for Bitcoin networks when amount is entered
+      if (!isBitcoinNetwork) return;
+
+      setGasEstimate(prev => ({ ...prev, loading: true }));
+
+      try {
+        const assetTicker = getAssetTicker(tokenId);
+        const dummyRecipient = 'bc1qraj47d6py592h6rufwkuf8m2xeljdqn34474l3';
+        const numericAmount = parseFloat(amount);
+
+        const gasFee = await WDKService.quoteSendByNetwork(
+          networkType,
+          0,
+          numericAmount,
+          dummyRecipient,
+          assetTicker
+        );
+
+        setGasEstimate({ fee: gasFee, loading: false });
+      } catch (error) {
+        console.error('Failed to calculate fee for entered amount:', error);
+        setGasEstimate(prev => ({
+          ...prev,
+          loading: false,
+          error: error instanceof Error && error.message.includes('Insufficient balance')
+            ? 'Insufficient balance'
+            : 'Failed to calculate fee',
+        }));
+      }
+    },
+    [networkId, tokenId, getNetworkType, getAssetTicker]
+  );
+
   const handleAmountChange = useCallback(
     (value: string) => {
       // Allow only numbers, decimal point, and comma
@@ -246,8 +323,13 @@ export default function SendDetailsScreen() {
 
       setAmount(formatted);
       validateAmount(formatted);
+
+      // Calculate fee for Bitcoin when amount changes
+      if (formatted && parseFloat(formatted) > 0) {
+        calculateFeeForAmount(formatted);
+      }
     },
-    [validateAmount]
+    [validateAmount, calculateFeeForAmount]
   );
 
   const validateTransaction = useCallback(() => {
@@ -368,6 +450,22 @@ export default function SendDetailsScreen() {
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
+              {/* Transaction Summary */}
+              <View style={styles.transactionRecap}>
+                <View style={styles.recapRow}>
+                  <Text style={styles.recapLabel}>Token:</Text>
+                  <Text style={styles.recapValue}>
+                    {tokenSymbol === 'USDT' ? 'USD₮' : tokenSymbol === 'XAUT' ? 'XAU₮' : tokenSymbol}{' '}
+                    <Text style={styles.recapValueSecondary}>({tokenSymbol})</Text>
+                  </Text>
+                </View>
+                <View style={styles.recapDivider} />
+                <View style={styles.recapRow}>
+                  <Text style={styles.recapLabel}>Network:</Text>
+                  <Text style={styles.recapValue}>{network}</Text>
+                </View>
+              </View>
+
               <CryptoAddressInput
                 value={recipientAddress}
                 onChangeText={setRecipientAddress}
@@ -417,9 +515,14 @@ export default function SendDetailsScreen() {
                 {gasEstimate.loading ? (
                   <Text style={styles.gasAmount}>Calculating...</Text>
                 ) : gasEstimate.error ? (
-                  <Text style={[styles.gasAmount, { color: '#FF6B6B' }]}>
-                    Error calculating fee
-                  </Text>
+                  <>
+                    <Text style={[styles.gasAmount, { color: '#FF6B6B', fontSize: 14 }]}>
+                      {gasEstimate.error === 'Gas estimation not available for XAUT'
+                        ? 'Fee estimation unavailable'
+                        : 'Error calculating fee'}
+                    </Text>
+                    <Text style={styles.gasError}>{gasEstimate.error}</Text>
+                  </>
                 ) : gasEstimate.fee !== undefined ? (
                   <>
                     <Text style={styles.gasAmount}>
@@ -434,13 +537,12 @@ export default function SendDetailsScreen() {
                           : tokenSymbol}
                     </Text>
                     <Text style={styles.gasUsd}>
-                      ≈ ${formatAmount(gasEstimate.fee * getTokenPrice(tokenId))}
+                      ≈ ${formatAmount(gasEstimate.fee * tokenPrice)}
                     </Text>
                   </>
                 ) : (
                   <Text style={styles.gasAmount}>Loading fee estimate...</Text>
                 )}
-                {gasEstimate.error && <Text style={styles.gasError}>{gasEstimate.error}</Text>}
               </View>
             </ScrollView>
 
@@ -776,5 +878,39 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'right',
     marginLeft: 12,
+  },
+  transactionRecap: {
+    backgroundColor: '#1E1E1E',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#2C2C2C',
+  },
+  recapRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  recapLabel: {
+    fontSize: 14,
+    color: '#999',
+    fontWeight: '500',
+  },
+  recapValue: {
+    fontSize: 14,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  recapValueSecondary: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '400',
+  },
+  recapDivider: {
+    height: 1,
+    backgroundColor: '#2C2C2C',
+    marginVertical: 4,
   },
 });
