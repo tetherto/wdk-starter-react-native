@@ -99,19 +99,7 @@ export default function AssetsScreen() {
       >
         {assets.length > 0 ? (
           assets.map(asset => (
-            <TouchableOpacity
-              key={asset.id}
-              style={styles.assetRow}
-              onPress={() =>
-                router.push({
-                  pathname: '/asset-details',
-                  params: {
-                    walletId: wallet?.id || '',
-                    token: asset.symbol,
-                  },
-                })
-              }
-            >
+            <TouchableOpacity key={asset.id} style={styles.assetRow}>
               <View style={styles.assetInfo}>
                 <View style={[styles.assetIcon, { backgroundColor: asset.color }]}>
                   {typeof asset.icon === 'string' ? (

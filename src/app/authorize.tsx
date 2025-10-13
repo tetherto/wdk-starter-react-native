@@ -1,6 +1,6 @@
 import { useWallet } from '@tetherto/wdk-react-native-provider';
 import { useRouter } from 'expo-router';
-import { Fingerprint, Lock, Shield } from 'lucide-react-native';
+import { Fingerprint, Shield } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -41,12 +41,7 @@ export default function AuthorizeScreen() {
   };
 
   const handleBiometricAuth = async () => {
-    // Placeholder for future biometric authentication
-    Alert.alert(
-      'Biometric Authentication',
-      'Biometric authentication will be available in a future update',
-      [{ text: 'OK', onPress: handleAuthorize }]
-    );
+    handleAuthorize();
   };
 
   return (
@@ -73,15 +68,6 @@ export default function AuthorizeScreen() {
             >
               <Fingerprint size={24} color="#fff" />
               <Text style={styles.primaryButtonText}>Use Biometric</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.secondaryButton}
-              onPress={handleAuthorize}
-              disabled={isLoading}
-            >
-              <Lock size={20} color="#FF6501" />
-              <Text style={styles.secondaryButtonText}>Use Device Security</Text>
             </TouchableOpacity>
           </>
         )}
