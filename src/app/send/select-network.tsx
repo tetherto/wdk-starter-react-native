@@ -55,7 +55,7 @@ export default function SelectNetworkScreen() {
 
           return {
             ...network,
-            balance: formatAmount(balanceValue),
+            balance: balanceValue.toString(),
             balanceFiat: formatAmount(balanceUSD),
             fiatCurrency: FiatCurrency.USD,
             token: tokenId === 'usdt' ? 'USD₮' : tokenId.toUpperCase()

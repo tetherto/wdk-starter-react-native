@@ -126,6 +126,9 @@ export function NetworkSelector({
           fontSize: theme.typography.fontSize.sm,
           color: theme.colors.textSecondary,
         },
+        disabledRow: {
+          opacity: 0.5,
+        },
         noNetworksContainer: {
           flex: 1,
           justifyContent: 'center',
@@ -142,34 +145,42 @@ export function NetworkSelector({
     [theme]
   );
 
-  const renderNetwork = ({ item }: { item: Network }) => (
-    <TouchableOpacity
-      style={styles.networkRow}
-      onPress={() => onSelectNetwork(item)}
-    >
-      <View style={styles.networkInfo}>
-        <View style={[styles.networkIcon, { backgroundColor: item.color }]}>
-          {typeof item.icon === 'string' ? (
-            <Text style={styles.networkIconText}>{item.icon}</Text>
-          ) : (
-            <Image source={item.icon} style={styles.networkIconImage} />
-          )}
+  const renderNetwork = ({ item }: { item: Network }) => {
+    // Check if balance is zero
+    const balanceValue = parseFloat(item.balance.replace(/,/g, ''));
+    const isDisabled = balanceValue === 0;
+
+    return (
+      <TouchableOpacity
+        style={[styles.networkRow, isDisabled && styles.disabledRow]}
+        onPress={() => !isDisabled && onSelectNetwork(item)}
+        disabled={isDisabled}
+        activeOpacity={isDisabled ? 1 : 0.7}
+      >
+        <View style={styles.networkInfo}>
+          <View style={[styles.networkIcon, { backgroundColor: item.color }]}>
+            {typeof item.icon === 'string' ? (
+              <Text style={styles.networkIconText}>{item.icon}</Text>
+            ) : (
+              <Image source={item.icon} style={styles.networkIconImage} />
+            )}
+          </View>
+          <View style={styles.networkTextContainer}>
+            <Text style={styles.networkName}>{item.name}</Text>
+            <Text style={[styles.gasLevel, { color: item.gasColor }]}>
+              {item.gasLevel} Gas fees
+            </Text>
+          </View>
         </View>
-        <View style={styles.networkTextContainer}>
-          <Text style={styles.networkName}>{item.name}</Text>
-          <Text style={[styles.gasLevel, { color: item.gasColor }]}>
-            {item.gasLevel} Gas fees
-          </Text>
-        </View>
-      </View>
-      {item.balance && item.balanceFiat && (
-        <View style={styles.networkBalanceContainer}>
-          <Text style={styles.networkBalance}>{item.balance} {item.token}</Text>
-          <Text style={styles.networkBalanceUSD}>{item.balanceFiat} {item.fiatCurrency}</Text>
-        </View>
-      )}
-    </TouchableOpacity>
-  );
+        {item.balance && item.balanceFiat && (
+          <View style={styles.networkBalanceContainer}>
+            <Text style={styles.networkBalance}>{item.balance} {item.token}</Text>
+            <Text style={styles.networkBalanceUSD}>{item.balanceFiat} {item.fiatCurrency}</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <>

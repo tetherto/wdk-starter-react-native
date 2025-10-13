@@ -164,35 +164,17 @@ export default function SelectTokenScreen() {
       const updatedRecent = await addToRecentTokens(token.name);
       setRecentTokens(updatedRecent);
 
-      // For tokens with multiple supported networks, go to network selection
-      const tokenConfig = assetConfig[token.id];
-      if (tokenConfig && tokenConfig.supportedNetworks.length > 1) {
-        router.push({
-          pathname: '/send/select-network',
-          params: {
-            tokenId: token.id,
-            tokenSymbol: token.symbol,
-            tokenName: token.name,
-            tokenBalance: token.balance,
-            tokenBalanceUSD: token.balanceUSD,
-            ...(scannedAddress && { scannedAddress }),
-          },
-        });
-      } else {
-        // For single-chain tokens, go directly to send details
-        router.push({
-          pathname: '/send/send-details',
-          params: {
-            tokenId: token.id,
-            tokenSymbol: token.symbol,
-            tokenName: token.name,
-            tokenBalance: token.balance,
-            tokenBalanceUSD: token.balanceUSD,
-            network: token.network || token.name,
-            ...(scannedAddress && { scannedAddress }),
-          },
-        });
-      }
+      router.push({
+        pathname: '/send/select-network',
+        params: {
+          tokenId: token.id,
+          tokenSymbol: token.symbol,
+          tokenName: token.name,
+          tokenBalance: token.balance,
+          tokenBalanceUSD: token.balanceUSD,
+          ...(scannedAddress && { scannedAddress }),
+        },
+      });
     },
     [router, scannedAddress]
   );
