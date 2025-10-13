@@ -143,10 +143,7 @@ export default function ScanQRScreen() {
       </View>
 
       {/* Bottom Section */}
-      <View style={styles.bottomSection}>
-        <Text style={styles.bottomText}>or Copy address</Text>
-        <View style={styles.bottomLine} />
-      </View>
+      <View style={styles.bottomSection}/>
     </View>
   );
 }

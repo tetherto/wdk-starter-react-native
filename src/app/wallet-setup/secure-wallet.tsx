@@ -1,12 +1,11 @@
+import { SeedPhrase } from '@/components/SeedPhrase';
 import { WDKService } from '@tetherto/wdk-react-native-provider';
-import { SeedPhrase } from '@tetherto/wdk-uikit-react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { AlertCircle, ChevronLeft, CloudUpload, Copy } from 'lucide-react-native';
+import { AlertCircle, ChevronLeft, Copy, Eye, EyeOff } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
-  Clipboard,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -24,8 +23,7 @@ export default function SecureWalletScreen() {
     avatar?: string;
   }>();
   const [mnemonic, setMnemonic] = useState<string[]>([]);
-  const [hasBackedUp, setHasBackedUp] = useState(false);
-  const [showBackupModal, setShowBackupModal] = useState(false);
+  const [showPhrase, setShowPhrase] = useState(true);
   const [isGenerating, setIsGenerating] = useState(true);
 
   useEffect(() => {
@@ -72,32 +70,17 @@ export default function SecureWalletScreen() {
     }
   };
 
-  const handleCopyPhrase = () => {
+  const handleCopyPhrase = async () => {
     const phraseText = mnemonic.join(' ');
-    Clipboard.setString(phraseText);
+    await Clipboard.setStringAsync(phraseText);
     Alert.alert('Copied!', 'Secret phrase copied to clipboard', [{ text: 'OK' }]);
   };
 
-  const handleBackup = () => {
-    setShowBackupModal(true);
-  };
-
-  const handleSavePhrase = () => {
-    setShowBackupModal(false);
-    setHasBackedUp(true);
-  };
-
-  const handleSkipForNow = () => {
-    setShowBackupModal(false);
+  const handleToggleVisibility = () => {
+    setShowPhrase(!showPhrase);
   };
 
   const handleNext = () => {
-    if (!hasBackedUp) {
-      Alert.alert('Backup Required', 'Please backup your secret phrase before continuing.', [
-        { text: 'OK' },
-      ]);
-      return;
-    }
     // Pass wallet data to next screen
     router.push({
       pathname: './confirm-phrase',
@@ -132,7 +115,7 @@ export default function SecureWalletScreen() {
           </Text>
         </View>
 
-        <SeedPhrase words={mnemonic} editable={false} isLoading={isGenerating} />
+        <SeedPhrase words={mnemonic} editable={false} isLoading={isGenerating} hidden={!showPhrase} />
 
         <View style={styles.actionButtons}>
           <TouchableOpacity style={styles.actionButton} onPress={handleCopyPhrase}>
@@ -141,12 +124,16 @@ export default function SecureWalletScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.actionButton, hasBackedUp && styles.actionButtonActive]}
-            onPress={handleBackup}
+            style={styles.actionButton}
+            onPress={handleToggleVisibility}
           >
-            <CloudUpload size={20} color={hasBackedUp ? '#00C853' : '#FF6501'} />
-            <Text style={[styles.actionButtonText, hasBackedUp && styles.actionButtonTextActive]}>
-              {hasBackedUp ? 'Backed Up' : 'Backup'}
+            {showPhrase ? (
+              <EyeOff size={20} color="#FF6501" />
+            ) : (
+              <Eye size={20} color="#FF6501" />
+            )}
+            <Text style={styles.actionButtonText}>
+              {showPhrase ? 'Hide Phrase' : 'Show Phrase'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -154,40 +141,14 @@ export default function SecureWalletScreen() {
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 20 }]}>
         <TouchableOpacity
-          style={[styles.nextButton, !hasBackedUp && styles.nextButtonDisabled]}
+          style={styles.nextButton}
           onPress={handleNext}
         >
-          <Text style={[styles.nextButtonText, !hasBackedUp && styles.nextButtonTextDisabled]}>
+          <Text style={styles.nextButtonText}>
             Next
           </Text>
         </TouchableOpacity>
       </View>
-
-      {/* Backup Warning Modal */}
-      <Modal
-        visible={showBackupModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowBackupModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Don&apos;t Lose Access to Your Wallet</Text>
-            <Text style={styles.modalMessage}>
-              Your secret phrase is the only way to recover your wallet. If you lose it, your funds
-              will be permanently inaccessible. Save it now to stay in control.
-            </Text>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.skipButton} onPress={handleSkipForNow}>
-                <Text style={styles.skipButtonText}>Skip For Now</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.saveButton} onPress={handleSavePhrase}>
-                <Text style={styles.saveButtonText}>Save Phrase</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -264,18 +225,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FF6501',
   },
-  actionButtonActive: {
-    backgroundColor: 'rgba(0, 200, 83, 0.1)',
-    borderColor: '#00C853',
-  },
   actionButtonText: {
     color: '#FF6501',
     fontSize: 16,
     fontWeight: '500',
     marginLeft: 8,
-  },
-  actionButtonTextActive: {
-    color: '#00C853',
   },
   footer: {
     paddingHorizontal: 20,
@@ -288,72 +242,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  nextButtonDisabled: {
-    backgroundColor: '#1E1E1E',
-  },
   nextButtonText: {
     fontSize: 18,
     fontWeight: '600',
     color: '#000',
-  },
-  nextButtonTextDisabled: {
-    color: '#666',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  modalContent: {
-    backgroundColor: '#1E1E1E',
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 340,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 12,
-    textAlign: 'left',
-  },
-  modalMessage: {
-    fontSize: 14,
-    color: '#999',
-    lineHeight: 20,
-    marginBottom: 24,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  skipButton: {
-    flex: 1,
-    backgroundColor: 'rgba(30, 144, 255, 0.1)',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#FF6501',
-  },
-  skipButtonText: {
-    color: '#FF6501',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  saveButton: {
-    flex: 1,
-    backgroundColor: '#FF6501',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  saveButtonText: {
-    color: '#000',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

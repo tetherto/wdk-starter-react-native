@@ -74,9 +74,7 @@ export default function ActivityScreen() {
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Activity</Text>
-        <TouchableOpacity style={styles.filterButton}>
-          <Filter size={24} color="#FF6501" />
-        </TouchableOpacity>
+        <View style={styles.rightSpacer}/>
       </View>
 
       {/* Transactions List */}
@@ -114,7 +112,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     textAlign: 'center',
   },
-  filterButton: {
-    padding: 4,
+  rightSpacer: {
+    width: 60,
   },
 });

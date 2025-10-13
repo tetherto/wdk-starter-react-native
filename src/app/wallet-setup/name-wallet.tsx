@@ -33,45 +33,16 @@ export default function NameWalletScreen() {
   const insets = useSafeAreaInsets();
   const [walletName, setWalletName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState(avatarOptions[0]);
-  const [nameError, setNameError] = useState('');
-
-  const validateName = (name: string) => {
-    if (name.length < 4) {
-      setNameError('Only letters (A-Z, a-z) and numbers (0-9) allowed. Max 20 characters');
-      return false;
-    }
-    if (name.length > 20) {
-      setNameError('Max 20 characters allowed');
-      return false;
-    }
-    if (!/^[A-Za-z0-9\s]+$/.test(name)) {
-      setNameError('Only letters (A-Z, a-z) and numbers (0-9) allowed');
-      return false;
-    }
-    setNameError('');
-    return true;
-  };
-
-  const handleNameChange = (text: string) => {
-    setWalletName(text);
-    if (text.length > 0) {
-      validateName(text);
-    } else {
-      setNameError('');
-    }
-  };
 
   const handleNext = () => {
-    if (validateName(walletName)) {
-      // Pass wallet name to next screen
-      router.push({
-        pathname: './secure-wallet',
-        params: { walletName, avatar: selectedAvatar.emoji },
-      });
-    }
+    // Pass wallet name to next screen
+    router.push({
+      pathname: './secure-wallet',
+      params: { walletName, avatar: selectedAvatar.emoji },
+    });
   };
 
-  const isNextDisabled = walletName.length === 0 || !!nameError;
+  const isNextDisabled = walletName.length === 0;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -92,25 +63,17 @@ export default function NameWalletScreen() {
 
           <View style={styles.inputSection}>
             <Text style={styles.label}>Wallet Name*</Text>
-            <View style={[styles.inputContainer, nameError && styles.inputError]}>
+            <View style={styles.inputContainer}>
               <Text style={styles.inputIcon}>{selectedAvatar.emoji}</Text>
               <TextInput
                 style={styles.input}
                 value={walletName}
-                onChangeText={handleNameChange}
+                onChangeText={setWalletName}
                 placeholder="e.g., Investment Stash"
                 placeholderTextColor="#666"
-                maxLength={20}
                 autoCapitalize="words"
               />
             </View>
-            {nameError ? (
-              <Text style={styles.errorText}>{nameError}</Text>
-            ) : (
-              <Text style={styles.helperText}>
-                Only letters (A-Z, a-z) and numbers (0-9) allowed. Max 20 characters
-              </Text>
-            )}
           </View>
 
           <View style={styles.avatarSection}>

@@ -1,4 +1,4 @@
-import { SeedPhrase } from '@tetherto/wdk-uikit-react-native';
+import { SeedPhrase } from '@/components/SeedPhrase';
 import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, Download, FileText, ScanText } from 'lucide-react-native';

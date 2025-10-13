@@ -1,7 +1,7 @@
 import formatAmount from '@/utils/format-amount';
 import { Send } from 'lucide-react-native';
 import React from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface TokenNetworkBalance {
   network: string;
@@ -13,7 +13,7 @@ interface TokenNetworkBalance {
 interface TokenData {
   symbol: string;
   name: string;
-  icon: string;
+  icon: any;
   color: string;
   totalBalance: number;
   totalUSDValue: number;
@@ -84,7 +84,11 @@ export function TokenDetails({ walletId, tokenData, onSendPress }: TokenDetailsP
       {/* Total Token Balance */}
       <View style={styles.totalBalanceCard}>
         <View style={[styles.tokenIcon, { backgroundColor: tokenData.color }]}>
-          <Text style={styles.tokenIconText}>{tokenData.icon}</Text>
+          {typeof tokenData.icon === 'string' ? (
+            <Text style={styles.tokenIconText}>{tokenData.icon}</Text>
+          ) : (
+            <Image source={tokenData.icon} style={styles.tokenIconImage} />
+          )}
         </View>
         <Text style={styles.totalLabel}>Total {tokenData.name} Balance</Text>
         <Text style={styles.totalAmount}>
@@ -179,6 +183,10 @@ const styles = StyleSheet.create({
     fontSize: 32,
     color: '#fff',
     fontWeight: 'bold',
+  },
+  tokenIconImage: {
+    width: 48,
+    height: 48,
   },
   totalLabel: {
     fontSize: 14,
