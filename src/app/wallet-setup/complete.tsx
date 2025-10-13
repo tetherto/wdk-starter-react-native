@@ -1,3 +1,4 @@
+import { CommonActions, useNavigation } from '@react-navigation/native';
 import { Wallet, useWallet } from '@tetherto/wdk-react-native-provider';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -6,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function CompleteScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ walletName: string; mnemonic: string }>();
   const { createWallet, isLoading, error, addWallet } = useWallet();
@@ -51,8 +53,13 @@ export default function CompleteScreen() {
       Alert.alert('Please Wait', 'Wallet is still being created...');
       return;
     }
-    // Reset navigation stack and go to main app
-    router.replace('/wallet');
+    // Reset navigation stack completely - only wallet screen will remain
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: 'wallet' }],
+      })
+    );
   };
 
   const generalLoadingStatus = !walletCreated || isLoading;

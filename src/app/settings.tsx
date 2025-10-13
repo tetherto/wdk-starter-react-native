@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useWallet } from '@tetherto/wdk-react-native-provider';
+import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
-import { ChevronLeft, Info, Shield, Trash2, Wallet } from 'lucide-react-native';
+import { ChevronLeft, Copy, Info, Shield, Trash2, Wallet } from 'lucide-react-native';
 import React from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -47,10 +48,15 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleCopyAddress = async (address: string, networkName: string) => {
+    await Clipboard.setStringAsync(address);
+    Alert.alert('Copied', `${networkName} address copied to clipboard`);
+  };
+
   const formatAddress = (address: string) => {
     if (!address) return 'N/A';
     if (address.length <= 12) return address;
-    return `${address.slice(0, 6)}...${address.slice(-6)}`;
+    return `${address.slice(0, 10)}...${address.slice(-10)}`;
   };
 
   const getNetworkName = (network: string) => {
@@ -120,10 +126,18 @@ export default function SettingsScreen() {
           <View style={styles.addressCard}>
             {wallet?.accountData?.addressMap &&
               Object.entries(wallet.accountData.addressMap).map(([network, address]) => (
-                <View key={network} style={styles.addressRow}>
-                  <Text style={styles.networkLabel}>{getNetworkName(network)}</Text>
-                  <Text style={styles.addressValue}>{formatAddress(address as string)}</Text>
-                </View>
+                <TouchableOpacity
+                  key={network}
+                  style={styles.addressRow}
+                  onPress={() => handleCopyAddress(address as string, getNetworkName(network))}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.addressContent}>
+                    <Text style={styles.networkLabel}>{getNetworkName(network)}</Text>
+                    <Text style={styles.addressValue}>{formatAddress(address as string)}</Text>
+                  </View>
+                  <Copy size={18} color="#FF6501" />
+                </TouchableOpacity>
               ))}
           </View>
         </View>
@@ -263,9 +277,16 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   addressRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#2A2A2A',
+  },
+  addressContent: {
+    flex: 1,
+    marginRight: 12,
   },
   networkLabel: {
     fontSize: 14,

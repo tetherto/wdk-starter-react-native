@@ -1,11 +1,14 @@
 import { assetConfig } from '@/config/assets';
-import { useWallet } from '@tetherto/wdk-react-native-provider';
+import formatAmount from '@/utils/format-amount';
+import { AssetTicker, NetworkType, useWallet } from '@tetherto/wdk-react-native-provider';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
-import React, { useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TokenDetails } from '../components/TokenDetails';
+import { FiatCurrency, pricingService } from '../services/pricing-service';
+import { networkConfigs } from '@/config/networks';
 
 export default function TokenDetailsScreen() {
   const router = useRouter();
@@ -22,62 +25,109 @@ export default function TokenDetailsScreen() {
   const tokenSymbol = params.token?.toLowerCase() as keyof typeof assetConfig;
   const tokenConfig = tokenSymbol ? assetConfig[tokenSymbol] : null;
 
-  // Calculate token balances from wallet data
-  const tokenData = useMemo(() => {
-    if (!wallet?.accountData?.balances || !tokenSymbol || !tokenConfig) {
-      return null;
-    }
+  const [tokenData, setTokenData] = useState<{
+    symbol: string;
+    name: string;
+    icon: any;
+    color: string;
+    totalBalance: number;
+    totalUSDValue: number;
+    networkBalances: Array<{
+      network: string;
+      balance: number;
+      usdValue: number;
+      address: string;
+    }>;
+    priceUSD: number;
+  } | null>(null);
 
-    // Filter balances for this specific token
-    const tokenBalances = wallet.accountData.balances.filter(balance => {
-      console.log('balance', balance);
+  // Calculate token balances from wallet data with async pricing
+  useEffect(() => {
+    const calculateTokenData = async () => {
+      if (!wallet?.accountData?.balances || !tokenSymbol || !tokenConfig) {
+        setTokenData(null);
+        return;
+      }
 
-      return balance.denomination === tokenSymbol;
-    });
+      // Filter balances for this specific token
+      const tokenBalances = wallet.accountData.balances.filter(balance => {
+        console.log('balance', balance);
+        return balance.denomination === tokenSymbol;
+      });
 
-    // Calculate total balance and network breakdown
-    let totalBalance = 0;
-    const networkBalances = tokenBalances
-      .map(balance => {
+      // Calculate total balance and network breakdown with fiat values
+      let totalBalance = 0;
+      const networkBalancesPromises = tokenBalances.map(async balance => {
         const amount = parseFloat(balance.value);
         totalBalance += amount;
+
+        // Calculate fiat value using pricing service
+        const usdValue = await pricingService.getFiatValue(
+          amount,
+          tokenSymbol as AssetTicker,
+          FiatCurrency.USD
+        );
 
         return {
           network: balance.networkType,
           balance: amount,
-          usdValue: amount * tokenConfig.priceUSD,
+          usdValue,
           address: wallet.accountData?.addressMap?.[balance.networkType] || '',
         };
-      })
-      .filter(item => item.balance > 0); // Only show networks with balance
+      });
 
-    return {
-      symbol:
-        tokenSymbol === 'usdt'
-          ? 'USD₮'
-          : tokenSymbol === 'xaut'
-            ? 'XAU₮'
-            : tokenSymbol.toUpperCase(),
-      name: tokenConfig.name,
-      icon: tokenConfig.icon,
-      color: tokenConfig.color,
-      totalBalance,
-      totalUSDValue: totalBalance * tokenConfig.priceUSD,
-      networkBalances,
-      priceUSD: tokenConfig.priceUSD,
+      const networkBalances = (await Promise.all(networkBalancesPromises)).filter(
+        item => item.balance > 0
+      );
+
+      // Calculate total USD value
+      const totalUSDValue = await pricingService.getFiatValue(
+        totalBalance,
+        tokenSymbol as AssetTicker,
+        FiatCurrency.USD
+      );
+
+      setTokenData({
+        symbol:
+          tokenSymbol === 'usdt'
+            ? 'USD₮'
+            : tokenSymbol === 'xaut'
+              ? 'XAU₮'
+              : tokenSymbol.toUpperCase(),
+        name: tokenConfig.name,
+        icon: tokenConfig.icon,
+        color: tokenConfig.color,
+        totalBalance,
+        totalUSDValue,
+        networkBalances,
+        priceUSD: tokenConfig.priceUSD,
+      });
     };
-  }, [wallet, tokenSymbol, tokenConfig]);
 
-  const handleSendToken = (network?: string) => {
-    if (!tokenData) return;
+    calculateTokenData();
+  }, [wallet?.accountData?.balances, tokenSymbol, tokenConfig, wallet?.accountData?.addressMap]);
 
-    // Navigate to send screen with token and network pre-selected
+  const handleSendToken = (network?: NetworkType) => {
+    if (!tokenData || !network) return;
+
+    // Find the specific network balance
+    const networkBalance = tokenData.networkBalances.find(nb => nb.network === network);
+    if (!networkBalance) return;
+
+    // Capitalize network name (e.g., "polygon" -> "Polygon")
+    const networkName = networkConfigs[network].name;
+
+    // Navigate to send details screen with all required params
     router.push({
-      pathname: '/send/select-token',
+      pathname: '/send/send-details',
       params: {
-        walletId: params.walletId,
-        preselectedToken: tokenData.symbol,
-        preselectedNetwork: network,
+        network: networkName,
+        networkId: network,
+        tokenBalance: networkBalance.balance.toString(),
+        tokenBalanceUSD: `${formatAmount(networkBalance.usdValue)} USD`,
+        tokenId: tokenSymbol,
+        tokenName: tokenData.symbol,
+        tokenSymbol: tokenData.symbol,
       },
     });
   };

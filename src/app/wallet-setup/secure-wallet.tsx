@@ -109,37 +109,12 @@ export default function SecureWalletScreen() {
     });
   };
 
-  const handleSkip = () => {
-    Alert.alert(
-      'Skip Backup?',
-      'You can backup your secret phrase later from settings, but you risk losing access to your wallet.',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Skip',
-          style: 'destructive',
-          onPress: () =>
-            router.push({
-              pathname: './complete',
-              params: { walletName: params.walletName, avatar: params.avatar },
-            }),
-        },
-      ]
-    );
-  };
-
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ChevronLeft size={24} color="#FF6501" />
           <Text style={styles.backText}>Back</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleSkip}>
-          <Text style={styles.skipText}>Skip</Text>
         </TouchableOpacity>
       </View>
 

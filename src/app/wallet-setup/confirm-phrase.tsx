@@ -110,32 +110,6 @@ export default function ConfirmPhraseScreen() {
     });
   };
 
-  const handleSkip = () => {
-    Alert.alert(
-      'Skip Verification?',
-      "Skipping verification is not recommended. You may lose access to your wallet if you haven't properly saved your secret phrase.",
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Skip',
-          style: 'destructive',
-          onPress: () =>
-            router.push({
-              pathname: './complete',
-              params: {
-                walletName: params.walletName,
-                avatar: params.avatar,
-                mnemonic: params.mnemonic,
-              },
-            }),
-        },
-      ]
-    );
-  };
-
   const getButtonStyle = (position: number, word: string) => {
     const selected = selectedWords[position] === word;
     const isCorrectWord = wordPositions.find(wp => wp.position === position)?.word === word;
@@ -157,9 +131,6 @@ export default function ConfirmPhraseScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ChevronLeft size={24} color="#FF6501" />
           <Text style={styles.backText}>Back</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleSkip}>
-          <Text style={styles.skipText}>Skip</Text>
         </TouchableOpacity>
       </View>
 

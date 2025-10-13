@@ -1,3 +1,4 @@
+import { CommonActions, useNavigation } from '@react-navigation/native';
 import { useWallet } from '@tetherto/wdk-react-native-provider';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Upload } from 'lucide-react-native';
@@ -33,6 +34,7 @@ const avatarOptions = [
 
 export default function ImportNameWalletScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
   const { importWallet } = useWallet();
@@ -94,7 +96,13 @@ export default function ImportNameWalletScreen() {
         {
           text: 'Continue',
           onPress: () => {
-            router.replace('/wallet'); // Navigate to main wallet screen
+            // Reset navigation stack completely - only wallet screen will remain
+            navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [{ name: 'wallet' }],
+              })
+            );
           },
         },
       ]);
@@ -186,8 +194,8 @@ export default function ImportNameWalletScreen() {
         >
           {isImporting ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color="#000" />
-              <Text style={[styles.nextButtonText, { marginLeft: 8 }]}>Importing...</Text>
+              <ActivityIndicator size="small" color="#666" />
+              <Text style={[styles.nextButtonText, isNextDisabled && styles.nextButtonTextDisabled, { marginLeft: 8 }]}>Importing...</Text>
             </View>
           ) : (
             <Text style={[styles.nextButtonText, isNextDisabled && styles.nextButtonTextDisabled]}>

@@ -1,16 +1,20 @@
+import { Network, NetworkSelector } from '@/components/NetworkSelector';
 import { assetConfig } from '@/config/assets';
 import { networkConfigs } from '@/config/networks';
-import { NetworkSelector, type Network } from '@tetherto/wdk-uikit-react-native';
+import formatAmount from '@/utils/format-amount';
+import { AssetTicker, useWallet } from '@tetherto/wdk-react-native-provider';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FiatCurrency, pricingService } from '@/services/pricing-service';
 
 export default function SelectNetworkScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { wallet } = useWallet();
   const { tokenId, tokenSymbol, tokenName, tokenBalance, tokenBalanceUSD, scannedAddress } =
     params as {
       tokenId: string;
@@ -21,14 +25,49 @@ export default function SelectNetworkScreen() {
       scannedAddress?: string;
     };
 
-  const networks: Network[] = useMemo(() => {
-    const tokenConfig = assetConfig[tokenId];
-    if (!tokenConfig) {
-      return [];
-    }
+  const [networks, setNetworks] = useState<Network[]>([]);
 
-    return tokenConfig.supportedNetworks.map(networkType => networkConfigs[networkType]);
-  }, [tokenId]);
+  // Calculate networks with balances and fiat values
+  useEffect(() => {
+    const calculateNetworks = async () => {
+      const tokenConfig = assetConfig[tokenId];
+      if (!tokenConfig) {
+        setNetworks([]);
+        return;
+      }
+
+      const networksWithBalances = await Promise.all(
+        tokenConfig.supportedNetworks.map(async networkType => {
+          const network = networkConfigs[networkType];
+
+          const balance = wallet?.accountData?.balances.find(
+            b => networkType === b.networkType && b.denomination === tokenId
+          );
+
+          const balanceValue = balance ? parseFloat(balance.value) : 0;
+
+          // Calculate fiat value using pricing service
+          const balanceUSD = await pricingService.getFiatValue(
+            balanceValue,
+            tokenId as AssetTicker,
+            FiatCurrency.USD
+          );
+
+          return {
+            ...network,
+            balance: formatAmount(balanceValue),
+            balanceFiat: formatAmount(balanceUSD),
+            fiatCurrency: FiatCurrency.USD,
+            token: tokenId === 'usdt' ? 'USD₮' : tokenId.toUpperCase()
+          };
+        })
+      );
+
+      setNetworks(networksWithBalances);
+    };
+
+    calculateNetworks();
+  }, [tokenId, wallet?.accountData?.balances]);
 
   const handleSelectNetwork = useCallback(
     (network: Network) => {
@@ -38,15 +77,15 @@ export default function SelectNetworkScreen() {
           tokenId,
           tokenSymbol,
           tokenName,
-          tokenBalance,
-          tokenBalanceUSD,
+          tokenBalance: network.balance,
+          tokenBalanceUSD: network.balanceFiat,
           network: network.name,
           networkId: network.id,
           ...(scannedAddress && { scannedAddress }),
         },
       });
     },
-    [router, tokenId, tokenSymbol, tokenName, tokenBalance, tokenBalanceUSD, scannedAddress]
+    [router, tokenId, tokenSymbol, tokenName, scannedAddress]
   );
 
   const handleBack = useCallback(() => {
