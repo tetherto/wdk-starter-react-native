@@ -8,7 +8,7 @@ import {
 import { CryptoAddressInput } from '@tetherto/wdk-uikit-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Keyboard,
@@ -33,7 +33,6 @@ export default function SendDetailsScreen() {
   const {
     tokenId,
     tokenSymbol,
-    tokenName,
     tokenBalance,
     tokenBalanceUSD,
     network,
@@ -158,7 +157,7 @@ export default function SendDetailsScreen() {
   }, [networkId, tokenId, getNetworkType, getAssetTicker]);
 
   // Pre-calculate fee when screen loads
-  React.useEffect(() => {
+  useEffect(() => {
     preCalculateGasFee();
   }, [preCalculateGasFee]);
 
@@ -169,7 +168,16 @@ export default function SendDetailsScreen() {
   const handleQRScan = useCallback(() => {
     router.push({
       pathname: '/scan-qr',
-      params: { returnRoute: '/send/send-details' },
+      params: {
+        returnRoute: '/send/send-details',
+        tokenId,
+        tokenSymbol,
+        tokenBalance,
+        tokenBalanceUSD,
+        network,
+        networkId,
+        scannedAddress,
+      },
     });
   }, [router]);
 
@@ -441,7 +449,7 @@ export default function SendDetailsScreen() {
                 style={[
                   styles.sendButton,
                   (amountError || !amount || !recipientAddress || sendingTransaction) &&
-                    styles.sendButtonDisabled,
+                  styles.sendButtonDisabled,
                 ]}
                 onPress={handleSend}
                 disabled={!!(amountError || !amount || !recipientAddress || sendingTransaction)}
@@ -450,7 +458,7 @@ export default function SendDetailsScreen() {
                   style={[
                     styles.sendButtonText,
                     (amountError || !amount || !recipientAddress || sendingTransaction) &&
-                      styles.sendButtonTextDisabled,
+                    styles.sendButtonTextDisabled,
                   ]}
                 >
                   {sendingTransaction ? 'Sending...' : 'Send'}

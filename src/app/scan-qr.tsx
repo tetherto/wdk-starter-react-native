@@ -11,12 +11,9 @@ const qrSize = screenWidth * 0.7;
 export default function ScanQRScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const params = useLocalSearchParams();
+  const {returnRoute, ...params} = useLocalSearchParams();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
-
-  // Get the return route from params (where to navigate back with the result)
-  const { returnRoute } = params as { returnRoute?: string };
 
   const handleBarCodeScanned = useCallback(
     ({ type, data }: { type: string; data: string }) => {
@@ -42,13 +39,13 @@ export default function ScanQRScreen() {
       if (returnRoute) {
         router.replace({
           pathname: returnRoute as any,
-          params: { scannedAddress: address },
+          params: { scannedAddress: address, ...params },
         });
       } else {
         // Fallback - navigate to send flow starting with token selection
         router.replace({
           pathname: '/send/select-token',
-          params: { scannedAddress: address },
+          params: { scannedAddress: address, ...params },
         });
       }
     },
