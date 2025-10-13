@@ -53,7 +53,10 @@ export default function RootLayout() {
       >
         <WalletProvider
           config={{
-            indexerApiKey: process.env.EXPO_PUBLIC_WDK_INDEXER_API_KEY!,
+            indexer: {
+              apiKey: process.env.EXPO_PUBLIC_WDK_INDEXER_API_KEY!,
+              url: process.env.EXPO_PUBLIC_WDK_INDEXER_BASE_URL!,
+            },
             chains: chains,
           }}
         >
