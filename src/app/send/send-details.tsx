@@ -25,6 +25,8 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Clipboard from 'expo-clipboard';
+
 
 export default function SendDetailsScreen() {
   const insets = useSafeAreaInsets();
@@ -218,8 +220,7 @@ export default function SendDetailsScreen() {
   }, [router]);
 
   const handlePasteAddress = useCallback(() => {
-    // In a real app, this would paste from clipboard
-    Alert.alert('Paste', 'Paste from clipboard functionality');
+    Clipboard.getStringAsync().then(setRecipientAddress);
   }, []);
 
   const handleUseMax = useCallback(() => {
