@@ -13,8 +13,7 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "prebuild": "expo prebuild",
-    "prebuild:clean": "expo prebuild --clean",
-    "gen:bundle": "npx bare-pack --target ios-arm64 --target ios-arm64-simulator --target ios-x64-simulator --target android-arm --target android-arm64 --target android-ia32 --target android-x64 --linked --out src/wdk-secret-manager-worklet.bundle.js src/worklet/wdk-secret-manager-worklet.js"
+    "prebuild:clean": "expo prebuild --clean"
   },
   "dependencies": {
     "@craftzdog/react-native-buffer": "^6.1.0",
