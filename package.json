@@ -25,7 +25,7 @@
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.1.8",
     "@reduxjs/toolkit": "^2.9.0",
-    "@tetherto/pear-wrk-wdk": "github:hakaari/pear-wrk-wdk#cf4f46de311e0de6d58dbf465fcf4717e72dc360",
+    "@tetherto/pear-wrk-wdk": "github:tetherto/pear-wrk-wdk#6acf6587e7737ab1307b6544156e876cce203f08",
     "@tetherto/wdk-pricing-bitfinex-http": "^1.0.0-beta.1",
     "@tetherto/wdk-pricing-provider": "^1.0.0-beta.1",
     "@tetherto/wdk-react-native-provider": "file:packages/wdk-react-native-provider",
