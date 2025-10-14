@@ -11,6 +11,13 @@ import { ArrowLeft } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FiatCurrency, pricingService } from '@/services/pricing-service';
 import {
+  getAssetTicker,
+  getNetworkType,
+  preCalculateGasFee as calculateGasFee,
+  calculateFeeForAmount as calculateFeeForSpecificAmount,
+  type GasFeeEstimate,
+} from '@/utils/gas-fee-calculator';
+import {
   Alert,
   Keyboard,
   KeyboardAvoidingView,
@@ -56,11 +63,7 @@ export default function SendDetailsScreen() {
   const [amount, setAmount] = useState('');
   const [inputMode, setInputMode] = useState<'token' | 'fiat'>('token');
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [gasEstimate, setGasEstimate] = useState<{
-    fee?: number;
-    loading: boolean;
-    error?: string;
-  }>({
+  const [gasEstimate, setGasEstimate] = useState<GasFeeEstimate>({
     fee: undefined,
     loading: false,
     error: undefined,
@@ -80,31 +83,6 @@ export default function SendDetailsScreen() {
     }
   }, [scannedAddress]);
 
-  // Network type mapping
-  const getNetworkType = useCallback((networkId: string): NetworkType => {
-    const networkMap: Record<string, NetworkType> = {
-      ethereum: NetworkType.ETHEREUM,
-      polygon: NetworkType.POLYGON,
-      arbitrum: NetworkType.ARBITRUM,
-      bitcoin: NetworkType.SEGWIT,
-      lightning: NetworkType.LIGHTNING,
-      ton: NetworkType.TON,
-      tron: NetworkType.TRON,
-      solana: NetworkType.SOLANA,
-    };
-    return networkMap[networkId] || NetworkType.ETHEREUM;
-  }, []);
-
-  // Asset ticker mapping
-  const getAssetTicker = useCallback((tokenId: string): AssetTicker => {
-    const assetMap: Record<string, AssetTicker> = {
-      btc: AssetTicker.BTC,
-      usdt: AssetTicker.USDT,
-      xaut: AssetTicker.XAUT,
-    };
-    return assetMap[tokenId?.toLowerCase()] || AssetTicker.USDT;
-  }, []);
-
   // Calculate token price using pricing service
   useEffect(() => {
     const calculateTokenPrice = async () => {
@@ -119,80 +97,14 @@ export default function SendDetailsScreen() {
     };
 
     calculateTokenPrice();
-  }, [tokenId, getAssetTicker]);
+  }, [tokenId]);
 
   // Pre-calculate fee immediately when screen loads
   const preCalculateGasFee = useCallback(async () => {
     setGasEstimate(prev => ({ ...prev, loading: true, error: undefined }));
-
-    try {
-      const networkType = getNetworkType(networkId);
-      const assetTicker = getAssetTicker(tokenId);
-
-      // Use dummy values for pre-calculation
-      // Each network type requires a valid address format for that specific network
-      const dummyRecipientMap: Record<NetworkType, string> = {
-        [NetworkType.SEGWIT]: 'bc1qraj47d6py592h6rufwkuf8m2xeljdqn34474l3',
-        [NetworkType.LIGHTNING]: 'bc1qraj47d6py592h6rufwkuf8m2xeljdqn34474l3',
-        [NetworkType.ETHEREUM]: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
-        [NetworkType.POLYGON]: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
-        [NetworkType.ARBITRUM]: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
-        [NetworkType.TON]: 'EQDtFpEwcFAEcRe5mLVh2N6C0x-_hJEM7W61_JLnSF74p4q2',
-        [NetworkType.TRON]: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
-        [NetworkType.SOLANA]: '11111111111111111111111111111111',
-      };
-
-      const dummyRecipient = dummyRecipientMap[networkType];
-
-      // Bitcoin requires a smaller dummy amount due to UTXO requirements
-      // Use 0.00001 BTC (1000 satoshis) which is above the dust limit
-      const dummyAmount =
-        networkType === NetworkType.SEGWIT || networkType === NetworkType.LIGHTNING
-          ? 0.00001
-          : 1;
-
-      const gasFee = await WDKService.quoteSendByNetwork(
-        networkType,
-        0, // account index
-        dummyAmount,
-        dummyRecipient,
-        assetTicker
-      );
-
-      setGasEstimate({ fee: gasFee, loading: false });
-    } catch (error) {
-      console.error('Gas fee pre-calculation failed:', error);
-      const networkType = getNetworkType(networkId);
-      const isBitcoinNetwork = networkType === NetworkType.SEGWIT || networkType === NetworkType.LIGHTNING;
-      const assetTicker = getAssetTicker(tokenId);
-
-      // For Bitcoin, insufficient balance during pre-calculation is expected if wallet has no BTC
-      if (isBitcoinNetwork && error instanceof Error && error.message.includes('Insufficient balance')) {
-        setGasEstimate({
-          fee: undefined,
-          loading: false,
-          error: 'Enter amount to see fee estimate',
-        });
-      } else if (
-        error instanceof Error &&
-        error.message.includes('callData reverts') &&
-        assetTicker === AssetTicker.XAUT
-      ) {
-        // XAUT is not supported by the current paymaster configuration
-        setGasEstimate({
-          fee: undefined,
-          loading: false,
-          error: 'Gas estimation not available for XAUT',
-        });
-      } else {
-        setGasEstimate({
-          fee: undefined,
-          loading: false,
-          error: error instanceof Error ? error.message : 'Failed to calculate fee',
-        });
-      }
-    }
-  }, [networkId, tokenId, getNetworkType, getAssetTicker]);
+    const estimate = await calculateGasFee(networkId, tokenId);
+    setGasEstimate(estimate);
+  }, [networkId, tokenId]);
 
   // Pre-calculate fee when screen loads
   useEffect(() => {
@@ -274,40 +186,16 @@ export default function SendDetailsScreen() {
     async (amount: string) => {
       if (!amount || parseFloat(amount) <= 0) return;
 
-      const networkType = getNetworkType(networkId);
-      const isBitcoinNetwork = networkType === NetworkType.SEGWIT || networkType === NetworkType.LIGHTNING;
-
-      // Only recalculate for Bitcoin networks when amount is entered
-      if (!isBitcoinNetwork) return;
-
       setGasEstimate(prev => ({ ...prev, loading: true }));
+      const estimate = await calculateFeeForSpecificAmount(amount, networkId, tokenId);
 
-      try {
-        const assetTicker = getAssetTicker(tokenId);
-        const dummyRecipient = 'bc1qraj47d6py592h6rufwkuf8m2xeljdqn34474l3';
-        const numericAmount = parseFloat(amount);
-
-        const gasFee = await WDKService.quoteSendByNetwork(
-          networkType,
-          0,
-          numericAmount,
-          dummyRecipient,
-          assetTicker
-        );
-
-        setGasEstimate({ fee: gasFee, loading: false });
-      } catch (error) {
-        console.error('Failed to calculate fee for entered amount:', error);
-        setGasEstimate(prev => ({
-          ...prev,
-          loading: false,
-          error: error instanceof Error && error.message.includes('Insufficient balance')
-            ? 'Insufficient balance'
-            : 'Failed to calculate fee',
-        }));
+      if (estimate.fee !== undefined || estimate.error) {
+        setGasEstimate(estimate);
+      } else {
+        setGasEstimate(prev => ({ ...prev, loading: false }));
       }
     },
-    [networkId, tokenId, getNetworkType, getAssetTicker]
+    [networkId, tokenId]
   );
 
   const handleAmountChange = useCallback(
@@ -395,8 +283,7 @@ export default function SendDetailsScreen() {
     recipientAddress,
     networkId,
     tokenId,
-    getNetworkType,
-    getAssetTicker,
+    refreshWalletBalance,
   ]);
 
   const handleConfirmSend = useCallback(async () => {
@@ -422,8 +309,6 @@ export default function SendDetailsScreen() {
     }
     return `Balance: ${tokenBalanceUSD}`;
   }, [inputMode, tokenBalance, tokenBalanceUSD, tokenSymbol]);
-
-  console.log('transactionResult', transactionResult);
 
   return (
     <>
