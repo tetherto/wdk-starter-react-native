@@ -30,15 +30,6 @@ interface TokenDetailsProps {
   onSendPress?: (network?: NetworkType) => void;
 }
 
-const NETWORK_COLORS: Record<string, string> = {
-  ethereum: '#627EEA',
-  polygon: '#8247E5',
-  arbitrum: '#28A0F0',
-  optimism: '#FF0420',
-  bitcoin: '#F7931A',
-  ton: '#0098EA',
-};
-
 export function TokenDetails({ tokenData, onSendPress }: TokenDetailsProps) {
   const handleSend = (network?: NetworkType) => {
     if (onSendPress) {
@@ -78,16 +69,17 @@ export function TokenDetails({ tokenData, onSendPress }: TokenDetailsProps) {
           <Text style={styles.sectionTitle}>Available on Networks</Text>
           <ScrollView style={styles.networkList} showsVerticalScrollIndicator={false}>
             {tokenData.networkBalances.map((item, index) => {
-              const networkName = NETWORK_NAMES[item.network] || item.network;
-              const networkColor = NETWORK_COLORS[item.network] || '#999';
+              const networkName = networkConfigs[item.network as NetworkType]?.name || item.network;
+              const networkColor = networkConfigs[item.network as NetworkType]?.color || '#999';
 
               return (
                 <View key={`${item.network}-${index}`} style={styles.networkRow}>
                   <View style={styles.networkInfo}>
                     <View style={[styles.networkIcon, { backgroundColor: networkColor }]}>
-                      <Text style={styles.networkIconText}>
-                        {networkName.charAt(0).toUpperCase()}
-                      </Text>
+                      <Image
+                        source={networkConfigs[item.network as NetworkType]?.icon}
+                        style={styles.tokenIconImage}
+                      />
                     </View>
                     <View style={styles.networkDetails}>
                       <Text style={styles.networkName}>{networkName}</Text>
@@ -155,8 +147,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   tokenIconImage: {
-    width: 48,
-    height: 48,
+    width: 24,
+    height: 24,
   },
   totalLabel: {
     fontSize: 14,
