@@ -135,19 +135,23 @@ src/
 │   ├── scan-qr.tsx              # QR code scanner
 │   └── token-details.tsx        # Individual token details
 ├── components/                  # Reusable UI components
-│   ├── wallet/                  # Wallet-specific components
 │   ├── onboarding/              # Onboarding components
 │   ├── ui/                      # Base UI components
 │   └── *.tsx                    # Shared components
 ├── config/                      # Configuration files
 │   ├── assets.ts                # Token/asset configurations
+│   ├── avatar-options.ts        # Wallet avatar configurations
 │   ├── networks.ts              # Network configurations
 │   └── get-chains-config.ts     # Chain-specific settings & provider URLs
 ├── services/                    # Business logic & external services
 │   └── pricing-service.ts       # Fiat pricing via Bitfinex
-├── hooks/                       # Custom React hooks
-│   ├── use-theme-color.ts       # Theme color utilities
-│   └── use-color-scheme.ts      # Dark/light mode detection
+├── utils/                       # Utility functions
+│   ├── gas-fee-calculator.ts    # Gas fee estimation & network utilities
+│   ├── format-amount.ts         # Amount formatting helpers
+│   ├── format-token-amount.ts   # Token-specific amount formatting
+│   ├── format-usd-value.ts      # USD value formatting
+│   ├── get-display-symbol.ts    # Token symbol display utilities
+│   └── recent-tokens.ts         # Recent token tracking
 └── constants/                   # App-wide constants
     └── theme.ts                 # Color schemes & fonts
 ```
