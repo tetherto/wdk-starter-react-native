@@ -145,15 +145,13 @@ src/
 │   └── get-chains-config.ts     # Chain-specific settings & provider URLs
 ├── services/                    # Business logic & external services
 │   └── pricing-service.ts       # Fiat pricing via Bitfinex
-├── utils/                       # Utility functions
-│   ├── gas-fee-calculator.ts    # Gas fee estimation & network utilities
-│   ├── format-amount.ts         # Amount formatting helpers
-│   ├── format-token-amount.ts   # Token-specific amount formatting
-│   ├── format-usd-value.ts      # USD value formatting
-│   ├── get-display-symbol.ts    # Token symbol display utilities
-│   └── recent-tokens.ts         # Recent token tracking
-└── constants/                   # App-wide constants
-    └── theme.ts                 # Color schemes & fonts
+└── utils/                       # Utility functions
+    ├── gas-fee-calculator.ts    # Gas fee estimation & network utilities
+    ├── format-amount.ts         # Amount formatting helpers
+    ├── format-token-amount.ts   # Token-specific amount formatting
+    ├── format-usd-value.ts      # USD value formatting
+    ├── get-display-symbol.ts    # Token symbol display utilities
+    └── recent-tokens.ts         # Recent token tracking
 ```
 
 ## 🏗️ Architecture & Key Flows
@@ -373,16 +371,7 @@ newnetwork: {
 
 3. Add chain logo to `assets/images/chains/`
 
-### Customizing Theme
-Edit `src/constants/theme.ts` to customize colors and fonts:
-```typescript
-export const Colors = {
-  light: { /* your light theme */ },
-  dark: { /* your dark theme */ },
-};
-```
-
-### Customizing Brand
+### Customizing Theme & Brand
 Update the brand configuration in `src/app/_layout.tsx`:
 ```typescript
 <ThemeProvider
