@@ -306,6 +306,14 @@ export default function SendDetailsScreen() {
         numericAmount = numericAmount / tokenPrice;
       }
 
+      if (assetTicker === AssetTicker.BTC) {
+        numericAmount = parseFloat(numericAmount.toFixed(8));
+      }
+
+      if (assetTicker === AssetTicker.XAUT || assetTicker === AssetTicker.USDT) {
+        numericAmount = parseFloat(numericAmount.toFixed(6));
+      }
+
       const sendResult = await WDKService.sendByNetwork(
         networkType,
         0, // account index
@@ -355,11 +363,20 @@ export default function SendDetailsScreen() {
     token: AssetTicker
   ) => {
     const fee = transactionResult.txId?.fee;
-    if (!fee) return '0';
+    if (!fee) return formatTokenAmount(0, token);
 
     const value = Number(fee) / WDKService.getDenominationValue(token);
     return formatTokenAmount(value, token);
   };
+
+  const getTransactionAmout = useCallback(() => {
+    const numericAmount = parseFloat(amount.replace(/,/g, ''));
+    if (inputMode === 'fiat' && tokenPrice > 0) {
+      return formatUSDValue(numericAmount);
+    }
+
+    return formatTokenAmount(parseFloat(amount || '0'), tokenSymbol as AssetTicker);
+  }, [inputMode, tokenPrice, amount, tokenSymbol]);
 
   return (
     <>
@@ -526,9 +543,7 @@ export default function SendDetailsScreen() {
 
             <View style={styles.transactionSummary}>
               <Text style={styles.summaryLabel}>Amount:</Text>
-              <Text style={styles.summaryValue}>
-                {formatTokenAmount(parseFloat(amount || '0'), tokenSymbol as AssetTicker)}
-              </Text>
+              <Text style={styles.summaryValue}>{getTransactionAmout()}</Text>
             </View>
 
             <View style={styles.transactionSummary}>

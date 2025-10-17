@@ -102,6 +102,15 @@ export const calculateGasFee = async (
         fee: undefined,
         error: 'Insufficient balance for fee calculation',
       };
+    } else if (
+      isBitcoinNetwork &&
+      error instanceof Error &&
+      error.message.includes('amount must be bigger than the dust limit')
+    ) {
+      return {
+        fee: undefined,
+        error: `The amount must be bigger than the dust limit`,
+      };
     } else {
       return {
         fee: undefined,
