@@ -73,15 +73,38 @@ cp .env.example .env
 # EXPO_PUBLIC_WDK_INDEXER_API_KEY=your_actual_api_key_here
 ```
 
-**Note:** The WDK Indexer API key is used for balance and transaction API requests. While not mandatory for development, it enables full functionality. Get your free WDK Indexer API key in the [WDK docs](https://docs.wallet.tether.io/). 
+**Note:** The WDK Indexer API key is used for balance and transaction API requests. While not mandatory for development, it enables full functionality. Get your free WDK Indexer API key in the [WDK docs](https://docs.wallet.tether.io/).
+
+## 🔧 Provider Configuration (Recommended)
+
+**For Better Performance:** The app uses public RPC endpoints by default, which may have rate limits and variable performance. For a better experience, customize provider URLs in `src/config/get-chains-config.ts`:
+
+### Customizable Endpoints
+
+Edit `src/config/get-chains-config.ts` to update these provider URLs:
+
+**Ethereum**
+```typescript
+ethereum: {
+  provider: 'https://eth.merkle.io',  // Replace with your Ethereum RPC URL
+  bundlerUrl: 'https://api.candide.dev/public/v3/ethereum',
+  paymasterUrl: 'https://api.candide.dev/public/v3/ethereum',
+}
+```
+
+**Arbitrum**
+```typescript
+arbitrum: {
+  provider: 'https://arb1.arbitrum.io/rpc',  // Replace with your Arbitrum RPC URL
+  bundlerUrl: 'https://api.candide.dev/public/v3/arbitrum',
+  paymasterUrl: 'https://api.candide.dev/public/v3/arbitrum',
+}
+```
+
+Do the same for other chains.
+
 
 ## 🚀 Run
-
-Generate the Secret Manager worklet bundle (needed after fresh clone or changes):
-
-```bash
-npm run gen:bundle
-```
 
 Then start the app:
 
@@ -119,7 +142,7 @@ src/
 ├── config/                      # Configuration files
 │   ├── assets.ts                # Token/asset configurations
 │   ├── networks.ts              # Network configurations
-│   └── chains.json              # Chain-specific settings
+│   └── get-chains-config.ts     # Chain-specific settings & provider URLs
 ├── services/                    # Business logic & external services
 │   └── pricing-service.ts       # Fiat pricing via Bitfinex
 ├── hooks/                       # Custom React hooks
@@ -334,7 +357,16 @@ export const assetConfig: Record<string, AssetConfig> = {
 }
 ```
 
-2. Add chain configuration in `src/config/chains.json`
+2. Add chain configuration in `src/config/get-chains-config.ts`:
+```typescript
+newnetwork: {
+  chainId: YOUR_CHAIN_ID,
+  blockchain: 'newnetwork',
+  provider: 'https://your-rpc-url.com',
+  // Add other chain-specific configuration
+}
+```
+
 3. Add chain logo to `assets/images/chains/`
 
 ### Customizing Theme

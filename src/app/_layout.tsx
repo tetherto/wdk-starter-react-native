@@ -8,8 +8,8 @@ import { useEffect } from 'react';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
-import chains from '../config/chains.json';
 import { pricingService } from '../services/pricing-service';
+import getChainsConfig from '@/config/get-chains-config';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -57,7 +57,7 @@ export default function RootLayout() {
               apiKey: process.env.EXPO_PUBLIC_WDK_INDEXER_API_KEY!,
               url: process.env.EXPO_PUBLIC_WDK_INDEXER_BASE_URL!,
             },
-            chains: chains,
+            chains: getChainsConfig(),
           }}
         >
           <NavigationThemeProvider value={CustomDarkTheme}>
