@@ -1,4 +1,4 @@
-import avatarOptions from '@/config/avatar-options';
+import avatarOptions, { setAvatar } from '@/config/avatar-options';
 import { CommonActions, useNavigation } from '@react-navigation/native';
 import { useWallet } from '@tetherto/wdk-react-native-provider';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -23,7 +23,7 @@ export default function ImportNameWalletScreen() {
   const navigation = useNavigation();
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
-  const { importWallet } = useWallet();
+  const { createWallet } = useWallet();
   const [walletName, setWalletName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState(avatarOptions[0]);
   const [isImporting, setIsImporting] = useState(false);
@@ -40,12 +40,9 @@ export default function ImportNameWalletScreen() {
     setIsImporting(true);
 
     try {
-      console.log('Importing wallet with seed phrase...');
-
-      // Use the context's importWallet method which handles everything including unlocking
-      const wallet = await importWallet(seedPhrase, walletName, selectedAvatar.emoji);
-
-      console.log('Wallet imported successfully:', wallet);
+      // Use the context's createWallet method which handles everything including unlocking
+      await createWallet({ name: walletName, mnemonic: seedPhrase });
+      await setAvatar(selectedAvatar.id);
 
       Alert.alert('Success!', 'Your wallet has been imported successfully.', [
         {

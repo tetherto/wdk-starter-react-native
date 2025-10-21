@@ -11,8 +11,10 @@ import {
   Shield,
   Star,
 } from 'lucide-react-native';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
+  Animated,
   Image,
   Linking,
   RefreshControl,
@@ -28,6 +30,7 @@ import { FiatCurrency, pricingService } from '../services/pricing-service';
 import formatAmount from '@/utils/format-amount';
 import formatTokenAmount from '@/utils/format-token-amount';
 import formatUSDValue from '@/utils/format-usd-value';
+import useWalletAvatar from '@/hooks/use-wallet-avatar';
 
 type AggregatedBalance = ({
   denomination: string;
@@ -53,11 +56,21 @@ type Transaction = {
 export default function WalletScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { wallet, isLoading, isUnlocked, refreshWalletBalance } = useWallet();
+  const {
+    wallet,
+    isLoading,
+    isUnlocked,
+    refreshWalletBalance,
+    balances,
+    addresses,
+    transactions: walletTransactions,
+  } = useWallet();
   const [refreshing, setRefreshing] = useState(false);
   const [aggregatedBalances, setAggregatedBalances] = useState<AggregatedBalance>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [mounted, setMounted] = useState(false);
+  const avatar = useWalletAvatar();
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   const hasWallet = !!wallet;
 
@@ -70,38 +83,36 @@ export default function WalletScreen() {
 
   // Calculate aggregated balances by denomination
   const getAggregatedBalances = async () => {
-    if (!wallet?.accountData?.balances) return [];
+    if (!balances) return [];
 
-    const balanceMap = new Map<string, { totalBalance: number }>();
+    const map = new Map<string, { totalBalance: number }>();
 
     // Sum up balances by denomination across all networks
-    wallet.accountData.balances.forEach(balance => {
-      const current = balanceMap.get(balance.denomination) || { totalBalance: 0 };
-      balanceMap.set(balance.denomination, {
+    balances.list.forEach(balance => {
+      const current = map.get(balance.denomination) || { totalBalance: 0 };
+      map.set(balance.denomination, {
         totalBalance: current.totalBalance + parseFloat(balance.value),
       });
     });
 
-    const promises = Array.from(balanceMap.entries()).map(
-      async ([denomination, { totalBalance }]) => {
-        const config = assetConfig[denomination];
-        if (!config) return null;
+    const promises = Array.from(map.entries()).map(async ([denomination, { totalBalance }]) => {
+      const config = assetConfig[denomination];
+      if (!config) return null;
 
-        // Calculate fiat value using pricing service
-        const fiatValue = await pricingService.getFiatValue(
-          totalBalance,
-          denomination as AssetTicker,
-          FiatCurrency.USD
-        );
+      // Calculate fiat value using pricing service
+      const fiatValue = await pricingService.getFiatValue(
+        totalBalance,
+        denomination as AssetTicker,
+        FiatCurrency.USD
+      );
 
-        return {
-          denomination,
-          balance: totalBalance,
-          usdValue: fiatValue,
-          config,
-        };
-      }
-    );
+      return {
+        denomination,
+        balance: totalBalance,
+        usdValue: fiatValue,
+        config,
+      };
+    });
 
     return (await Promise.all(promises))
       .filter(Boolean)
@@ -113,6 +124,13 @@ export default function WalletScreen() {
   const totalPortfolioValue = useMemo(() => {
     return aggregatedBalances.reduce((sum, asset) => sum + (asset?.usdValue || 0), 0);
   }, [aggregatedBalances]);
+
+  // Animated border opacity based on scroll position
+  const borderOpacity = scrollY.interpolate({
+    inputRange: [0, 50],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
 
   const suggestions = [
     {
@@ -140,15 +158,15 @@ export default function WalletScreen() {
 
   // Get real transactions from wallet data
   const getTransactions = async () => {
-    if (!wallet?.accountData?.transactions) return [];
+    if (!walletTransactions) return [];
 
     // Get the wallet's own addresses for comparison
-    const walletAddresses = wallet.accountData.addressMap
-      ? Object.values(wallet.accountData.addressMap).map(addr => addr?.toLowerCase())
+    const walletAddresses = addresses
+      ? Object.values(addresses).map(addr => addr?.toLowerCase())
       : [];
 
     const result = await Promise.all(
-      wallet.accountData.transactions
+      walletTransactions.list
         .sort((a, b) => b.timestamp - a.timestamp)
         .slice(0, 3)
         .map(async (tx, index) => {
@@ -227,12 +245,12 @@ export default function WalletScreen() {
   useEffect(() => {
     getAggregatedBalances().then(setAggregatedBalances);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wallet?.accountData?.balances]);
+  }, [balances]);
 
   useEffect(() => {
     getTransactions().then(setTransactions);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wallet?.accountData?.transactions, wallet?.accountData?.addressMap]);
+  }, [walletTransactions?.list, addresses]);
 
   // Force component to fully mount before enabling RefreshControl on iOS
   useEffect(() => {
@@ -243,12 +261,42 @@ export default function WalletScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Header */}
+      <Animated.View
+        style={[
+          styles.header,
+          {
+            paddingTop: insets.top,
+            borderBottomColor: borderOpacity.interpolate({
+              inputRange: [0, 1],
+              outputRange: ['rgba(30, 30, 30, 0)', 'rgba(30, 30, 30, 1)'],
+            }),
+          },
+        ]}
+      >
+        <View style={styles.walletInfo}>
+          <View style={styles.walletIcon}>
+            <Text style={styles.walletIconText}>{avatar}</Text>
+          </View>
+          <Text style={styles.walletName}>{wallet?.name || 'No Wallet'}</Text>
+        </View>
+
+        <View style={styles.headerActions}>
+          <TouchableOpacity style={styles.settingsButton} onPress={handleSettingsPress}>
+            <Settings size={24} color="#FF6501" />
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top }]}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         bounces={true}
         scrollEventThrottle={16}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+          useNativeDriver: false,
+        })}
         refreshControl={
           mounted ? (
             <RefreshControl
@@ -271,35 +319,31 @@ export default function WalletScreen() {
           )
         }
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.walletInfo}>
-            <View style={styles.walletIcon}>
-              <Text style={styles.walletIconText}>{wallet?.icon || '💎'}</Text>
-            </View>
-            <Text style={styles.walletName}>{wallet?.name || 'No Wallet'}</Text>
-          </View>
-
-          <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.settingsButton} onPress={handleSettingsPress}>
-              <Settings size={24} color="#FF6501" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
         {/* Balance */}
         {!hasWallet && !isLoading ? (
           <TouchableOpacity onPress={handleCreateWallet}>
             <Text>Create Your First Wallet</Text>
           </TouchableOpacity>
         ) : (
-          <View style={{ margin: 12 }}>
+          <View
+            style={{
+              margin: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
             <Balance
               value={totalPortfolioValue}
               currency="USD"
               isLoading={isLoading}
               Loader={BalanceLoader}
             />
+            {balances.isLoading ? (
+              <View style={{ top: 16, marginRight: 8 }}>
+                <ActivityIndicator size="small" color="#FF6501" />
+              </View>
+            ) : null}
           </View>
         )}
 
@@ -377,7 +421,16 @@ export default function WalletScreen() {
 
         {/* Activity */}
         <View style={styles.activitySection}>
-          <Text style={styles.sectionTitle}>Activity</Text>
+          <View
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+          >
+            <Text style={styles.sectionTitle}>Activity</Text>
+            {walletTransactions.isLoading ? (
+              <View style={{ marginRight: 8 }}>
+                <ActivityIndicator size="small" color="#FF6501" />
+              </View>
+            ) : null}
+          </View>
 
           {transactions.length > 0 ? (
             transactions.map(tx => (
@@ -448,6 +501,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 16,
+    borderBottomWidth: 1,
   },
   walletInfo: {
     flexDirection: 'row',

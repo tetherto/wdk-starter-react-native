@@ -171,7 +171,7 @@ export default function SendDetailsScreen() {
     router.push({
       pathname: '/scan-qr',
       params: {
-        returnRoute: '/send/send-details',
+        returnRoute: '/send/details',
         tokenId,
         tokenSymbol,
         tokenBalance,
@@ -304,14 +304,6 @@ export default function SendDetailsScreen() {
       let numericAmount = parseFloat(amount);
       if (inputMode === 'fiat' && tokenPrice > 0) {
         numericAmount = numericAmount / tokenPrice;
-      }
-
-      if (assetTicker === AssetTicker.BTC) {
-        numericAmount = parseFloat(numericAmount.toFixed(8));
-      }
-
-      if (assetTicker === AssetTicker.XAUT || assetTicker === AssetTicker.USDT) {
-        numericAmount = parseFloat(numericAmount.toFixed(6));
       }
 
       const sendResult = await WDKService.sendByNetwork(

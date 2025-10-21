@@ -8,7 +8,6 @@ import { useEffect } from 'react';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
-import { pricingService } from '../services/pricing-service';
 import getChainsConfig from '@/config/get-chains-config';
 
 SplashScreen.preventAutoHideAsync();
@@ -26,13 +25,7 @@ export default function RootLayout() {
   useEffect(() => {
     const initApp = async () => {
       try {
-        // Initialize WDK services early in app lifecycle
         await WDKService.initialize();
-        console.log('WDK Services initialized in app layout');
-
-        // Initialize pricing service
-        await pricingService.initialize();
-        console.log('Pricing service initialized in app layout');
       } catch (error) {
         console.error('Failed to initialize services in app layout:', error);
       } finally {
@@ -58,6 +51,7 @@ export default function RootLayout() {
               url: process.env.EXPO_PUBLIC_WDK_INDEXER_BASE_URL!,
             },
             chains: getChainsConfig(),
+            enableCaching: true,
           }}
         >
           <NavigationThemeProvider value={CustomDarkTheme}>
@@ -67,27 +61,7 @@ export default function RootLayout() {
                   headerShown: false,
                   contentStyle: { backgroundColor: '#121212' },
                 }}
-              >
-                <Stack.Screen name="index" options={{ headerShown: false }} />
-                <Stack.Screen
-                  name="onboarding"
-                  options={{
-                    headerShown: false,
-                    animation: 'none',
-                  }}
-                />
-                <Stack.Screen
-                  name="wallet"
-                  options={{
-                    headerShown: false,
-                    gestureEnabled: false,
-                  }}
-                />
-                <Stack.Screen name="wallet-setup" options={{ headerShown: false }} />
-                <Stack.Screen name="assets" options={{ headerShown: false }} />
-                <Stack.Screen name="activity" options={{ headerShown: false }} />
-                <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-              </Stack>
+              />
               <StatusBar style="light" />
             </View>
           </NavigationThemeProvider>

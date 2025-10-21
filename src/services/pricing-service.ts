@@ -11,6 +11,7 @@ class PricingService {
   private static instance: PricingService;
   private provider: PricingProvider | null = null;
   private fiatExchangeRateCache: Record<FiatCurrency, Record<AssetTicker, number>> | undefined;
+  private isInitialized: boolean = false;
 
   private constructor() {}
 
@@ -32,7 +33,7 @@ class PricingService {
         priceCacheDurationMs: 1000 * 60 * 60, // 1 hour
       });
 
-      // Initialize exchange rate cache
+      // Fetch and update exchange rate cache
       this.fiatExchangeRateCache = {
         [FiatCurrency.USD]: {
           [AssetTicker.BTC]: await this.provider.getLastPrice(AssetTicker.BTC, FiatCurrency.USD),
@@ -40,6 +41,8 @@ class PricingService {
           [AssetTicker.XAUT]: await this.provider.getLastPrice(AssetTicker.XAUT, FiatCurrency.USD),
         },
       };
+
+      this.isInitialized = true;
     } catch (error) {
       console.error('Failed to initialize pricing service:', error);
       throw error;
@@ -47,8 +50,8 @@ class PricingService {
   }
 
   async getFiatValue(value: number, asset: AssetTicker, currency: FiatCurrency): Promise<number> {
-    if (!this.fiatExchangeRateCache) {
-      throw new Error(`Fiat exchange rate not ready`);
+    if (!this.isInitialized || !this.fiatExchangeRateCache) {
+      throw new Error('Pricing service not initialized. Call initialize() first.');
     }
 
     return new Decimal(value).mul(this.fiatExchangeRateCache[currency][asset]).toNumber();
@@ -67,6 +70,8 @@ class PricingService {
           [AssetTicker.XAUT]: await this.provider.getLastPrice(AssetTicker.XAUT, FiatCurrency.USD),
         },
       };
+
+      this.isInitialized = true;
     } catch (error) {
       console.error('Failed to refresh exchange rates:', error);
       throw error;
@@ -75,6 +80,10 @@ class PricingService {
 
   getExchangeRate(asset: AssetTicker, currency: FiatCurrency): number | undefined {
     return this.fiatExchangeRateCache?.[currency]?.[asset];
+  }
+
+  isReady(): boolean {
+    return this.isInitialized;
   }
 }
 

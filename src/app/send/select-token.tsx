@@ -1,8 +1,7 @@
 import { assetConfig } from '@/config/assets';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AssetTicker, useWallet } from '@tetherto/wdk-react-native-provider';
@@ -12,12 +11,13 @@ import formatAmount from '@/utils/format-amount';
 import getDisplaySymbol from '@/utils/get-display-symbol';
 import { getRecentTokens, addToRecentTokens } from '@/utils/recent-tokens';
 import formatTokenAmount from '@/utils/format-token-amount';
+import Header from '@/components/header';
 
 export default function SelectTokenScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { wallet } = useWallet();
+  const { wallet, balances } = useWallet();
 
   // Get the scanned address from params (passed from QR scanner)
   const { scannedAddress } = params as { scannedAddress?: string };
@@ -35,13 +35,7 @@ export default function SelectTokenScreen() {
   // Calculate token balances from wallet data with fiat values
   useEffect(() => {
     const calculateTokensWithFiatValues = async () => {
-      if (!wallet?.accountData?.balances || !wallet?.enabledAssets) {
-        console.log('No wallet data available', {
-          hasWallet: !!wallet,
-          hasAccountData: !!wallet?.accountData,
-          hasBalances: !!wallet?.accountData?.balances,
-          hasEnabledAssets: !!wallet?.enabledAssets,
-        });
+      if (!balances.list || !wallet?.enabledAssets) {
         setTokens([]);
         return;
       }
@@ -49,7 +43,7 @@ export default function SelectTokenScreen() {
       // Group balances by denomination
       const balanceMap = new Map<string, { totalBalance: number }>();
 
-      wallet.accountData.balances.forEach(balance => {
+      balances.list.forEach(balance => {
         const current = balanceMap.get(balance.denomination) || { totalBalance: 0 };
         balanceMap.set(balance.denomination, {
           totalBalance: current.totalBalance + parseFloat(balance.value),
@@ -114,7 +108,7 @@ export default function SelectTokenScreen() {
     };
 
     calculateTokensWithFiatValues();
-  }, [wallet?.accountData?.balances, wallet?.enabledAssets]);
+  }, [balances.list, wallet?.enabledAssets]);
 
   const handleSelectToken = useCallback(
     async (token: Token) => {
@@ -142,21 +136,9 @@ export default function SelectTokenScreen() {
     [router, scannedAddress]
   );
 
-  const handleBack = useCallback(() => {
-    router.back();
-  }, [router]);
-
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <ArrowLeft size={24} color="#FF6501" />
-          <Text style={styles.backText}>Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Send funds</Text>
-        <View style={{ width: 60 }} />
-      </View>
-
+      <Header title="Send funds" style={styles.header} />
       <AssetSelector
         tokens={tokens}
         recentTokens={recentTokens}
@@ -172,24 +154,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#121212',
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backText: {
-    color: '#FF6501',
-    fontSize: 16,
-    marginLeft: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
+    marginBottom: 16,
   },
 });

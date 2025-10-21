@@ -1,10 +1,12 @@
+import Header from '@/components/header';
+import { clearAvatar } from '@/config/avatar-options';
 import { networkConfigs } from '@/config/networks';
+import useWalletAvatar from '@/hooks/use-wallet-avatar';
 import getDisplaySymbol from '@/utils/get-display-symbol';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NetworkType, useWallet } from '@tetherto/wdk-react-native-provider';
 import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
-import { ChevronLeft, Copy, Info, Shield, Trash2, Wallet } from 'lucide-react-native';
+import { Copy, Info, Shield, Trash2, Wallet } from 'lucide-react-native';
 import React from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,11 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { wallet, clearWallet } = useWallet();
-
-  const handleBack = () => {
-    router.back();
-  };
+  const { wallet, clearWallet, addresses } = useWallet();
+  const avatar = useWalletAvatar();
 
   const handleDeleteWallet = () => {
     Alert.alert(
@@ -32,8 +31,8 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await AsyncStorage.clear();
-              clearWallet();
+              await clearWallet();
+              await clearAvatar();
               Alert.alert('Success', 'Wallet deleted successfully', [
                 {
                   text: 'OK',
@@ -67,15 +66,7 @@ export default function SettingsScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <ChevronLeft size={24} color="#FF6501" />
-          <Text style={styles.backText}>Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Settings</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <Header title="Settings" />
 
       <ScrollView
         style={styles.scrollView}
@@ -97,7 +88,7 @@ export default function SettingsScreen() {
 
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Icon</Text>
-              <Text style={styles.infoValue}>{wallet?.icon || '💎'}</Text>
+              <Text style={styles.infoValue}>{avatar}</Text>
             </View>
 
             <View style={[styles.infoRow, styles.infoRowLast]}>
@@ -117,26 +108,24 @@ export default function SettingsScreen() {
           </View>
 
           <View style={styles.addressCard}>
-            {wallet?.accountData?.addressMap &&
-              Object.entries(wallet.accountData.addressMap).map(
-                ([network, address], index, array) => (
-                  <TouchableOpacity
-                    key={network}
-                    style={[
-                      styles.addressRow,
-                      index === array.length - 1 ? styles.addressRowLast : null,
-                    ]}
-                    onPress={() => handleCopyAddress(address as string, getNetworkName(network))}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.addressContent}>
-                      <Text style={styles.networkLabel}>{getNetworkName(network)}</Text>
-                      <Text style={styles.addressValue}>{formatAddress(address as string)}</Text>
-                    </View>
-                    <Copy size={18} color="#FF6501" />
-                  </TouchableOpacity>
-                )
-              )}
+            {addresses &&
+              Object.entries(addresses).map(([network, address], index, array) => (
+                <TouchableOpacity
+                  key={network}
+                  style={[
+                    styles.addressRow,
+                    index === array.length - 1 ? styles.addressRowLast : null,
+                  ]}
+                  onPress={() => handleCopyAddress(address as string, getNetworkName(network))}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.addressContent}>
+                    <Text style={styles.networkLabel}>{getNetworkName(network)}</Text>
+                    <Text style={styles.addressValue}>{formatAddress(address as string)}</Text>
+                  </View>
+                  <Copy size={18} color="#FF6501" />
+                </TouchableOpacity>
+              ))}
           </View>
         </View>
 
@@ -186,33 +175,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#121212',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1E1E1E',
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backText: {
-    color: '#FF6501',
-    fontSize: 16,
-    marginLeft: 4,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
-    textAlign: 'center',
-  },
-  headerSpacer: {
-    width: 60,
   },
   scrollView: {
     flex: 1,

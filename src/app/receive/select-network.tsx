@@ -1,8 +1,8 @@
+import Header from '@/components/header';
 import { assetConfig } from '@/config/assets';
 import { Network, networkConfigs } from '@/config/networks';
-import { useWallet } from '@tetherto/wdk-react-native-provider';
+import { NetworkType, useWallet } from '@tetherto/wdk-react-native-provider';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft } from 'lucide-react-native';
 import React, { useCallback, useMemo } from 'react';
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,28 +13,28 @@ interface NetworkOption extends Network {
   description?: string;
 }
 
+// Network descriptions for receive flow
+const NETWORK_DESCRIPTIONS = {
+  [NetworkType.ETHEREUM]: 'ERC20',
+  [NetworkType.POLYGON]: 'Polygon Network',
+  [NetworkType.ARBITRUM]: 'Arbitrum One',
+  [NetworkType.TON]: 'TON Network',
+  [NetworkType.TRON]: 'Tron Network',
+  [NetworkType.SOLANA]: 'Solana Network',
+  [NetworkType.SEGWIT]: 'Native Bitcoin Network',
+  [NetworkType.LIGHTNING]: 'Lightning Network',
+};
+
 export default function ReceiveSelectNetworkScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { wallet } = useWallet();
+  const { addresses } = useWallet();
   const params = useLocalSearchParams();
 
   const { tokenId, tokenSymbol, tokenName } = params as {
     tokenId: string;
     tokenSymbol: string;
     tokenName: string;
-  };
-
-  // Network descriptions for receive flow
-  const networkDescriptions = {
-    ethereum: 'ERC20',
-    polygon: 'Polygon Network',
-    arbitrum: 'Arbitrum One',
-    ton: 'TON Network',
-    tron: 'Tron Network',
-    solana: 'Solana Network',
-    bitcoin: 'Native Bitcoin Network',
-    lightning: 'Lightning Network',
   };
 
   // Get available networks for the selected token
@@ -44,19 +44,17 @@ export default function ReceiveSelectNetworkScreen() {
       return [];
     }
 
-    const addressMap = wallet?.accountData?.addressMap || {};
-
     return tokenConfig.supportedNetworks.map(networkType => {
       const network = networkConfigs[networkType];
-      const address = addressMap[network.id];
+      const address = addresses?.[network.id as NetworkType];
       return {
         ...network,
         address,
         hasAddress: Boolean(address),
-        description: networkDescriptions[network.id as keyof typeof networkDescriptions],
+        description: NETWORK_DESCRIPTIONS[network.id as NetworkType],
       };
     });
-  }, [tokenId, wallet?.accountData?.addressMap]);
+  }, [tokenId, addresses]);
 
   const handleSelectNetwork = useCallback(
     (network: NetworkOption) => {
@@ -78,10 +76,6 @@ export default function ReceiveSelectNetworkScreen() {
     },
     [router, tokenId, tokenSymbol, tokenName]
   );
-
-  const handleBack = useCallback(() => {
-    router.back();
-  }, [router]);
 
   const renderNetwork = ({ item }: { item: NetworkOption }) => {
     const isDisabled = !item.hasAddress;
@@ -132,14 +126,7 @@ export default function ReceiveSelectNetworkScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <ArrowLeft size={24} color="#FF6501" />
-          <Text style={styles.backText}>Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Select network</Text>
-        <View style={{ width: 60 }} />
-      </View>
+      <Header title="Select network" style={styles.header} />
 
       <View style={styles.description}>
         <Text style={styles.descriptionText}>
@@ -165,25 +152,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#121212',
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backText: {
-    color: '#FF6501',
-    fontSize: 16,
-    marginLeft: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
+    marginBottom: 16,
   },
   description: {
     paddingHorizontal: 20,

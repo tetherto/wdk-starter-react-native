@@ -2,30 +2,30 @@ import { useWallet } from '@tetherto/wdk-react-native-provider';
 import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
+import { pricingService } from '../services/pricing-service';
 
 export default function Index() {
-  const { wallet, isInitialized, isUnlocked, initializeWDK } = useWallet();
-  const [isLoading, setIsLoading] = useState(true);
+  const { wallet, isInitialized, isUnlocked } = useWallet();
+  const [isPricingReady, setIsPricingReady] = useState(false);
 
-  useEffect(() => {
-    checkForExistingWallet();
-  }, [isInitialized]);
-
-  const checkForExistingWallet = async () => {
+  const initializePricing = async () => {
     try {
-      // Initialize WDK services first
-      await initializeWDK();
-      setIsLoading(false);
+      await pricingService.initialize();
+      setIsPricingReady(true);
+      console.log('Pricing service initialized');
     } catch (error) {
-      console.error('Failed to initialize WDK:', error);
-      setIsLoading(false);
+      console.error('Failed to initialize pricing service:', error);
+      // Still set to true to allow app to continue even if pricing fails
+      setIsPricingReady(true);
     }
   };
 
-  const hasWallet = !!wallet;
+  useEffect(() => {
+    initializePricing();
+  }, []);
 
-  // Show loading indicator while checking
-  if (isLoading || !isInitialized) {
+  // Show loading indicator while WDK and pricing service are being initialized
+  if (!isInitialized || !isPricingReady) {
     return (
       <View
         style={{
@@ -41,7 +41,7 @@ export default function Index() {
   }
 
   // Redirect based on wallet existence and unlock status
-  if (!hasWallet) {
+  if (wallet === null) {
     return <Redirect href="/onboarding" />;
   }
 
