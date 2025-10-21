@@ -9,6 +9,7 @@ import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import getChainsConfig from '@/config/get-chains-config';
+import { Toaster } from 'sonner-native';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -66,6 +67,13 @@ export default function RootLayout() {
             </View>
           </NavigationThemeProvider>
         </WalletProvider>
+        <Toaster
+          toastOptions={{
+            style: { backgroundColor: '#121212', borderWidth: 1, borderColor: '#333' },
+            titleStyle: { color: '#fff' },
+            descriptionStyle: { color: '#fff' },
+          }}
+        />
       </ThemeProvider>
     </GestureHandlerRootView>
   );

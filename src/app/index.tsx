@@ -12,7 +12,6 @@ export default function Index() {
     try {
       await pricingService.initialize();
       setIsPricingReady(true);
-      console.log('Pricing service initialized');
     } catch (error) {
       console.error('Failed to initialize pricing service:', error);
       // Still set to true to allow app to continue even if pricing fails

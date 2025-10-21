@@ -17,6 +17,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { toast } from 'sonner-native';
 
 export default function ImportNameWalletScreen() {
   const router = useRouter();
@@ -44,20 +45,14 @@ export default function ImportNameWalletScreen() {
       await createWallet({ name: walletName, mnemonic: seedPhrase });
       await setAvatar(selectedAvatar.id);
 
-      Alert.alert('Success!', 'Your wallet has been imported successfully.', [
-        {
-          text: 'Continue',
-          onPress: () => {
-            // Reset navigation stack completely - only wallet screen will remain
-            navigation.dispatch(
-              CommonActions.reset({
-                index: 0,
-                routes: [{ name: 'wallet' }],
-              })
-            );
-          },
-        },
-      ]);
+      toast.success('Your wallet has been imported successfully.');
+
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'wallet' }],
+        })
+      );
     } catch (error: any) {
       console.error('Import wallet error:', error);
       Alert.alert(

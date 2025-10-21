@@ -10,6 +10,7 @@ import { Copy, Info, Shield, Trash2, Wallet } from 'lucide-react-native';
 import React from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { toast } from 'sonner-native';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -33,15 +34,11 @@ export default function SettingsScreen() {
             try {
               await clearWallet();
               await clearAvatar();
-              Alert.alert('Success', 'Wallet deleted successfully', [
-                {
-                  text: 'OK',
-                  onPress: () => router.replace('/onboarding'),
-                },
-              ]);
+              toast.success('Wallet deleted successfully');
+              router.replace('/onboarding');
             } catch (error) {
               console.error('Failed to delete wallet:', error);
-              Alert.alert('Error', 'Failed to delete wallet');
+              toast.error('Failed to delete wallet');
             }
           },
         },
@@ -51,7 +48,7 @@ export default function SettingsScreen() {
 
   const handleCopyAddress = async (address: string, networkName: string) => {
     await Clipboard.setStringAsync(address);
-    Alert.alert('Copied', `${networkName} address copied to clipboard`);
+    toast.success(`${networkName} address copied to clipboard`);
   };
 
   const formatAddress = (address: string) => {

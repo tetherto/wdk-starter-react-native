@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { toast } from 'sonner-native';
 
 export default function ImportWalletScreen() {
   const router = useRouter();
@@ -31,17 +32,15 @@ export default function ImportWalletScreen() {
       const clipboardContent = await Clipboard.getStringAsync();
 
       if (!clipboardContent.trim()) {
-        Alert.alert('Empty Clipboard', 'No text found in clipboard', [{ text: 'OK' }]);
+        toast.error('Empty Clipboard! No text found in clipboard');
         return;
       }
 
       const words = clipboardContent.trim().split(/\s+/).slice(0, 12);
 
       if (words.length < 12) {
-        Alert.alert(
-          'Invalid Phrase',
-          `Found only ${words.length} words in clipboard. Please ensure you have exactly 12 words.`,
-          [{ text: 'OK' }]
+        toast.error(
+          `Invalid Phrase! Found only ${words.length} words in clipboard. Please ensure you have exactly 12 words.`
         );
         return;
       }
@@ -54,10 +53,10 @@ export default function ImportWalletScreen() {
       });
       setSecretWords(newWords);
 
-      Alert.alert('Success!', '12 words have been pasted from clipboard', [{ text: 'OK' }]);
+      toast.success('12 words have been pasted from clipboard');
     } catch (error) {
       console.error('Paste error:', error);
-      Alert.alert('Error', 'Could not paste from clipboard', [{ text: 'OK' }]);
+      toast.error('Could not paste from clipboard');
     }
   };
 

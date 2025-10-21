@@ -3,8 +3,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { ArrowLeft, Copy, Share, X } from 'lucide-react-native';
 import React, { useCallback } from 'react';
-import { Alert, Share as RNShare, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Share as RNShare, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { toast } from 'sonner-native';
 
 export default function ReceiveQRCodeScreen() {
   const insets = useSafeAreaInsets();
@@ -29,9 +30,9 @@ export default function ReceiveQRCodeScreen() {
   const handleCopyAddress = useCallback(async () => {
     try {
       await Clipboard.setStringAsync(address);
-      Alert.alert('Copied', 'Address copied to clipboard');
+      toast.success('Address copied to clipboard');
     } catch (error) {
-      Alert.alert('Error', 'Failed to copy address');
+      toast.error('Failed to copy address');
     }
   }, [address]);
 

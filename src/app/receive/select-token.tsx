@@ -98,12 +98,13 @@ export default function ReceiveSelectTokenScreen() {
     setSearchQuery('');
   }, []);
 
-  const renderRecentToken = ({ item }: { item: string }) => {
-    const token = tokens.find(t => t.name === item);
+  const renderRecentToken = (tokenName: string) => {
+    const token = tokens.find(t => t.name === tokenName);
     if (!token) return null;
 
     return (
       <TouchableOpacity
+        key={tokenName}
         style={styles.recentToken}
         onPress={() => handleSelectToken(token)}
         activeOpacity={0.7}
@@ -173,7 +174,7 @@ export default function ReceiveSelectTokenScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.recentTokensContainer}
           >
-            {recentTokens.map(tokenName => renderRecentToken({ item: tokenName }))}
+            {recentTokens.map(tokenName => renderRecentToken(tokenName))}
           </ScrollView>
         </View>
       )}
