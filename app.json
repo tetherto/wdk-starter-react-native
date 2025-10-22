@@ -48,7 +48,6 @@
     "plugins": [
       "expo-router",
       "expo-dev-client",
-      "./plugins/withAndroidBuildGradle.js",
       [
         "expo-splash-screen",
         {
@@ -70,13 +69,7 @@
           "android": {
             "minSdkVersion": 29,
             "enableProguardInReleaseBuilds": true,
-            "enableShrinkResourcesInReleaseBuilds": true,
-            "externalNativeBuild": {
-              "cmake": {
-                "cppFlags": "-std=c++20",
-                "arguments": "-DANDROID_STL=c++_shared"
-              }
-            }
+            "enableShrinkResourcesInReleaseBuilds": true
           }
         }
       ]

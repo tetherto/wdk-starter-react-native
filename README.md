@@ -284,7 +284,6 @@ The app includes comprehensive Node.js polyfills for React Native compatibility 
 ### Native Modules
 - **Sodium**: `sodium-javascript` (WebAssembly-based cryptography)
 - **Random**: `react-native-get-random-values` (secure randomness)
-- **PBKDF2**: `react-native-fast-pbkdf2` (key derivation)
 - **TCP**: `react-native-tcp-socket` (for Bitcoin Electrum)
 
 ## 🧪 Available Scripts

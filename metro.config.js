@@ -1,5 +1,6 @@
 const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
+const { configureMetroForWDK } = require('@tetherto/wdk-react-native-provider/metro-polyfills');
 
 const config = getDefaultConfig(__dirname);
 
@@ -15,59 +16,31 @@ config.resolver = {
   assetExts: resolver.assetExts.filter(ext => ext !== 'svg'),
   sourceExts: [...resolver.sourceExts, 'svg'],
   // Ensure module paths include root node_modules
-  nodeModulesPaths: [
-    path.resolve(__dirname, 'node_modules'),
-  ],
+  nodeModulesPaths: [path.resolve(__dirname, 'node_modules')],
   alias: {
     '@': path.resolve(__dirname, 'src'),
   },
-  extraNodeModules: {
-    ...resolver.extraNodeModules,
-    // Force React and React Native to resolve from root node_modules
-    react: path.resolve(__dirname, 'node_modules/react'),
-    'react-native': path.resolve(__dirname, 'node_modules/react-native'),
-    stream: require.resolve('stream-browserify'),
-    buffer: require.resolve('@craftzdog/react-native-buffer'),
-    crypto: require.resolve('react-native-crypto'),
-    net: require.resolve('react-native-tcp-socket'),
-    tls: require.resolve('react-native-tcp-socket'),
-    url: require.resolve('react-native-url-polyfill'),
-    http: require.resolve('stream-http'),
-    https: require.resolve('https-browserify'),
-    http2: require.resolve('http2-wrapper'),
-    zlib: require.resolve('browserify-zlib'),
-    path: require.resolve('path-browserify'),
-    'nice-grpc': require.resolve('nice-grpc-web'),
-    'sodium-universal': require.resolve('sodium-javascript'),
-    querystring: require.resolve('querystring-es3'),
-    events: require.resolve('events'),
-  },
-  resolveRequest: (context, moduleName, platform) => {
-    // Handle @/ alias
-    if (moduleName.startsWith('@/')) {
-      const resolvedPath = moduleName.replace('@/', path.resolve(__dirname, 'src') + '/');
-      try {
-        return context.resolveRequest(context, resolvedPath, platform);
-      } catch (e) {
-        // If the resolved path fails, fall through to default behavior
-      }
-    }
-
-    // Polyfills for modules that aren't available in React Native
-    if (moduleName === 'stream') {
-      return {
-        filePath: require.resolve('stream-browserify'),
-        type: 'sourceFile',
-      };
-    } else if (moduleName === 'url') {
-      return {
-        filePath: require.resolve('react-native-url-polyfill'),
-        type: 'sourceFile',
-      };
-    }
-
-    return context.resolveRequest(context, moduleName, platform);
-  },
 };
 
-module.exports = config;
+// Apply WDK polyfills configuration first (handles Node.js core module polyfills)
+const wdkConfig = configureMetroForWDK(config);
+
+// Now wrap the WDK's resolveRequest with our custom alias logic
+const wdkResolveRequest = wdkConfig.resolver.resolveRequest;
+
+wdkConfig.resolver.resolveRequest = (context, moduleName, platform) => {
+  // Handle @/ alias
+  if (moduleName.startsWith('@/')) {
+    const resolvedPath = moduleName.replace('@/', path.resolve(__dirname, 'src') + '/');
+    try {
+      return context.resolveRequest(context, resolvedPath, platform);
+    } catch (e) {
+      // If the resolved path fails, fall through to WDK resolver
+    }
+  }
+
+  // Delegate to WDK's resolveRequest
+  return wdkResolveRequest(context, moduleName, platform);
+};
+
+module.exports = wdkConfig;
