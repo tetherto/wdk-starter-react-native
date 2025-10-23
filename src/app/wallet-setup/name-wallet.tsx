@@ -1,5 +1,5 @@
 import avatarOptions from '@/config/avatar-options';
-import { useRouter } from 'expo-router';
+import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { ChevronLeft } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
@@ -15,7 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function NameWalletScreen() {
-  const router = useRouter();
+  const router = useDebouncedNavigation();
   const insets = useSafeAreaInsets();
   const [walletName, setWalletName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState(avatarOptions[0]);

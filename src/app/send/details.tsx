@@ -1,9 +1,11 @@
 import { AssetTicker, useWallet, WDKService } from '@tetherto/wdk-react-native-provider';
 import { CryptoAddressInput } from '@tetherto/wdk-uikit-react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, RefreshCw } from 'lucide-react-native';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
+import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
+import { RefreshCw } from 'lucide-react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FiatCurrency, pricingService } from '@/services/pricing-service';
+import { useKeyboard } from '@/hooks/use-keyboard';
 import {
   getAssetTicker,
   getNetworkType,
@@ -29,12 +31,16 @@ import * as Clipboard from 'expo-clipboard';
 import getDisplaySymbol from '@/utils/get-display-symbol';
 import formatTokenAmount from '@/utils/format-token-amount';
 import formatUSDValue from '@/utils/format-usd-value';
+import Header from '@/components/header';
+import { toast } from 'sonner-native';
 
 export default function SendDetailsScreen() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
+  const router = useDebouncedNavigation();
   const { refreshWalletBalance } = useWallet();
   const params = useLocalSearchParams();
+  const scrollViewRef = useRef<ScrollView>(null);
+  const amountSectionYPosition = useRef<number>(0);
   const {
     tokenId,
     tokenSymbol,
@@ -70,6 +76,8 @@ export default function SendDetailsScreen() {
     error?: string;
   } | null>(null);
   const [tokenPrice, setTokenPrice] = useState<number>(0);
+  const [isAmountInputFocused, setIsAmountInputFocused] = useState(false);
+  const keyboard = useKeyboard();
 
   // Handle scanned address from QR scanner
   useEffect(() => {
@@ -77,6 +85,21 @@ export default function SendDetailsScreen() {
       setRecipientAddress(scannedAddress);
     }
   }, [scannedAddress]);
+
+  // Auto-scroll when keyboard opens
+  useEffect(() => {
+    if (keyboard.isVisible && isAmountInputFocused) {
+      // Small delay to ensure smooth animation
+      setTimeout(() => {
+        const scrollTo = amountSectionYPosition.current - 40;
+
+        scrollViewRef.current?.scrollTo({
+          y: Math.max(0, scrollTo),
+          animated: true,
+        });
+      }, 100);
+    }
+  }, [keyboard.isVisible, isAmountInputFocused]);
 
   // Calculate token price using pricing service
   useEffect(() => {
@@ -196,6 +219,7 @@ export default function SendDetailsScreen() {
       let maxAmount = numericBalance;
       if (gasEstimate.fee !== undefined) {
         maxAmount = Math.max(0, numericBalance - gasEstimate.fee);
+        toast.info('To avoid transaction failure, the max amount has been reduced by the gas fee');
       }
       setAmount(maxAmount.toString());
     } else {
@@ -265,6 +289,18 @@ export default function SendDetailsScreen() {
     },
     [validateAmount]
   );
+
+  const handleAmountInputFocus = useCallback(() => {
+    setIsAmountInputFocused(true);
+  }, []);
+
+  const handleAmountInputBlur = useCallback(() => {
+    setIsAmountInputFocused(false);
+  }, []);
+
+  const handleAmountSectionLayout = useCallback((event: any) => {
+    amountSectionYPosition.current = event.nativeEvent.layout.y;
+  }, []);
 
   const validateTransaction = useCallback(() => {
     if (!recipientAddress) {
@@ -370,6 +406,10 @@ export default function SendDetailsScreen() {
     return formatTokenAmount(parseFloat(amount || '0'), tokenSymbol as AssetTicker);
   }, [inputMode, tokenPrice, amount, tokenSymbol]);
 
+  const isUseMaxDisabled = useMemo(() => {
+    return tokenId.toLowerCase() !== 'btc' && gasEstimate.fee === undefined;
+  }, [tokenId, gasEstimate.fee]);
+
   return (
     <>
       <KeyboardAvoidingView
@@ -378,16 +418,10 @@ export default function SendDetailsScreen() {
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.container}>
-            <View style={styles.header}>
-              <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-                <ArrowLeft size={24} color="#FF6501" />
-                <Text style={styles.backText}>Back</Text>
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>Send {getDisplaySymbol(tokenSymbol)}</Text>
-              <View style={{ width: 60 }} />
-            </View>
+            <Header title={`Send ${getDisplaySymbol(tokenSymbol)}`} style={styles.header} />
 
             <ScrollView
+              ref={scrollViewRef}
               style={styles.scrollView}
               contentContainerStyle={styles.scrollContent}
               keyboardShouldPersistTaps="handled"
@@ -416,7 +450,7 @@ export default function SendDetailsScreen() {
                 onQRScan={handleQRScan}
               />
 
-              <View style={styles.section}>
+              <View style={styles.section} onLayout={handleAmountSectionLayout}>
                 <Text style={styles.sectionTitle}>Enter Amount</Text>
                 <View style={styles.amountInputContainer}>
                   <TextInput
@@ -427,6 +461,8 @@ export default function SendDetailsScreen() {
                     placeholderTextColor="#666"
                     value={amount}
                     onChangeText={handleAmountChange}
+                    onFocus={handleAmountInputFocus}
+                    onBlur={handleAmountInputBlur}
                     keyboardType="decimal-pad"
                   />
                   <TouchableOpacity style={styles.currencyToggle} onPress={toggleInputMode}>
@@ -437,8 +473,12 @@ export default function SendDetailsScreen() {
                 </View>
 
                 <View style={styles.balanceRow}>
-                  <TouchableOpacity onPress={handleUseMax}>
-                    <Text style={styles.useMaxText}>Use Max</Text>
+                  <TouchableOpacity disabled={isUseMaxDisabled} onPress={handleUseMax}>
+                    <Text
+                      style={[styles.useMaxText, { color: isUseMaxDisabled ? '#666' : '#FF6501' }]}
+                    >
+                      Use Max
+                    </Text>
                   </TouchableOpacity>
                   <Text style={styles.balanceText}>{balanceDisplay}</Text>
                 </View>
@@ -485,7 +525,14 @@ export default function SendDetailsScreen() {
               </View>
             </ScrollView>
 
-            <View style={[styles.bottomContainer, { paddingBottom: insets.bottom + 20 }]}>
+            <View
+              style={[
+                styles.bottomContainer,
+                {
+                  paddingBottom: (keyboard.isVisible ? 0 : insets.bottom) + 16,
+                },
+              ]}
+            >
               <TouchableOpacity
                 style={[
                   styles.sendButton,
@@ -566,32 +613,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#121212',
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backText: {
-    color: '#FF6501',
-    fontSize: 16,
-    marginLeft: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
+    marginBottom: 16,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingBottom: 100,
+    paddingBottom: 108,
   },
   section: {
     marginBottom: 24,
@@ -688,7 +717,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     paddingHorizontal: 20,
+    paddingTop: 16,
     backgroundColor: '#121212',
+    borderTopWidth: 1,
+    borderTopColor: '#2C2C2C',
   },
   sendButton: {
     backgroundColor: '#FF6501',

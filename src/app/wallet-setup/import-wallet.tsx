@@ -1,6 +1,6 @@
 import { SeedPhrase } from '@/components/SeedPhrase';
 import * as Clipboard from 'expo-clipboard';
-import { useRouter } from 'expo-router';
+import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { ChevronLeft, Download, FileText, ScanText } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
 
 export default function ImportWalletScreen() {
-  const router = useRouter();
+  const router = useDebouncedNavigation();
   const insets = useSafeAreaInsets();
   const [secretWords, setSecretWords] = useState<string[]>(Array(12).fill(''));
 

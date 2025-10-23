@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { ChevronLeft } from 'lucide-react-native';
 import {
   ActivityIndicator,
@@ -18,7 +18,7 @@ interface HeaderProps {
 
 const Header = (params: HeaderProps) => {
   const { title, isLoading = false, style } = params;
-  const router = useRouter();
+  const router = useDebouncedNavigation();
 
   const handleBack = () => {
     router.back();

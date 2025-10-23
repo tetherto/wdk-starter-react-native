@@ -3,7 +3,8 @@ import { assetConfig } from '@/config/assets';
 import { networkConfigs } from '@/config/networks';
 import formatAmount from '@/utils/format-amount';
 import { AssetTicker, useWallet } from '@tetherto/wdk-react-native-provider';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,7 +15,7 @@ import Header from '@/components/header';
 
 export default function SelectNetworkScreen() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
+  const router = useDebouncedNavigation();
   const params = useLocalSearchParams();
   const { balances } = useWallet();
   const { tokenId, tokenSymbol, tokenName, scannedAddress } = params as {

@@ -1,6 +1,6 @@
 import { FiatCurrency, pricingService } from '@/services/pricing-service';
 import { AssetTicker, useWallet } from '@tetherto/wdk-react-native-provider';
-import { useRouter } from 'expo-router';
+import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import React, { useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,7 +12,7 @@ import Header from '@/components/header';
 
 export default function AssetsScreen() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
+  const router = useDebouncedNavigation();
   const { wallet, balances } = useWallet();
   const [assets, setAssets] = useState<Asset[]>([]);
 

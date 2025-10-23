@@ -1,7 +1,7 @@
 import { BalanceLoader } from '@/components/BalanceLoader';
 import { AssetTicker, useWallet } from '@tetherto/wdk-react-native-provider';
 import { Balance } from '@tetherto/wdk-uikit-react-native';
-import { useRouter } from 'expo-router';
+import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -55,7 +55,7 @@ type Transaction = {
 
 export default function WalletScreen() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
+  const router = useDebouncedNavigation();
   const {
     wallet,
     isLoading,
@@ -266,7 +266,7 @@ export default function WalletScreen() {
         style={[
           styles.header,
           {
-            paddingTop: insets.top,
+            paddingTop: insets.top + 16,
             borderBottomColor: borderOpacity.interpolate({
               inputRange: [0, 1],
               outputRange: ['rgba(30, 30, 30, 0)', 'rgba(30, 30, 30, 1)'],

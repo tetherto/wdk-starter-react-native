@@ -1,5 +1,6 @@
 import { QRCode } from '@tetherto/wdk-uikit-react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import * as Clipboard from 'expo-clipboard';
 import { ArrowLeft, Copy, Share, X } from 'lucide-react-native';
 import React, { useCallback } from 'react';
@@ -9,7 +10,7 @@ import { toast } from 'sonner-native';
 
 export default function ReceiveQRCodeScreen() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
+  const router = useDebouncedNavigation();
   const params = useLocalSearchParams();
 
   const { tokenName, networkName, address } = params as {

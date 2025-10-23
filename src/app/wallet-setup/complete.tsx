@@ -1,18 +1,16 @@
 import { CommonActions, useNavigation } from '@react-navigation/native';
-import { Wallet, useWallet } from '@tetherto/wdk-react-native-provider';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useWallet } from '@tetherto/wdk-react-native-provider';
+import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function CompleteScreen() {
-  const router = useRouter();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ walletName: string; mnemonic: string }>();
-  const { createWallet, isLoading, error, addWallet } = useWallet();
+  const { createWallet, isLoading } = useWallet();
   const [walletCreated, setWalletCreated] = useState(false);
-  const [createdWallet, setCreatedWallet] = useState<Wallet | null>(null);
 
   useEffect(() => {
     // Auto-create wallet when screen loads
@@ -27,16 +25,11 @@ export default function CompleteScreen() {
       const mnemonic = params.mnemonic.split(',').join(' ');
 
       // Use the wallet context to create the wallet
-      const wallet = await createWallet({
+      await createWallet({
         name: walletName,
-        type: 'primary',
-        network: 'ethereum', // Start with Ethereum for USD₮ support
-        icon: '💎', // Default icon for new wallets
         mnemonic,
       });
 
-      console.log('Wallet created successfully:', wallet);
-      setCreatedWallet(wallet);
       setWalletCreated(true);
     } catch (error) {
       console.error('Failed to create wallet:', error);

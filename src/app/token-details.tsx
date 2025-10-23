@@ -1,7 +1,8 @@
 import { assetConfig } from '@/config/assets';
 import formatAmount from '@/utils/format-amount';
 import { AssetTicker, NetworkType, useWallet } from '@tetherto/wdk-react-native-provider';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,7 +13,7 @@ import getDisplaySymbol from '@/utils/get-display-symbol';
 import Header from '@/components/header';
 
 export default function TokenDetailsScreen() {
-  const router = useRouter();
+  const router = useDebouncedNavigation();
   const insets = useSafeAreaInsets();
   const { wallet, balances, addresses } = useWallet();
   const params = useLocalSearchParams<{ walletId?: string; token?: string }>();

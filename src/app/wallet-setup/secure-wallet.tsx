@@ -1,22 +1,18 @@
 import { SeedPhrase } from '@/components/SeedPhrase';
 import { WDKService } from '@tetherto/wdk-react-native-provider';
 import * as Clipboard from 'expo-clipboard';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { AlertCircle, ChevronLeft, Copy, Eye, EyeOff } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { getUniqueId } from 'react-native-device-info';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import parseWorkletError from '@/utils/parse-worklet-error';
+import { toast } from 'sonner-native';
 
 export default function SecureWalletScreen() {
-  const router = useRouter();
+  const router = useDebouncedNavigation();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     walletName?: string;
@@ -25,6 +21,7 @@ export default function SecureWalletScreen() {
   const [mnemonic, setMnemonic] = useState<string[]>([]);
   const [showPhrase, setShowPhrase] = useState(true);
   const [isGenerating, setIsGenerating] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Generate mnemonic using WDK on mount
@@ -34,6 +31,7 @@ export default function SecureWalletScreen() {
   const generateMnemonic = async () => {
     try {
       setIsGenerating(true);
+      setError(null);
       const prf = await getUniqueId();
       const mnemonicString = await WDKService.createSeed({ prf });
 
@@ -48,23 +46,16 @@ export default function SecureWalletScreen() {
 
       setMnemonic(words);
     } catch (error) {
-      console.error('Failed to generate mnemonic:', error);
+      console.error('Failed to generate mnemonic', error);
 
       let errorMessage = 'Failed to generate seed phrase. Please try again.';
       if ((error as Error).message) {
-        errorMessage = `Failed to generate seed phrase: ${(error as Error).message}`;
+        const workletError = parseWorkletError(error);
+        errorMessage = `Failed to generate seed phrase: ${workletError ? workletError.message : (error as Error).message}`;
       }
 
-      Alert.alert('Error', errorMessage, [
-        {
-          text: 'Retry',
-          onPress: () => generateMnemonic(),
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-      ]);
+      setError(errorMessage);
+      setMnemonic([]);
     } finally {
       setIsGenerating(false);
     }
@@ -73,7 +64,7 @@ export default function SecureWalletScreen() {
   const handleCopyPhrase = async () => {
     const phraseText = mnemonic.join(' ');
     await Clipboard.setStringAsync(phraseText);
-    Alert.alert('Copied!', 'Secret phrase copied to clipboard', [{ text: 'OK' }]);
+    toast.success('Secret phrase copied to clipboard');
   };
 
   const handleToggleVisibility = () => {
@@ -115,36 +106,62 @@ export default function SecureWalletScreen() {
           </Text>
         </View>
 
-        <SeedPhrase words={mnemonic} editable={false} isLoading={isGenerating} hidden={!showPhrase} />
+        {error ? (
+          <View style={styles.errorContainer}>
+            <View style={styles.errorBox}>
+              <AlertCircle size={24} color="#FF3B30" />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={generateMnemonic}
+              disabled={isGenerating}
+            >
+              <Text style={styles.retryButtonText}>{isGenerating ? 'Generating...' : 'Retry'}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            <SeedPhrase
+              words={mnemonic}
+              editable={false}
+              isLoading={isGenerating}
+              hidden={!showPhrase}
+            />
 
-        <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.actionButton} onPress={handleCopyPhrase}>
-            <Copy size={20} color="#FF6501" />
-            <Text style={styles.actionButtonText}>Copy Phrase</Text>
-          </TouchableOpacity>
+            <View style={styles.actionButtons}>
+              <TouchableOpacity style={styles.actionButton} onPress={handleCopyPhrase}>
+                <Copy size={20} color="#FF6501" />
+                <Text style={styles.actionButtonText}>Copy Phrase</Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={handleToggleVisibility}
-          >
-            {showPhrase ? (
-              <EyeOff size={20} color="#FF6501" />
-            ) : (
-              <Eye size={20} color="#FF6501" />
-            )}
-            <Text style={styles.actionButtonText}>
-              {showPhrase ? 'Hide Phrase' : 'Show Phrase'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+              <TouchableOpacity style={styles.actionButton} onPress={handleToggleVisibility}>
+                {showPhrase ? (
+                  <EyeOff size={20} color="#FF6501" />
+                ) : (
+                  <Eye size={20} color="#FF6501" />
+                )}
+                <Text style={styles.actionButtonText}>
+                  {showPhrase ? 'Hide Phrase' : 'Show Phrase'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 20 }]}>
         <TouchableOpacity
-          style={styles.nextButton}
+          style={[styles.nextButton, (error || mnemonic.length === 0) && styles.nextButtonDisabled]}
           onPress={handleNext}
+          disabled={error !== null || mnemonic.length === 0}
         >
-          <Text style={styles.nextButtonText}>
+          <Text
+            style={[
+              styles.nextButtonText,
+              (error || mnemonic.length === 0) && styles.nextButtonTextDisabled,
+            ]}
+          >
             Next
           </Text>
         </TouchableOpacity>
@@ -242,8 +259,45 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  nextButtonDisabled: {
+    backgroundColor: '#333',
+    opacity: 0.5,
+  },
   nextButtonText: {
     fontSize: 18,
+    fontWeight: '600',
+    color: '#000',
+  },
+  nextButtonTextDisabled: {
+    color: '#666',
+  },
+  errorContainer: {
+    marginBottom: 24,
+  },
+  errorBox: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255, 59, 48, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 59, 48, 0.3)',
+  },
+  errorText: {
+    flex: 1,
+    color: '#FF3B30',
+    fontSize: 14,
+    marginLeft: 12,
+  },
+  retryButton: {
+    backgroundColor: '#FF6501',
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  retryButtonText: {
+    fontSize: 16,
     fontWeight: '600',
     color: '#000',
   },

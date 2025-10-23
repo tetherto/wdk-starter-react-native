@@ -68,6 +68,7 @@ export default function RootLayout() {
           </NavigationThemeProvider>
         </WalletProvider>
         <Toaster
+          offset={90}
           toastOptions={{
             style: { backgroundColor: '#121212', borderWidth: 1, borderColor: '#333' },
             titleStyle: { color: '#fff' },

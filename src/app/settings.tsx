@@ -5,7 +5,7 @@ import useWalletAvatar from '@/hooks/use-wallet-avatar';
 import getDisplaySymbol from '@/utils/get-display-symbol';
 import { NetworkType, useWallet } from '@tetherto/wdk-react-native-provider';
 import * as Clipboard from 'expo-clipboard';
-import { useRouter } from 'expo-router';
+import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { Copy, Info, Shield, Trash2, Wallet } from 'lucide-react-native';
 import React from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -14,7 +14,7 @@ import { toast } from 'sonner-native';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
+  const router = useDebouncedNavigation();
   const { wallet, clearWallet, addresses } = useWallet();
   const avatar = useWalletAvatar();
 
@@ -35,7 +35,7 @@ export default function SettingsScreen() {
               await clearWallet();
               await clearAvatar();
               toast.success('Wallet deleted successfully');
-              router.replace('/onboarding');
+              router.dismissAll('/');
             } catch (error) {
               console.error('Failed to delete wallet:', error);
               toast.error('Failed to delete wallet');

@@ -1,13 +1,14 @@
 import { useWallet } from '@tetherto/wdk-react-native-provider';
-import { useRouter } from 'expo-router';
+import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { Fingerprint, Shield } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import parseWorkletError from '@/utils/parse-worklet-error';
 
 export default function AuthorizeScreen() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
+  const router = useDebouncedNavigation();
   const { wallet, unlockWallet } = useWallet();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +34,14 @@ export default function AuthorizeScreen() {
       }
     } catch (error) {
       console.error('Failed to unlock wallet:', error);
-      setError(error instanceof Error ? error.message : 'Failed to unlock wallet');
+      const workletError = parseWorkletError(error);
+      setError(
+        workletError
+          ? workletError.message
+          : error instanceof Error
+            ? error.message
+            : 'Failed to unlock wallet'
+      );
       return;
     } finally {
       setIsLoading(false);
