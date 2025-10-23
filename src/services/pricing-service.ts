@@ -1,7 +1,7 @@
 import { BitfinexPricingClient } from '@tetherto/wdk-pricing-bitfinex-http';
 import { PricingProvider } from '@tetherto/wdk-pricing-provider';
 import { AssetTicker } from '@tetherto/wdk-react-native-provider';
-import Decimal from 'decimal.js';
+import DecimalJS from 'decimal.js';
 
 export enum FiatCurrency {
   USD = 'USD',
@@ -54,7 +54,7 @@ class PricingService {
       throw new Error('Pricing service not initialized. Call initialize() first.');
     }
 
-    return new Decimal(value).mul(this.fiatExchangeRateCache[currency][asset]).toNumber();
+    return new DecimalJS(value).mul(this.fiatExchangeRateCache[currency][asset]).toNumber();
   }
 
   async refreshExchangeRates(): Promise<void> {

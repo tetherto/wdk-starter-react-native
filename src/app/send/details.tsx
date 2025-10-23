@@ -186,10 +186,6 @@ export default function SendDetailsScreen() {
     return () => clearInterval(interval);
   }, [tokenId, handleCalculateGasFee, amount]);
 
-  const handleBack = useCallback(() => {
-    router.back();
-  }, [router]);
-
   const handleQRScan = useCallback(() => {
     router.push({
       pathname: '/scan-qr',
@@ -204,7 +200,16 @@ export default function SendDetailsScreen() {
         scannedAddress,
       },
     });
-  }, [router]);
+  }, [
+    router,
+    tokenId,
+    tokenSymbol,
+    tokenBalance,
+    tokenBalanceUSD,
+    networkName,
+    networkId,
+    scannedAddress,
+  ]);
 
   const handlePasteAddress = useCallback(() => {
     Clipboard.getStringAsync().then(setRecipientAddress);

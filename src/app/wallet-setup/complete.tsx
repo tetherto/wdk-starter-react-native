@@ -15,6 +15,7 @@ export default function CompleteScreen() {
   useEffect(() => {
     // Auto-create wallet when screen loads
     createWalletWithWDK();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const createWalletWithWDK = async () => {

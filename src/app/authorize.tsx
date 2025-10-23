@@ -15,6 +15,7 @@ export default function AuthorizeScreen() {
 
   useEffect(() => {
     handleAuthorize();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAuthorize = async () => {

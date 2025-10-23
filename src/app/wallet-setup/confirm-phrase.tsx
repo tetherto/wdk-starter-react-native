@@ -19,7 +19,6 @@ export default function ConfirmPhraseScreen() {
     walletName?: string;
     avatar?: string;
   }>();
-  const [mnemonic, setMnemonic] = useState<string[]>([]);
   const [selectedWords, setSelectedWords] = useState<{ [key: number]: string }>({});
   const [wordPositions, setWordPositions] = useState<WordPosition[]>([]);
 
@@ -28,7 +27,6 @@ export default function ConfirmPhraseScreen() {
     const mnemonicString = params.mnemonic as string;
     if (mnemonicString) {
       const words = mnemonicString.split(',');
-      setMnemonic(words);
 
       // Select 4 random positions to verify
       const positions = [2, 4, 6, 11]; // Word #3, #5, #7, #12 (0-indexed + 1)

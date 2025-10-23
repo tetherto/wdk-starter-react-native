@@ -33,6 +33,7 @@ export default function ReceiveQRCodeScreen() {
       await Clipboard.setStringAsync(address);
       toast.success('Address copied to clipboard');
     } catch (error) {
+      console.error('Error copying address:', error);
       toast.error('Failed to copy address');
     }
   }, [address]);
