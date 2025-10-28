@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import parseWorkletError from '@/utils/parse-worklet-error';
 import { toast } from 'sonner-native';
 import { colors } from '@/constants/colors';
+import getErrorMessage from '@/utils/get-error-message';
 
 export default function SecureWalletScreen() {
   const router = useDebouncedNavigation();
@@ -47,15 +48,8 @@ export default function SecureWalletScreen() {
 
       setMnemonic(words);
     } catch (error) {
-      console.error('Failed to generate mnemonic', error);
-
-      let errorMessage = 'Failed to generate seed phrase. Please try again.';
-      if ((error as Error).message) {
-        const workletError = parseWorkletError(error);
-        errorMessage = `Failed to generate seed phrase: ${workletError ? workletError.message : (error as Error).message}`;
-      }
-
-      setError(errorMessage);
+      console.error('Failed to generate seed phrase', error);
+      setError(getErrorMessage(error, 'Failed to generate seed phrase. Please try again.'));
       setMnemonic([]);
     } finally {
       setIsGenerating(false);

@@ -6,6 +6,7 @@ import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } fr
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import parseWorkletError from '@/utils/parse-worklet-error';
 import { colors } from '@/constants/colors';
+import getErrorMessage from '@/utils/get-error-message';
 
 export default function AuthorizeScreen() {
   const insets = useSafeAreaInsets();
@@ -36,14 +37,7 @@ export default function AuthorizeScreen() {
       }
     } catch (error) {
       console.error('Failed to unlock wallet:', error);
-      const workletError = parseWorkletError(error);
-      setError(
-        workletError
-          ? workletError.message
-          : error instanceof Error
-            ? error.message
-            : 'Failed to unlock wallet'
-      );
+      setError(getErrorMessage(error, 'Failed to unlock wallet'));
       return;
     } finally {
       setIsLoading(false);
