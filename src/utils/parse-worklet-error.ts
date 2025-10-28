@@ -3,15 +3,17 @@ const ERROR_MESSAGES = {
 };
 
 const parseWorkletError = (error: any) => {
-  if (error.message) {
-    const [codeRaw, messageRaw] = error.message.split(',');
+  if (!error.message) {
+    return undefined;
+  }
 
-    if (codeRaw.trim().startsWith('code:') && messageRaw.trim().startsWith('msg:')) {
-      const code = (codeRaw.split(':')[1] || '').trim();
-      const message = (messageRaw.split(':')[1] || '').trim();
+  const [codeRaw, messageRaw] = error.message.split(',');
 
-      return { code, message: ERROR_MESSAGES[code as keyof typeof ERROR_MESSAGES] || message };
-    }
+  if (codeRaw.trim().startsWith('code:') && messageRaw.trim().startsWith('msg:')) {
+    const code = (codeRaw.split(':')[1] || '').trim();
+    const message = (messageRaw.split(':')[1] || '').trim();
+
+    return { code, message: ERROR_MESSAGES[code as keyof typeof ERROR_MESSAGES] || message };
   }
 };
 
