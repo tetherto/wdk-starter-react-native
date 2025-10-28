@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 /**
  * A debounced version of expo-router's useRouter hook to prevent
@@ -8,6 +8,15 @@ import { useCallback, useRef } from 'react';
 export function useDebouncedNavigation(delay = 300) {
   const router = useRouter();
   const isNavigatingRef = useRef(false);
+  const timeoutIdsRef = useRef<Set<number>>(new Set());
+
+  useEffect(() => {
+    return () => {
+      // Clear all pending timeouts on unmount
+      timeoutIdsRef.current.forEach(timeoutId => clearTimeout(timeoutId));
+      timeoutIdsRef.current.clear();
+    };
+  }, []);
 
   const push = useCallback(
     (path: string | { pathname: string; params?: Record<string, any> }) => {
@@ -18,9 +27,11 @@ export function useDebouncedNavigation(delay = 300) {
       isNavigatingRef.current = true;
       router.push(path as any);
 
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         isNavigatingRef.current = false;
+        timeoutIdsRef.current.delete(timeoutId);
       }, delay);
+      timeoutIdsRef.current.add(timeoutId);
     },
     [router, delay]
   );
@@ -34,9 +45,11 @@ export function useDebouncedNavigation(delay = 300) {
       isNavigatingRef.current = true;
       router.replace(path as any);
 
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         isNavigatingRef.current = false;
+        timeoutIdsRef.current.delete(timeoutId);
       }, delay);
+      timeoutIdsRef.current.add(timeoutId);
     },
     [router, delay]
   );
@@ -49,9 +62,11 @@ export function useDebouncedNavigation(delay = 300) {
     isNavigatingRef.current = true;
     router.back();
 
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       isNavigatingRef.current = false;
+      timeoutIdsRef.current.delete(timeoutId);
     }, delay);
+    timeoutIdsRef.current.add(timeoutId);
   }, [router, delay]);
 
   const dismissAll = useCallback(
@@ -67,9 +82,11 @@ export function useDebouncedNavigation(delay = 300) {
         router.replace(navigateTo as any);
       }
 
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         isNavigatingRef.current = false;
+        timeoutIdsRef.current.delete(timeoutId);
       }, delay);
+      timeoutIdsRef.current.add(timeoutId);
     },
     [router, delay]
   );
