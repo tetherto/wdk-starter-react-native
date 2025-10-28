@@ -11,10 +11,11 @@ export function useDebouncedNavigation(delay = 300) {
   const timeoutIdsRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
+    const refs = timeoutIdsRef.current;
     return () => {
       // Clear all pending timeouts on unmount
-      timeoutIdsRef.current.forEach(timeoutId => clearTimeout(timeoutId));
-      timeoutIdsRef.current.clear();
+      refs.forEach(clearTimeout);
+      refs.clear();
     };
   }, []);
 
