@@ -175,7 +175,7 @@ export default function ReceiveSelectTokenScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.recentTokensContainer}
           >
-            {recentTokens.map(tokenName => renderRecentToken(tokenName))}
+            {recentTokens.map(renderRecentToken)}
           </ScrollView>
         </View>
       )}
