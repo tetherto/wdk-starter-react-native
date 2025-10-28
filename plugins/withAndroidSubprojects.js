@@ -1,7 +1,7 @@
 const { withProjectBuildGradle } = require('@expo/config-plugins');
 
-const withAndroidSubprojects = config => {
-  return withProjectBuildGradle(config, modConfig => {
+const withAndroidSubprojects = (config) => {
+  return withProjectBuildGradle(config, (modConfig) => {
     if (modConfig.modResults.language === 'groovy') {
       // Add subprojects block after allprojects
       const subprojectsBlock = `
