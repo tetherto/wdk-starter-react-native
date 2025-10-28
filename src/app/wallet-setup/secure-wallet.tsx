@@ -78,6 +78,8 @@ export default function SecureWalletScreen() {
     });
   };
 
+  const PhraseVisibilityIcon = showPhrase ? EyeOff : Eye;
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
@@ -131,11 +133,7 @@ export default function SecureWalletScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.actionButton} onPress={handleToggleVisibility}>
-                {showPhrase ? (
-                  <EyeOff size={20} color={colors.primary} />
-                ) : (
-                  <Eye size={20} color={colors.primary} />
-                )}
+                <PhraseVisibilityIcon size={20} color={colors.primary} />
                 <Text style={styles.actionButtonText}>
                   {showPhrase ? 'Hide Phrase' : 'Show Phrase'}
                 </Text>
