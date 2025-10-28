@@ -99,9 +99,7 @@ export function SeedPhrase({
     return (
       <View style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>
-            Generating secure seed phrase...
-          </Text>
+          <Text style={styles.loadingText}>Generating secure seed phrase...</Text>
         </View>
       </View>
     );
@@ -119,15 +117,13 @@ export function SeedPhrase({
           <Text style={styles.wordNumber}>{index + 1}</Text>
           {editable ? (
             <TextInput
-              ref={(ref) => {
+              ref={ref => {
                 if (ref) inputRefs.current[index] = ref;
               }}
               style={styles.wordInput}
               value={word}
-              onChangeText={(text) => handleWordChange(index, text)}
-              onKeyPress={({ nativeEvent }) =>
-                handleKeyPress(index, nativeEvent.key)
-              }
+              onChangeText={text => handleWordChange(index, text)}
+              onKeyPress={({ nativeEvent }) => handleKeyPress(index, nativeEvent.key)}
               placeholder=""
               placeholderTextColor={theme.colors.textDisabled}
               autoCapitalize="none"

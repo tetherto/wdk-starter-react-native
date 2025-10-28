@@ -3,20 +3,22 @@ import { assetConfig } from '@/config/assets';
 import { networkConfigs } from '@/config/networks';
 import formatAmount from '@/utils/format-amount';
 import { AssetTicker, useWallet } from '@tetherto/wdk-react-native-provider';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft } from 'lucide-react-native';
+import { useLocalSearchParams } from 'expo-router';
+import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FiatCurrency, pricingService } from '@/services/pricing-service';
 import getDisplaySymbol from '@/utils/get-display-symbol';
 import formatTokenAmount from '@/utils/format-token-amount';
+import Header from '@/components/header';
+import { colors } from '@/constants/colors';
 
 export default function SelectNetworkScreen() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
+  const router = useDebouncedNavigation();
   const params = useLocalSearchParams();
-  const { wallet } = useWallet();
+  const { balances } = useWallet();
   const { tokenId, tokenSymbol, tokenName, scannedAddress } = params as {
     tokenId: string;
     tokenSymbol: string;
@@ -30,6 +32,7 @@ export default function SelectNetworkScreen() {
   useEffect(() => {
     const calculateNetworks = async () => {
       const tokenConfig = assetConfig[tokenId];
+
       if (!tokenConfig) {
         setNetworks([]);
         return;
@@ -39,7 +42,7 @@ export default function SelectNetworkScreen() {
         tokenConfig.supportedNetworks.map(async networkType => {
           const network = networkConfigs[networkType];
 
-          const balance = wallet?.accountData?.balances.find(
+          const balance = balances.list?.find(
             b => networkType === b.networkType && b.denomination === tokenId
           );
 
@@ -66,12 +69,12 @@ export default function SelectNetworkScreen() {
     };
 
     calculateNetworks();
-  }, [tokenId, wallet?.accountData?.balances]);
+  }, [tokenId, balances.list]);
 
   const handleSelectNetwork = useCallback(
     (network: Network) => {
       router.push({
-        pathname: '/send/send-details',
+        pathname: '/send/details',
         params: {
           tokenId,
           tokenSymbol,
@@ -87,20 +90,9 @@ export default function SelectNetworkScreen() {
     [router, tokenId, tokenSymbol, tokenName, scannedAddress]
   );
 
-  const handleBack = useCallback(() => {
-    router.back();
-  }, [router]);
-
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <ArrowLeft size={24} color="#FF6501" />
-          <Text style={styles.backText}>Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Select network</Text>
-        <View style={{ width: 60 }} />
-      </View>
+      <Header title="Select network" style={styles.header} />
 
       <Text style={styles.description}>
         Select the network you will be using to send {tokenSymbol || tokenName}
@@ -114,32 +106,14 @@ export default function SelectNetworkScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: colors.background,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backText: {
-    color: '#FF6501',
-    fontSize: 16,
-    marginLeft: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
+    marginBottom: 16,
   },
   description: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
     paddingHorizontal: 20,
     marginBottom: 24,
   },

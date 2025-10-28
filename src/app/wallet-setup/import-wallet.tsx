@@ -1,8 +1,9 @@
 import { SeedPhrase } from '@/components/SeedPhrase';
 import * as Clipboard from 'expo-clipboard';
-import { useRouter } from 'expo-router';
+import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { ChevronLeft, Download, FileText, ScanText } from 'lucide-react-native';
 import React, { useState } from 'react';
+import { colors } from '@/constants/colors';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -14,9 +15,10 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { toast } from 'sonner-native';
 
 export default function ImportWalletScreen() {
-  const router = useRouter();
+  const router = useDebouncedNavigation();
   const insets = useSafeAreaInsets();
   const [secretWords, setSecretWords] = useState<string[]>(Array(12).fill(''));
 
@@ -31,17 +33,15 @@ export default function ImportWalletScreen() {
       const clipboardContent = await Clipboard.getStringAsync();
 
       if (!clipboardContent.trim()) {
-        Alert.alert('Empty Clipboard', 'No text found in clipboard', [{ text: 'OK' }]);
+        toast.error('Empty Clipboard! No text found in clipboard');
         return;
       }
 
       const words = clipboardContent.trim().split(/\s+/).slice(0, 12);
 
       if (words.length < 12) {
-        Alert.alert(
-          'Invalid Phrase',
-          `Found only ${words.length} words in clipboard. Please ensure you have exactly 12 words.`,
-          [{ text: 'OK' }]
+        toast.error(
+          `Invalid Phrase! Found only ${words.length} words in clipboard. Please ensure you have exactly 12 words.`
         );
         return;
       }
@@ -54,10 +54,10 @@ export default function ImportWalletScreen() {
       });
       setSecretWords(newWords);
 
-      Alert.alert('Success!', '12 words have been pasted from clipboard', [{ text: 'OK' }]);
+      toast.success('12 words have been pasted from clipboard');
     } catch (error) {
       console.error('Paste error:', error);
-      Alert.alert('Error', 'Could not paste from clipboard', [{ text: 'OK' }]);
+      toast.error('Could not paste from clipboard');
     }
   };
 
@@ -122,7 +122,7 @@ export default function ImportWalletScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color="#FF6501" />
+          <ChevronLeft size={24} color={colors.primary} />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
       </View>
@@ -138,12 +138,12 @@ export default function ImportWalletScreen() {
 
           <View style={styles.actionButtons}>
             <TouchableOpacity style={styles.actionButton} onPress={handlePaste}>
-              <FileText size={20} color="#FF6501" />
+              <FileText size={20} color={colors.primary} />
               <Text style={styles.actionButtonText}>Paste</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.actionButton} onPress={handleScanText}>
-              <ScanText size={20} color="#FF6501" />
+              <ScanText size={20} color={colors.primary} />
               <Text style={styles.actionButtonText}>Scan Text</Text>
             </TouchableOpacity>
           </View>
@@ -155,7 +155,7 @@ export default function ImportWalletScreen() {
           style={[styles.importButton, !isFormValid() && styles.importButtonDisabled]}
           onPress={handleImportWallet}
         >
-          <Download size={20} color={isFormValid() ? '#000' : '#666'} />
+          <Download size={20} color={isFormValid() ? colors.black : colors.textTertiary} />
           <Text
             style={[styles.importButtonText, !isFormValid() && styles.importButtonTextDisabled]}
           >
@@ -170,7 +170,7 @@ export default function ImportWalletScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: colors.background,
   },
   header: {
     paddingHorizontal: 20,
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backText: {
-    color: '#FF6501',
+    color: colors.primary,
     fontSize: 16,
     marginLeft: 4,
   },
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.text,
     marginBottom: 32,
   },
   actionButtons: {
@@ -205,15 +205,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(30, 144, 255, 0.1)',
+    backgroundColor: colors.tintedBackground,
     borderRadius: 12,
     paddingVertical: 14,
     marginHorizontal: 8,
     borderWidth: 1,
-    borderColor: '#FF6501',
+    borderColor: colors.primary,
   },
   actionButtonText: {
-    color: '#FF6501',
+    color: colors.primary,
     fontSize: 16,
     fontWeight: '500',
     marginLeft: 8,
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   importButton: {
-    backgroundColor: '#FF6501',
+    backgroundColor: colors.primary,
     height: 56,
     borderRadius: 12,
     flexDirection: 'row',
@@ -232,14 +232,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   importButtonDisabled: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: colors.card,
   },
   importButtonText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000',
+    color: colors.black,
   },
   importButtonTextDisabled: {
-    color: '#666',
+    color: colors.textTertiary,
   },
 });

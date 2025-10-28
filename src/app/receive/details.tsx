@@ -1,14 +1,17 @@
 import { QRCode } from '@tetherto/wdk-uikit-react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import * as Clipboard from 'expo-clipboard';
 import { ArrowLeft, Copy, Share, X } from 'lucide-react-native';
 import React, { useCallback } from 'react';
-import { Alert, Share as RNShare, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Share as RNShare, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { toast } from 'sonner-native';
+import { colors } from '@/constants/colors';
 
 export default function ReceiveQRCodeScreen() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
+  const router = useDebouncedNavigation();
   const params = useLocalSearchParams();
 
   const { tokenName, networkName, address } = params as {
@@ -29,9 +32,10 @@ export default function ReceiveQRCodeScreen() {
   const handleCopyAddress = useCallback(async () => {
     try {
       await Clipboard.setStringAsync(address);
-      Alert.alert('Copied', 'Address copied to clipboard');
+      toast.success('Address copied to clipboard');
     } catch (error) {
-      Alert.alert('Error', 'Failed to copy address');
+      console.error('Error copying address:', error);
+      toast.error('Failed to copy address');
     }
   }, [address]);
 
@@ -50,12 +54,12 @@ export default function ReceiveQRCodeScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <ArrowLeft size={24} color="#FF6501" />
+          <ArrowLeft size={24} color={colors.primary} />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Receive funds</Text>
         <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-          <X size={24} color="#FF6501" />
+          <X size={24} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -70,7 +74,7 @@ export default function ReceiveQRCodeScreen() {
           value={address}
           label="Scan QR code"
           size={200}
-          color="#FF6501"
+          color={colors.primary}
           containerStyle={styles.qrSection}
         />
 
@@ -87,7 +91,7 @@ export default function ReceiveQRCodeScreen() {
               onPress={handleCopyAddress}
               activeOpacity={0.7}
             >
-              <Copy size={20} color="#fff" />
+              <Copy size={20} color={colors.white} />
               <Text style={styles.actionButtonText}>Copy</Text>
             </TouchableOpacity>
 
@@ -96,7 +100,7 @@ export default function ReceiveQRCodeScreen() {
               onPress={handleShareAddress}
               activeOpacity={0.7}
             >
-              <Share size={20} color="#fff" />
+              <Share size={20} color={colors.white} />
               <Text style={styles.actionButtonText}>Share</Text>
             </TouchableOpacity>
           </View>
@@ -109,7 +113,7 @@ export default function ReceiveQRCodeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -123,14 +127,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backText: {
-    color: '#FF6501',
+    color: colors.primary,
     fontSize: 16,
     marginLeft: 4,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text,
   },
   closeButton: {
     padding: 4,
@@ -145,7 +149,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text,
     lineHeight: 28,
     textAlign: 'left',
   },
@@ -157,22 +161,22 @@ const styles = StyleSheet.create({
   },
   addressLabel: {
     fontSize: 16,
-    color: '#999',
+    color: colors.textSecondary,
     marginBottom: 16,
   },
   addressContainer: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: colors.card,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     marginBottom: 24,
     width: '100%',
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: colors.border,
   },
   addressText: {
     fontSize: 14,
-    color: '#fff',
+    color: colors.text,
     textAlign: 'center',
     fontFamily: 'monospace',
     lineHeight: 20,
@@ -192,13 +196,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   copyButton: {
-    backgroundColor: '#FF6501',
+    backgroundColor: colors.primary,
   },
   shareButton: {
-    backgroundColor: '#666',
+    backgroundColor: colors.textTertiary,
   },
   actionButtonText: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 16,
     fontWeight: '600',
   },

@@ -2,46 +2,46 @@ import { useWallet } from '@tetherto/wdk-react-native-provider';
 import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
+import { pricingService } from '../services/pricing-service';
+import { colors } from '@/constants/colors';
 
 export default function Index() {
-  const { wallet, isInitialized, isUnlocked, initializeWDK } = useWallet();
-  const [isLoading, setIsLoading] = useState(true);
+  const { wallet, isInitialized, isUnlocked } = useWallet();
+  const [isPricingReady, setIsPricingReady] = useState(false);
 
-  useEffect(() => {
-    checkForExistingWallet();
-  }, [isInitialized]);
-
-  const checkForExistingWallet = async () => {
+  const initializePricing = async () => {
     try {
-      // Initialize WDK services first
-      await initializeWDK();
-      setIsLoading(false);
+      await pricingService.initialize();
+      setIsPricingReady(true);
     } catch (error) {
-      console.error('Failed to initialize WDK:', error);
-      setIsLoading(false);
+      console.error('Failed to initialize pricing service:', error);
+      // Still set to true to allow app to continue even if pricing fails
+      setIsPricingReady(true);
     }
   };
 
-  const hasWallet = !!wallet;
+  useEffect(() => {
+    initializePricing();
+  }, []);
 
-  // Show loading indicator while checking
-  if (isLoading || !isInitialized) {
+  // Show loading indicator while WDK and pricing service are being initialized
+  if (!isInitialized || !isPricingReady) {
     return (
       <View
         style={{
           flex: 1,
           justifyContent: 'center',
           alignItems: 'center',
-          backgroundColor: '#121212',
+          backgroundColor: colors.background,
         }}
       >
-        <ActivityIndicator size="large" color="#FF6501" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   // Redirect based on wallet existence and unlock status
-  if (!hasWallet) {
+  if (!wallet) {
     return <Redirect href="/onboarding" />;
   }
 

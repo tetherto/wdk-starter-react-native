@@ -8,8 +8,9 @@ import { useEffect } from 'react';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
-import { pricingService } from '../services/pricing-service';
 import getChainsConfig from '@/config/get-chains-config';
+import { Toaster } from 'sonner-native';
+import { colors } from '@/constants/colors';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -17,8 +18,8 @@ const CustomDarkTheme = {
   ...DarkTheme,
   colors: {
     ...DarkTheme.colors,
-    background: '#121212',
-    card: '#121212',
+    background: colors.background,
+    card: colors.background,
   },
 };
 
@@ -26,13 +27,7 @@ export default function RootLayout() {
   useEffect(() => {
     const initApp = async () => {
       try {
-        // Initialize WDK services early in app lifecycle
         await WDKService.initialize();
-        console.log('WDK Services initialized in app layout');
-
-        // Initialize pricing service
-        await pricingService.initialize();
-        console.log('Pricing service initialized in app layout');
       } catch (error) {
         console.error('Failed to initialize services in app layout:', error);
       } finally {
@@ -48,7 +43,7 @@ export default function RootLayout() {
       <ThemeProvider
         defaultMode="dark"
         brandConfig={{
-          primaryColor: '#FF6501',
+          primaryColor: colors.primary,
         }}
       >
         <WalletProvider
@@ -58,40 +53,33 @@ export default function RootLayout() {
               url: process.env.EXPO_PUBLIC_WDK_INDEXER_BASE_URL!,
             },
             chains: getChainsConfig(),
+            enableCaching: true,
           }}
         >
           <NavigationThemeProvider value={CustomDarkTheme}>
-            <View style={{ flex: 1, backgroundColor: '#121212' }}>
+            <View style={{ flex: 1, backgroundColor: colors.background }}>
               <Stack
                 screenOptions={{
                   headerShown: false,
-                  contentStyle: { backgroundColor: '#121212' },
+                  contentStyle: { backgroundColor: colors.background },
                 }}
-              >
-                <Stack.Screen name="index" options={{ headerShown: false }} />
-                <Stack.Screen
-                  name="onboarding"
-                  options={{
-                    headerShown: false,
-                    animation: 'none',
-                  }}
-                />
-                <Stack.Screen
-                  name="wallet"
-                  options={{
-                    headerShown: false,
-                    gestureEnabled: false,
-                  }}
-                />
-                <Stack.Screen name="wallet-setup" options={{ headerShown: false }} />
-                <Stack.Screen name="assets" options={{ headerShown: false }} />
-                <Stack.Screen name="activity" options={{ headerShown: false }} />
-                <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-              </Stack>
+              />
               <StatusBar style="light" />
             </View>
           </NavigationThemeProvider>
         </WalletProvider>
+        <Toaster
+          offset={90}
+          toastOptions={{
+            style: {
+              backgroundColor: colors.background,
+              borderWidth: 1,
+              borderColor: colors.border,
+            },
+            titleStyle: { color: colors.text },
+            descriptionStyle: { color: colors.text },
+          }}
+        />
       </ThemeProvider>
     </GestureHandlerRootView>
   );

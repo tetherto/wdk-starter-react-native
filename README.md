@@ -31,7 +31,7 @@ For detailed documentation about the complete WDK ecosystem, visit [docs.wallet.
 ### Wallet Management
 - **Secure Seed Generation**: Cryptographically secure 12-word mnemonic generation
 - **Seed Import**: Import existing BIP39-compatible mnemonic phrases
-- **Encrypted Storage**: Secure key storage via [`@tetherto/wdk-secret-manager`](https://github.com/tetherto/wdk-secret-manager)
+- **Encrypted Storage**: Secure key storage via native secure storage (iOS Keychain, Android KeyStore)
 - **Biometric Authentication**: Face ID/Touch ID for wallet unlock
 - **Wallet Naming**: Custom wallet names for better organization
 
@@ -53,9 +53,12 @@ For detailed documentation about the complete WDK ecosystem, visit [docs.wallet.
 ## 🧱 Platform Prerequisites
 
 - Node.js 22+
-- iOS: Xcode toolchain; Android: SDK + NDK (see `app.json` build properties)
+- iOS: Xcode toolchain
+- Android: SDK (see `app.json` build properties for version requirements)
 
 ## ⬇️ Installation
+
+Clone this repository and install dependencies:
 
 ```bash
 npm install
@@ -63,17 +66,20 @@ npm install
 
 ## 🔑 Environment Setup
 
-**Optional but Recommended:** Configure the WDK Indexer API key for balance and transaction data:
+**Optional but Recommended:** Configure API keys for balance, transaction data, and Tron network support:
 
 ```bash
 # Copy the example environment file
 cp .env.example .env
 
-# Edit .env and replace PUT_WDK_API_KEY_HERE with your actual API key
-# EXPO_PUBLIC_WDK_INDEXER_API_KEY=your_actual_api_key_here
+# Edit .env and configure the following:
+# EXPO_PUBLIC_WDK_INDEXER_BASE_URL=https://wdk-api.tether.io
+# EXPO_PUBLIC_WDK_INDEXER_API_KEY=your_wdk_api_key_here
+# EXPO_PUBLIC_TRON_API_KEY=your_tron_api_key_here (optional, for Tron network)
+# EXPO_PUBLIC_TRON_API_SECRET=your_tron_api_secret_here (optional, for Tron network)
 ```
 
-**Note:** The WDK Indexer API key is used for balance and transaction API requests. While not mandatory for development, it enables full functionality. Get your free WDK Indexer API key in the [WDK docs](https://docs.wallet.tether.io/).
+**Note:** The WDK Indexer API key is used for balance and transaction API requests. While not mandatory for development, it enables full functionality. Tron API keys are optional and only needed if you want to use the Tron network. Get your free WDK Indexer API key in the [WDK docs](https://docs.wallet.tether.io/).
 
 ## 🔧 Provider Configuration (Recommended)
 
@@ -145,12 +151,18 @@ src/
 │   └── get-chains-config.ts     # Chain-specific settings & provider URLs
 ├── services/                    # Business logic & external services
 │   └── pricing-service.ts       # Fiat pricing via Bitfinex
+├── hooks/                       # Custom React hooks
+│   ├── use-debounced-navigation.ts  # Debounced navigation to prevent rapid taps
+│   ├── use-keyboard.ts          # Keyboard visibility detection
+│   └── use-wallet-avatar.ts     # Wallet avatar management
 └── utils/                       # Utility functions
     ├── gas-fee-calculator.ts    # Gas fee estimation & network utilities
     ├── format-amount.ts         # Amount formatting helpers
     ├── format-token-amount.ts   # Token-specific amount formatting
     ├── format-usd-value.ts      # USD value formatting
     ├── get-display-symbol.ts    # Token symbol display utilities
+    ├── get-denomination-value.ts # Token denomination utilities
+    ├── parse-worklet-error.ts   # Worklet error parsing for better UX
     └── recent-tokens.ts         # Recent token tracking
 ```
 
@@ -273,14 +285,7 @@ This starter implements multiple layers of security for protecting user assets:
 ## ⚙️ Polyfills & Build Configuration
 
 ### Node.js Polyfills
-The app includes comprehensive Node.js polyfills for React Native compatibility (see `metro.config.js`):
-- **Stream**: `stream-browserify`, `stream-http`
-- **Buffer**: `@craftzdog/react-native-buffer`
-- **Crypto**: `react-native-crypto`, `expo-crypto`
-- **Network**: `https-browserify`, `http2-wrapper`
-- **Utilities**: `path-browserify`, `querystring-es3`, `events`, `zlib`
-- **gRPC**: `nice-grpc-web` for blockchain communication
-
+The app includes comprehensive Node.js polyfills for React Native compatibility via `@tetherto/wdk-react-native-provider/metro-polyfills`
 ### Native Modules
 - **Sodium**: `sodium-javascript` (WebAssembly-based cryptography)
 - **Random**: `react-native-get-random-values` (secure randomness)
@@ -295,7 +300,6 @@ The app includes comprehensive Node.js polyfills for React Native compatibility 
 | `npm run ios` | Run on iOS simulator |
 | `npm run android` | Run on Android emulator/device |
 | `npm run web` | Run in web browser |
-| `npm run gen:bundle` | Build secret manager worklet bundle for all platforms |
 | `npm run prebuild` | Generate native project files |
 | `npm run prebuild:clean` | Clean and regenerate native project files |
 | `npm run lint` | Run ESLint to check code quality |
@@ -318,15 +322,15 @@ The app includes comprehensive Node.js polyfills for React Native compatibility 
 - **React Compiler**: Enabled for automatic memoization
 
 ### Platform Requirements
-- **Android**: minSdkVersion 29, NDK configured with C++20 support
+- **Android**: minSdkVersion 29, compileSdkVersion 36
 - **iOS**: Latest Xcode toolchain recommended
 - **Node.js**: 22+ required
 
 ### WDK Packages
 - `@tetherto/wdk-react-native-provider`: Main wallet provider
 - `@tetherto/wdk-uikit-react-native`: UI components library
-- `@tetherto/wdk-secret-manager`: Secure key management
 - `@tetherto/wdk-pricing-provider`: Fiat pricing integration
+- `@tetherto/wdk-pricing-bitfinex-http`: Bitfinex price data provider
 - `@tetherto/pear-wrk-wdk`: BareKit worklets runtime
 
 ## 🎨 Customization Guide
@@ -385,11 +389,6 @@ Update the brand configuration in `src/app/_layout.tsx`:
 ## 🐛 Troubleshooting
 
 ### Common Issues
-
-**Worklet bundle errors**
-```bash
-npm run gen:bundle
-```
 
 **Metro bundler cache issues**
 ```bash

@@ -1,9 +1,12 @@
 import { AssetTicker, useWallet, WDKService } from '@tetherto/wdk-react-native-provider';
 import { CryptoAddressInput } from '@tetherto/wdk-uikit-react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, RefreshCw } from 'lucide-react-native';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
+import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
+import { RefreshCw } from 'lucide-react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FiatCurrency, pricingService } from '@/services/pricing-service';
+import { useKeyboard } from '@/hooks/use-keyboard';
+import { colors } from '@/constants/colors';
 import {
   getAssetTicker,
   getNetworkType,
@@ -29,12 +32,16 @@ import * as Clipboard from 'expo-clipboard';
 import getDisplaySymbol from '@/utils/get-display-symbol';
 import formatTokenAmount from '@/utils/format-token-amount';
 import formatUSDValue from '@/utils/format-usd-value';
+import Header from '@/components/header';
+import { toast } from 'sonner-native';
 
 export default function SendDetailsScreen() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
+  const router = useDebouncedNavigation();
   const { refreshWalletBalance } = useWallet();
   const params = useLocalSearchParams();
+  const scrollViewRef = useRef<ScrollView>(null);
+  const amountSectionYPosition = useRef<number>(0);
   const {
     tokenId,
     tokenSymbol,
@@ -70,6 +77,8 @@ export default function SendDetailsScreen() {
     error?: string;
   } | null>(null);
   const [tokenPrice, setTokenPrice] = useState<number>(0);
+  const [isAmountInputFocused, setIsAmountInputFocused] = useState(false);
+  const keyboard = useKeyboard();
 
   // Handle scanned address from QR scanner
   useEffect(() => {
@@ -77,6 +86,21 @@ export default function SendDetailsScreen() {
       setRecipientAddress(scannedAddress);
     }
   }, [scannedAddress]);
+
+  // Auto-scroll when keyboard opens
+  useEffect(() => {
+    if (keyboard.isVisible && isAmountInputFocused) {
+      // Small delay to ensure smooth animation
+      setTimeout(() => {
+        const scrollTo = amountSectionYPosition.current - 40;
+
+        scrollViewRef.current?.scrollTo({
+          y: Math.max(0, scrollTo),
+          animated: true,
+        });
+      }, 100);
+    }
+  }, [keyboard.isVisible, isAmountInputFocused]);
 
   // Calculate token price using pricing service
   useEffect(() => {
@@ -163,15 +187,11 @@ export default function SendDetailsScreen() {
     return () => clearInterval(interval);
   }, [tokenId, handleCalculateGasFee, amount]);
 
-  const handleBack = useCallback(() => {
-    router.back();
-  }, [router]);
-
   const handleQRScan = useCallback(() => {
     router.push({
       pathname: '/scan-qr',
       params: {
-        returnRoute: '/send/send-details',
+        returnRoute: '/send/details',
         tokenId,
         tokenSymbol,
         tokenBalance,
@@ -181,7 +201,16 @@ export default function SendDetailsScreen() {
         scannedAddress,
       },
     });
-  }, [router]);
+  }, [
+    router,
+    tokenId,
+    tokenSymbol,
+    tokenBalance,
+    tokenBalanceUSD,
+    networkName,
+    networkId,
+    scannedAddress,
+  ]);
 
   const handlePasteAddress = useCallback(() => {
     Clipboard.getStringAsync().then(setRecipientAddress);
@@ -196,6 +225,7 @@ export default function SendDetailsScreen() {
       let maxAmount = numericBalance;
       if (gasEstimate.fee !== undefined) {
         maxAmount = Math.max(0, numericBalance - gasEstimate.fee);
+        toast.info('To avoid transaction failure, the max amount has been reduced by the gas fee');
       }
       setAmount(maxAmount.toString());
     } else {
@@ -266,6 +296,18 @@ export default function SendDetailsScreen() {
     [validateAmount]
   );
 
+  const handleAmountInputFocus = useCallback(() => {
+    setIsAmountInputFocused(true);
+  }, []);
+
+  const handleAmountInputBlur = useCallback(() => {
+    setIsAmountInputFocused(false);
+  }, []);
+
+  const handleAmountSectionLayout = useCallback((event: any) => {
+    amountSectionYPosition.current = event.nativeEvent.layout.y;
+  }, []);
+
   const validateTransaction = useCallback(() => {
     if (!recipientAddress) {
       Alert.alert('Error', 'Please enter a recipient address');
@@ -304,14 +346,6 @@ export default function SendDetailsScreen() {
       let numericAmount = parseFloat(amount);
       if (inputMode === 'fiat' && tokenPrice > 0) {
         numericAmount = numericAmount / tokenPrice;
-      }
-
-      if (assetTicker === AssetTicker.BTC) {
-        numericAmount = parseFloat(numericAmount.toFixed(8));
-      }
-
-      if (assetTicker === AssetTicker.XAUT || assetTicker === AssetTicker.USDT) {
-        numericAmount = parseFloat(numericAmount.toFixed(6));
       }
 
       const sendResult = await WDKService.sendByNetwork(
@@ -378,6 +412,10 @@ export default function SendDetailsScreen() {
     return formatTokenAmount(parseFloat(amount || '0'), tokenSymbol as AssetTicker);
   }, [inputMode, tokenPrice, amount, tokenSymbol]);
 
+  const isUseMaxDisabled = useMemo(() => {
+    return tokenId.toLowerCase() !== 'btc' && gasEstimate.fee === undefined;
+  }, [tokenId, gasEstimate.fee]);
+
   return (
     <>
       <KeyboardAvoidingView
@@ -386,16 +424,10 @@ export default function SendDetailsScreen() {
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.container}>
-            <View style={styles.header}>
-              <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-                <ArrowLeft size={24} color="#FF6501" />
-                <Text style={styles.backText}>Back</Text>
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>Send {getDisplaySymbol(tokenSymbol)}</Text>
-              <View style={{ width: 60 }} />
-            </View>
+            <Header title={`Send ${getDisplaySymbol(tokenSymbol)}`} style={styles.header} />
 
             <ScrollView
+              ref={scrollViewRef}
               style={styles.scrollView}
               contentContainerStyle={styles.scrollContent}
               keyboardShouldPersistTaps="handled"
@@ -424,7 +456,7 @@ export default function SendDetailsScreen() {
                 onQRScan={handleQRScan}
               />
 
-              <View style={styles.section}>
+              <View style={styles.section} onLayout={handleAmountSectionLayout}>
                 <Text style={styles.sectionTitle}>Enter Amount</Text>
                 <View style={styles.amountInputContainer}>
                   <TextInput
@@ -432,9 +464,11 @@ export default function SendDetailsScreen() {
                     placeholder={
                       inputMode === 'token' ? `${getDisplaySymbol(tokenSymbol)} 0.00` : '$ 0.00'
                     }
-                    placeholderTextColor="#666"
+                    placeholderTextColor={colors.textTertiary}
                     value={amount}
                     onChangeText={handleAmountChange}
+                    onFocus={handleAmountInputFocus}
+                    onBlur={handleAmountInputBlur}
                     keyboardType="decimal-pad"
                   />
                   <TouchableOpacity style={styles.currencyToggle} onPress={toggleInputMode}>
@@ -445,8 +479,15 @@ export default function SendDetailsScreen() {
                 </View>
 
                 <View style={styles.balanceRow}>
-                  <TouchableOpacity onPress={handleUseMax}>
-                    <Text style={styles.useMaxText}>Use Max</Text>
+                  <TouchableOpacity disabled={isUseMaxDisabled} onPress={handleUseMax}>
+                    <Text
+                      style={[
+                        styles.useMaxText,
+                        { color: isUseMaxDisabled ? colors.textTertiary : colors.primary },
+                      ]}
+                    >
+                      Use Max
+                    </Text>
                   </TouchableOpacity>
                   <Text style={styles.balanceText}>{balanceDisplay}</Text>
                 </View>
@@ -465,8 +506,8 @@ export default function SendDetailsScreen() {
                       size={18}
                       color={
                         isLoadingGasEstimate || (tokenId.toLowerCase() === 'btc' && !amount)
-                          ? '#666'
-                          : '#FF6501'
+                          ? colors.textTertiary
+                          : colors.primary
                       }
                       style={isLoadingGasEstimate ? styles.refreshIconLoading : undefined}
                     />
@@ -493,7 +534,14 @@ export default function SendDetailsScreen() {
               </View>
             </ScrollView>
 
-            <View style={[styles.bottomContainer, { paddingBottom: insets.bottom + 20 }]}>
+            <View
+              style={[
+                styles.bottomContainer,
+                {
+                  paddingBottom: (keyboard.isVisible ? 0 : insets.bottom) + 16,
+                },
+              ]}
+            >
               <TouchableOpacity
                 style={[
                   styles.sendButton,
@@ -571,48 +619,30 @@ export default function SendDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: colors.background,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backText: {
-    color: '#FF6501',
-    fontSize: 16,
-    marginLeft: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
+    marginBottom: 16,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingBottom: 100,
+    paddingBottom: 108,
   },
   section: {
     marginBottom: 24,
   },
   sectionTitle: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
     marginBottom: 8,
   },
   amountInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E1E1E',
+    backgroundColor: colors.card,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 16,
@@ -622,16 +652,16 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 24,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text,
   },
   currencyToggle: {
-    backgroundColor: '#2C2C2C',
+    backgroundColor: colors.cardDark,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
   },
   currencyToggleText: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -641,16 +671,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   useMaxText: {
-    color: '#FF6501',
+    color: colors.primary,
     fontSize: 14,
     fontWeight: '500',
   },
   balanceText: {
-    color: '#999',
+    color: colors.textSecondary,
     fontSize: 14,
   },
   gasSection: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     marginTop: 24,
@@ -662,7 +692,7 @@ const styles = StyleSheet.create({
   },
   gasTitle: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
   },
   refreshButton: {
     padding: 4,
@@ -673,21 +703,21 @@ const styles = StyleSheet.create({
   gasAmount: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text,
   },
   gasUsd: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   gasError: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textSecondary,
     marginTop: 4,
   },
   amountError: {
     fontSize: 12,
-    color: '#FF6B6B',
+    color: colors.error,
     marginTop: 4,
   },
   bottomContainer: {
@@ -696,34 +726,37 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     paddingHorizontal: 20,
-    backgroundColor: '#121212',
+    paddingTop: 16,
+    backgroundColor: colors.background,
+    borderTopWidth: 1,
+    borderTopColor: colors.cardDark,
   },
   sendButton: {
-    backgroundColor: '#FF6501',
+    backgroundColor: colors.primary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
   },
   sendButtonText: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 16,
     fontWeight: '600',
   },
   sendButtonDisabled: {
-    backgroundColor: '#333',
+    backgroundColor: colors.border,
     opacity: 0.5,
   },
   sendButtonTextDisabled: {
-    color: '#999',
+    color: colors.textSecondary,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: colors.card,
     borderRadius: 16,
     padding: 24,
     marginHorizontal: 20,
@@ -734,42 +767,42 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text,
     marginBottom: 12,
     textAlign: 'center',
   },
   modalDescription: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: 4,
   },
   modalButton: {
-    backgroundColor: '#FF6501',
+    backgroundColor: colors.primary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 32,
   },
   modalButtonText: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 16,
     fontWeight: '600',
   },
   transactionDetails: {
-    backgroundColor: '#2C2C2C',
+    backgroundColor: colors.cardDark,
     borderRadius: 8,
     padding: 12,
     marginVertical: 16,
   },
   transactionLabel: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   transactionId: {
     fontSize: 14,
-    color: '#FF6501',
+    color: colors.primary,
     fontFamily: 'monospace',
   },
   transactionSummary: {
@@ -779,23 +812,23 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
   },
   summaryValue: {
     fontSize: 14,
-    color: '#fff',
+    color: colors.text,
     fontWeight: '500',
     flex: 1,
     textAlign: 'right',
     marginLeft: 12,
   },
   transactionRecap: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#2C2C2C',
+    borderColor: colors.cardDark,
   },
   recapRow: {
     flexDirection: 'row',
@@ -805,22 +838,22 @@ const styles = StyleSheet.create({
   },
   recapLabel: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
     fontWeight: '500',
   },
   recapValue: {
     fontSize: 14,
-    color: '#fff',
+    color: colors.text,
     fontWeight: '600',
   },
   recapValueSecondary: {
     fontSize: 12,
-    color: '#666',
+    color: colors.textTertiary,
     fontWeight: '400',
   },
   recapDivider: {
     height: 1,
-    backgroundColor: '#2C2C2C',
+    backgroundColor: colors.cardDark,
     marginVertical: 4,
   },
 });

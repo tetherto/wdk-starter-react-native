@@ -1,22 +1,23 @@
+import Header from '@/components/header';
+import { clearAvatar } from '@/config/avatar-options';
 import { networkConfigs } from '@/config/networks';
+import useWalletAvatar from '@/hooks/use-wallet-avatar';
 import getDisplaySymbol from '@/utils/get-display-symbol';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NetworkType, useWallet } from '@tetherto/wdk-react-native-provider';
 import * as Clipboard from 'expo-clipboard';
-import { useRouter } from 'expo-router';
-import { ChevronLeft, Copy, Info, Shield, Trash2, Wallet } from 'lucide-react-native';
+import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
+import { Copy, Info, Shield, Trash2, Wallet } from 'lucide-react-native';
 import React from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { toast } from 'sonner-native';
+import { colors } from '@/constants/colors';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
-  const { wallet, clearWallet } = useWallet();
-
-  const handleBack = () => {
-    router.back();
-  };
+  const router = useDebouncedNavigation();
+  const { wallet, clearWallet, addresses } = useWallet();
+  const avatar = useWalletAvatar();
 
   const handleDeleteWallet = () => {
     Alert.alert(
@@ -32,17 +33,13 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await AsyncStorage.clear();
-              clearWallet();
-              Alert.alert('Success', 'Wallet deleted successfully', [
-                {
-                  text: 'OK',
-                  onPress: () => router.replace('/onboarding'),
-                },
-              ]);
+              await clearWallet();
+              await clearAvatar();
+              toast.success('Wallet deleted successfully');
+              router.dismissAll('/');
             } catch (error) {
               console.error('Failed to delete wallet:', error);
-              Alert.alert('Error', 'Failed to delete wallet');
+              toast.error('Failed to delete wallet');
             }
           },
         },
@@ -52,7 +49,7 @@ export default function SettingsScreen() {
 
   const handleCopyAddress = async (address: string, networkName: string) => {
     await Clipboard.setStringAsync(address);
-    Alert.alert('Copied', `${networkName} address copied to clipboard`);
+    toast.success(`${networkName} address copied to clipboard`);
   };
 
   const formatAddress = (address: string) => {
@@ -67,15 +64,7 @@ export default function SettingsScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <ChevronLeft size={24} color="#FF6501" />
-          <Text style={styles.backText}>Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Settings</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <Header title="Settings" />
 
       <ScrollView
         style={styles.scrollView}
@@ -85,7 +74,7 @@ export default function SettingsScreen() {
         {/* Wallet Info Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Wallet size={20} color="#FF6501" />
+            <Wallet size={20} color={colors.primary} />
             <Text style={styles.sectionTitle}>Wallet Information</Text>
           </View>
 
@@ -97,7 +86,7 @@ export default function SettingsScreen() {
 
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Icon</Text>
-              <Text style={styles.infoValue}>{wallet?.icon || '💎'}</Text>
+              <Text style={styles.infoValue}>{avatar}</Text>
             </View>
 
             <View style={[styles.infoRow, styles.infoRowLast]}>
@@ -112,38 +101,36 @@ export default function SettingsScreen() {
         {/* Network Addresses Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Shield size={20} color="#FF6501" />
+            <Shield size={20} color={colors.primary} />
             <Text style={styles.sectionTitle}>Network Addresses</Text>
           </View>
 
           <View style={styles.addressCard}>
-            {wallet?.accountData?.addressMap &&
-              Object.entries(wallet.accountData.addressMap).map(
-                ([network, address], index, array) => (
-                  <TouchableOpacity
-                    key={network}
-                    style={[
-                      styles.addressRow,
-                      index === array.length - 1 ? styles.addressRowLast : null,
-                    ]}
-                    onPress={() => handleCopyAddress(address as string, getNetworkName(network))}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.addressContent}>
-                      <Text style={styles.networkLabel}>{getNetworkName(network)}</Text>
-                      <Text style={styles.addressValue}>{formatAddress(address as string)}</Text>
-                    </View>
-                    <Copy size={18} color="#FF6501" />
-                  </TouchableOpacity>
-                )
-              )}
+            {addresses &&
+              Object.entries(addresses).map(([network, address], index, array) => (
+                <TouchableOpacity
+                  key={network}
+                  style={[
+                    styles.addressRow,
+                    index === array.length - 1 ? styles.addressRowLast : null,
+                  ]}
+                  onPress={() => handleCopyAddress(address as string, getNetworkName(network))}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.addressContent}>
+                    <Text style={styles.networkLabel}>{getNetworkName(network)}</Text>
+                    <Text style={styles.addressValue}>{formatAddress(address as string)}</Text>
+                  </View>
+                  <Copy size={18} color={colors.primary} />
+                </TouchableOpacity>
+              ))}
           </View>
         </View>
 
         {/* About Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Info size={20} color="#FF6501" />
+            <Info size={20} color={colors.primary} />
             <Text style={styles.sectionTitle}>About</Text>
           </View>
 
@@ -163,12 +150,12 @@ export default function SettingsScreen() {
         {/* Danger Zone */}
         <View style={styles.dangerSection}>
           <View style={styles.sectionHeader}>
-            <Trash2 size={20} color="#FF3B30" />
+            <Trash2 size={20} color={colors.danger} />
             <Text style={[styles.sectionTitle, styles.dangerTitle]}>Danger Zone</Text>
           </View>
 
           <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteWallet}>
-            <Trash2 size={20} color="#fff" />
+            <Trash2 size={20} color={colors.white} />
             <Text style={styles.deleteButtonText}>Delete Wallet</Text>
           </TouchableOpacity>
 
@@ -185,34 +172,7 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1E1E1E',
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backText: {
-    color: '#FF6501',
-    fontSize: 16,
-    marginLeft: 4,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
-    textAlign: 'center',
-  },
-  headerSpacer: {
-    width: 60,
+    backgroundColor: colors.background,
   },
   scrollView: {
     flex: 1,
@@ -233,11 +193,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text,
     marginLeft: 8,
   },
   infoCard: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
   },
@@ -247,27 +207,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
+    borderBottomColor: colors.borderDark,
   },
   infoRowLast: {
     borderBottomWidth: 0,
   },
   infoLabel: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
   },
   infoValue: {
     fontSize: 14,
-    color: '#fff',
+    color: colors.text,
     fontWeight: '500',
   },
   infoValueSmall: {
     fontSize: 12,
-    color: '#fff',
+    color: colors.text,
     fontWeight: '500',
   },
   addressCard: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
   },
@@ -277,7 +237,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
+    borderBottomColor: colors.borderDark,
   },
   addressRowLast: {
     borderBottomWidth: 0,
@@ -288,12 +248,12 @@ const styles = StyleSheet.create({
   },
   networkLabel: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   addressValue: {
     fontSize: 13,
-    color: '#fff',
+    color: colors.text,
     fontFamily: 'monospace',
   },
   dangerSection: {
@@ -302,26 +262,26 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   dangerTitle: {
-    color: '#FF3B30',
+    color: colors.danger,
   },
   deleteButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FF3B30',
+    backgroundColor: colors.danger,
     borderRadius: 12,
     paddingVertical: 16,
     marginBottom: 12,
   },
   deleteButtonText: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
   },
   warningText: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 18,
   },

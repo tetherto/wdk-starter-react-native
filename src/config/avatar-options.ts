@@ -1,3 +1,5 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 const avatarOptions = [
   { id: 1, emoji: '₿', color: '#FF9500' },
   { id: 2, emoji: '💎', color: '#00D4FF' },
@@ -12,5 +14,23 @@ const avatarOptions = [
   { id: 11, emoji: '🚗', color: '#007AFF' },
   { id: 12, emoji: '😊', color: '#FFCC00' },
 ];
+
+const STORAGE_KEY_AVATAR = 'wallet_avatar';
+
+export const getAvatar = async () => {
+  const stored = await AsyncStorage.getItem(STORAGE_KEY_AVATAR);
+  if (stored) {
+    return avatarOptions[parseInt(stored) - 1];
+  }
+  return avatarOptions[0];
+};
+
+export const setAvatar = async (avatar: number) => {
+  await AsyncStorage.setItem(STORAGE_KEY_AVATAR, JSON.stringify(avatar));
+};
+
+export const clearAvatar = async () => {
+  await AsyncStorage.removeItem(STORAGE_KEY_AVATAR);
+};
 
 export default avatarOptions;

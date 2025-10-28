@@ -1,9 +1,11 @@
-import avatarOptions from '@/config/avatar-options';
+import avatarOptions, { setAvatar } from '@/config/avatar-options';
 import { CommonActions, useNavigation } from '@react-navigation/native';
 import { useWallet } from '@tetherto/wdk-react-native-provider';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { ChevronLeft } from 'lucide-react-native';
 import React, { useState } from 'react';
+import { colors } from '@/constants/colors';
 import {
   ActivityIndicator,
   Alert,
@@ -17,13 +19,14 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { toast } from 'sonner-native';
 
 export default function ImportNameWalletScreen() {
-  const router = useRouter();
+  const router = useDebouncedNavigation();
   const navigation = useNavigation();
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
-  const { importWallet } = useWallet();
+  const { createWallet } = useWallet();
   const [walletName, setWalletName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState(avatarOptions[0]);
   const [isImporting, setIsImporting] = useState(false);
@@ -40,27 +43,18 @@ export default function ImportNameWalletScreen() {
     setIsImporting(true);
 
     try {
-      console.log('Importing wallet with seed phrase...');
+      // Use the context's createWallet method which handles everything including unlocking
+      await createWallet({ name: walletName, mnemonic: seedPhrase });
+      await setAvatar(selectedAvatar.id);
 
-      // Use the context's importWallet method which handles everything including unlocking
-      const wallet = await importWallet(seedPhrase, walletName, selectedAvatar.emoji);
+      toast.success('Your wallet has been imported successfully.');
 
-      console.log('Wallet imported successfully:', wallet);
-
-      Alert.alert('Success!', 'Your wallet has been imported successfully.', [
-        {
-          text: 'Continue',
-          onPress: () => {
-            // Reset navigation stack completely - only wallet screen will remain
-            navigation.dispatch(
-              CommonActions.reset({
-                index: 0,
-                routes: [{ name: 'wallet' }],
-              })
-            );
-          },
-        },
-      ]);
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'wallet' }],
+        })
+      );
     } catch (error: any) {
       console.error('Import wallet error:', error);
       Alert.alert(
@@ -79,7 +73,7 @@ export default function ImportNameWalletScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color="#FF6501" />
+          <ChevronLeft size={24} color={colors.primary} />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
       </View>
@@ -101,7 +95,7 @@ export default function ImportNameWalletScreen() {
                 value={walletName}
                 onChangeText={setWalletName}
                 placeholder="e.g., Investment Stash"
-                placeholderTextColor="#666"
+                placeholderTextColor={colors.textTertiary}
                 autoCapitalize="words"
               />
             </View>
@@ -136,7 +130,7 @@ export default function ImportNameWalletScreen() {
         >
           {isImporting ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color="#666" />
+              <ActivityIndicator size="small" color={colors.textTertiary} />
               <Text
                 style={[
                   styles.nextButtonText,
@@ -161,7 +155,7 @@ export default function ImportNameWalletScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: colors.background,
   },
   header: {
     paddingHorizontal: 20,
@@ -172,7 +166,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backText: {
-    color: '#FF6501',
+    color: colors.primary,
     fontSize: 16,
     marginLeft: 4,
   },
@@ -183,12 +177,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.text,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#999',
+    color: colors.textSecondary,
     marginBottom: 32,
   },
   inputSection: {
@@ -196,20 +190,20 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
     marginBottom: 8,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E1E1E',
+    backgroundColor: colors.card,
     borderRadius: 12,
     paddingHorizontal: 16,
     borderWidth: 1,
     borderColor: 'transparent',
   },
   inputError: {
-    borderColor: '#FF3B30',
+    borderColor: colors.danger,
   },
   inputIcon: {
     fontSize: 20,
@@ -218,17 +212,17 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: 50,
-    color: '#fff',
+    color: colors.text,
     fontSize: 16,
   },
   helperText: {
     fontSize: 12,
-    color: '#666',
+    color: colors.textTertiary,
     marginTop: 8,
   },
   errorText: {
     fontSize: 12,
-    color: '#FF3B30',
+    color: colors.danger,
     marginTop: 8,
   },
   avatarSection: {
@@ -237,7 +231,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text,
     marginBottom: 20,
   },
   avatarGrid: {
@@ -257,7 +251,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   selectedAvatar: {
-    borderColor: '#FF6501',
+    borderColor: colors.primary,
   },
   avatarEmoji: {
     fontSize: 28,
@@ -267,22 +261,22 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   nextButton: {
-    backgroundColor: '#FF6501',
+    backgroundColor: colors.primary,
     height: 56,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   nextButtonDisabled: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: colors.card,
   },
   nextButtonText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000',
+    color: colors.black,
   },
   nextButtonTextDisabled: {
-    color: '#666',
+    color: colors.textTertiary,
   },
   loadingContainer: {
     flexDirection: 'row',

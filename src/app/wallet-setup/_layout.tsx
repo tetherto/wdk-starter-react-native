@@ -1,4 +1,5 @@
 import { Stack } from 'expo-router';
+import { colors } from '@/constants/colors';
 
 export default function WalletSetupLayout() {
   return (
@@ -6,7 +7,7 @@ export default function WalletSetupLayout() {
       screenOptions={{
         headerShown: false,
         animation: 'slide_from_right',
-        contentStyle: { backgroundColor: '#121212' },
+        contentStyle: { backgroundColor: colors.background },
       }}
     >
       <Stack.Screen name="name-wallet" />

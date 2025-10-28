@@ -10,7 +10,7 @@ module.exports = {
   jsxSingleQuote: false,
   bracketSpacing: true,
   bracketSameLine: false,
-  arrowParens: 'avoid',
+  arrowParens: 'always',
   endOfLine: 'lf',
 
   // File-specific overrides

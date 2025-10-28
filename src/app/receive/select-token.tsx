@@ -2,9 +2,10 @@ import { assetConfig } from '@/config/assets';
 import getDisplaySymbol from '@/utils/get-display-symbol';
 import { getRecentTokens, addToRecentTokens } from '@/utils/recent-tokens';
 import { useWallet } from '@tetherto/wdk-react-native-provider';
-import { useRouter } from 'expo-router';
+import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { ArrowLeft, Search, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { colors } from '@/constants/colors';
 import {
   FlatList,
   Image,
@@ -28,7 +29,7 @@ interface Token {
 
 export default function ReceiveSelectTokenScreen() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
+  const router = useDebouncedNavigation();
   const { wallet } = useWallet();
   const [searchQuery, setSearchQuery] = useState('');
   const [recentTokens, setRecentTokens] = useState<string[]>([]);
@@ -98,12 +99,13 @@ export default function ReceiveSelectTokenScreen() {
     setSearchQuery('');
   }, []);
 
-  const renderRecentToken = ({ item }: { item: string }) => {
-    const token = tokens.find(t => t.name === item);
+  const renderRecentToken = (tokenName: string) => {
+    const token = tokens.find(t => t.name === tokenName);
     if (!token) return null;
 
     return (
       <TouchableOpacity
+        key={tokenName}
         style={styles.recentToken}
         onPress={() => handleSelectToken(token)}
         activeOpacity={0.7}
@@ -140,7 +142,7 @@ export default function ReceiveSelectTokenScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <ArrowLeft size={24} color="#FF6501" />
+          <ArrowLeft size={24} color={colors.primary} />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Receive funds</Text>
@@ -148,11 +150,11 @@ export default function ReceiveSelectTokenScreen() {
       </View>
 
       <View style={styles.searchContainer}>
-        <Search size={20} color="#666" />
+        <Search size={20} color={colors.textTertiary} />
         <TextInput
           style={styles.searchInput}
           placeholder="Search"
-          placeholderTextColor="#666"
+          placeholderTextColor={colors.textTertiary}
           value={searchQuery}
           onChangeText={setSearchQuery}
           autoCapitalize="none"
@@ -160,7 +162,7 @@ export default function ReceiveSelectTokenScreen() {
         />
         {searchQuery !== '' && (
           <TouchableOpacity onPress={clearSearch}>
-            <X size={20} color="#666" />
+            <X size={20} color={colors.textTertiary} />
           </TouchableOpacity>
         )}
       </View>
@@ -173,7 +175,7 @@ export default function ReceiveSelectTokenScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.recentTokensContainer}
           >
-            {recentTokens.map(tokenName => renderRecentToken({ item: tokenName }))}
+            {recentTokens.map(renderRecentToken)}
           </ScrollView>
         </View>
       )}
@@ -201,7 +203,7 @@ export default function ReceiveSelectTokenScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -215,14 +217,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backText: {
-    color: '#FF6501',
+    color: colors.primary,
     fontSize: 16,
     marginLeft: 4,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -231,14 +233,14 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#1E1E1E',
+    backgroundColor: colors.card,
     borderRadius: 12,
   },
   searchInput: {
     flex: 1,
     marginLeft: 8,
     fontSize: 16,
-    color: '#fff',
+    color: colors.text,
   },
   recentSection: {
     marginBottom: 24,
@@ -246,7 +248,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#999',
+    color: colors.textSecondary,
     marginLeft: 20,
     marginBottom: 12,
   },
@@ -271,7 +273,7 @@ const styles = StyleSheet.create({
   },
   recentTokenName: {
     fontSize: 12,
-    color: '#fff',
+    color: colors.text,
   },
   tokensSection: {
     flex: 1,
@@ -305,11 +307,11 @@ const styles = StyleSheet.create({
   tokenName: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#fff',
+    color: colors.text,
   },
   tokenSymbol: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textSecondary,
   },
   noTokensContainer: {
     flex: 1,
@@ -319,7 +321,7 @@ const styles = StyleSheet.create({
   },
   noTokensText: {
     fontSize: 16,
-    color: '#999',
+    color: colors.textSecondary,
     textAlign: 'center',
   },
 });
