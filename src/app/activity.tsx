@@ -8,6 +8,7 @@ import { FiatCurrency, pricingService } from '../services/pricing-service';
 import formatTokenAmount from '@/utils/format-token-amount';
 import formatUSDValue from '@/utils/format-usd-value';
 import Header from '@/components/header';
+import { colors } from '@/constants/colors';
 
 export default function ActivityScreen() {
   const insets = useSafeAreaInsets();
@@ -71,6 +72,6 @@ export default function ActivityScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: colors.background,
   },
 });

@@ -31,6 +31,7 @@ import formatAmount from '@/utils/format-amount';
 import formatTokenAmount from '@/utils/format-token-amount';
 import formatUSDValue from '@/utils/format-usd-value';
 import useWalletAvatar from '@/hooks/use-wallet-avatar';
+import { colors } from '@/constants/colors';
 
 type AggregatedBalance = ({
   denomination: string;
@@ -137,21 +138,21 @@ export default function WalletScreen() {
       id: 1,
       icon: Star,
       title: 'Star repo on GitHub',
-      color: '#FF6501',
+      color: colors.primary,
       url: 'https://github.com/tetherto/wdk-starter-react-native',
     },
     {
       id: 2,
       icon: Shield,
       title: 'Explore the WDK docs',
-      color: '#FF6501',
+      color: colors.primary,
       url: 'https://docs.wallet.tether.io/',
     },
     {
       id: 3,
       icon: Palette,
       title: 'Explore the WDK UI Kit',
-      color: '#FF6501',
+      color: colors.primary,
       url: 'https://github.com/tetherto/wdk-uikit-react-native',
     },
   ];
@@ -189,7 +190,7 @@ export default function WalletScreen() {
             token: tx.token,
             amount: `${formatTokenAmount(amount, tx.token as AssetTicker)}`,
             icon: isSent ? ArrowUpRight : ArrowDownLeft,
-            iconColor: isSent ? '#FF3B30' : '#4CAF50',
+            iconColor: isSent ? colors.danger : colors.success,
             blockchain: tx.blockchain,
             hash: tx.transactionHash,
             fiatAmount: fiatAmount,
@@ -283,7 +284,7 @@ export default function WalletScreen() {
 
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.settingsButton} onPress={handleSettingsPress}>
-            <Settings size={24} color="#FF6501" />
+            <Settings size={24} color={colors.primary} />
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -302,18 +303,18 @@ export default function WalletScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              tintColor="#FF6501"
-              colors={['#FF6501']}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
               title="Pull to refresh"
-              titleColor="#999999"
+              titleColor={colors.textSecondary}
               progressViewOffset={insets.top}
             />
           ) : (
             <RefreshControl
               refreshing={false}
               onRefresh={() => {}}
-              tintColor="#FFF"
-              colors={['#FFF']}
+              tintColor={colors.white}
+              colors={[colors.white]}
               progressViewOffset={0}
             />
           )
@@ -341,7 +342,7 @@ export default function WalletScreen() {
             />
             {balances.isLoading ? (
               <View style={{ top: 16, marginRight: 8 }}>
-                <ActivityIndicator size="small" color="#FF6501" />
+                <ActivityIndicator size="small" color={colors.primary} />
               </View>
             ) : null}
           </View>
@@ -427,7 +428,7 @@ export default function WalletScreen() {
             <Text style={styles.sectionTitle}>Activity</Text>
             {walletTransactions.isLoading ? (
               <View style={{ marginRight: 8 }}>
-                <ActivityIndicator size="small" color="#FF6501" />
+                <ActivityIndicator size="small" color={colors.primary} />
               </View>
             ) : null}
           </View>
@@ -465,16 +466,16 @@ export default function WalletScreen() {
       {/* Bottom Actions */}
       <View style={[styles.bottomActions, { marginBottom: insets.bottom }]}>
         <TouchableOpacity style={styles.actionButton} onPress={handleSendPress}>
-          <ArrowUpRight size={20} color="#fff" />
+          <ArrowUpRight size={20} color={colors.white} />
           <Text style={styles.actionButtonText}>Send</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.qrButton} onPress={handleQRPress}>
-          <QrCode size={24} color="#000" />
+          <QrCode size={24} color={colors.black} />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.actionButton} onPress={handleReceivePress}>
-          <ArrowDownLeft size={20} color="#fff" />
+          <ArrowDownLeft size={20} color={colors.white} />
           <Text style={styles.actionButtonText}>Receive</Text>
         </TouchableOpacity>
       </View>
@@ -485,7 +486,7 @@ export default function WalletScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: colors.background,
   },
   scrollView: {
     flex: 1,
@@ -513,7 +514,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#FF6501',
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 8,
@@ -522,7 +523,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   walletName: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 16,
     fontWeight: '600',
     flex: 1,
@@ -544,7 +545,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderLeftWidth: 4,
-    borderLeftColor: '#FF6501',
+    borderLeftColor: colors.primary,
     paddingLeft: 16,
     marginBottom: 16,
   },
@@ -567,7 +568,7 @@ const styles = StyleSheet.create({
   assetName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text,
     marginBottom: 2,
   },
   assetBalance: {
@@ -579,21 +580,21 @@ const styles = StyleSheet.create({
   },
   noAssetsText: {
     fontSize: 16,
-    color: '#999',
+    color: colors.textSecondary,
   },
   assetAmount: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text,
     marginBottom: 2,
   },
   assetValue: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
   },
   seeAllText: {
     fontSize: 16,
-    color: '#FF6501',
+    color: colors.primary,
     textAlign: 'center',
   },
   suggestionsSection: {
@@ -609,7 +610,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text,
   },
   suggestionsGrid: {
     flexDirection: 'row',
@@ -617,7 +618,7 @@ const styles = StyleSheet.create({
   },
   suggestionCard: {
     flex: 1,
-    backgroundColor: '#1E1E1E',
+    backgroundColor: colors.card,
     marginHorizontal: 6,
     padding: 16,
     borderRadius: 12,
@@ -626,7 +627,7 @@ const styles = StyleSheet.create({
   },
   suggestionText: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textSecondary,
     textAlign: 'center',
     marginTop: 8,
     lineHeight: 16,
@@ -645,7 +646,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#333',
+    backgroundColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -656,12 +657,12 @@ const styles = StyleSheet.create({
   transactionType: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#fff',
+    color: colors.text,
     marginBottom: 2,
   },
   transactionSubtitle: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
   },
   transactionAmount: {
     alignItems: 'flex-end',
@@ -669,12 +670,12 @@ const styles = StyleSheet.create({
   transactionAssetAmount: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text,
     marginBottom: 2,
   },
   transactionUsdAmount: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
   },
   bottomActions: {
     position: 'absolute',
@@ -684,11 +685,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#1E1E1E',
+    backgroundColor: colors.card,
     borderRadius: 48,
     paddingHorizontal: 20,
     paddingVertical: 16,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -705,7 +706,7 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textSecondary,
     marginTop: 4,
   },
   qrButton: {
@@ -715,6 +716,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 20,
-    backgroundColor: '#FF6501',
+    backgroundColor: colors.primary,
   },
 });

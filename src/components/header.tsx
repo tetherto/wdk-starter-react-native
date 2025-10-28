@@ -9,6 +9,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
+import { colors } from '@/constants/colors';
 
 interface HeaderProps {
   title: string;
@@ -27,14 +28,14 @@ const Header = (params: HeaderProps) => {
   return (
     <View style={[styles.header, style]}>
       <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-        <ChevronLeft size={24} color="#FF6501" />
+        <ChevronLeft size={24} color={colors.primary} />
         <Text style={styles.backText}>Back</Text>
       </TouchableOpacity>
       <View style={styles.titleContainer}>
         <Text style={styles.title}>{title}</Text>
         {isLoading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color="#FF6501" />
+            <ActivityIndicator size="small" color={colors.primary} />
           </View>
         ) : null}
       </View>
@@ -53,21 +54,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#1E1E1E',
+    borderBottomColor: colors.card,
   },
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   backText: {
-    color: '#FF6501',
+    color: colors.primary,
     fontSize: 16,
     marginLeft: 4,
   },
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text,
     textAlign: 'center',
   },
   spacer: {

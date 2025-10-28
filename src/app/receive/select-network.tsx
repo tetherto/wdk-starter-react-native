@@ -7,6 +7,7 @@ import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import React, { useCallback, useMemo } from 'react';
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors } from '@/constants/colors';
 
 interface NetworkOption extends Network {
   address?: string;
@@ -150,7 +151,7 @@ export default function ReceiveSelectNetworkScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: colors.background,
   },
   header: {
     marginBottom: 16,
@@ -161,7 +162,7 @@ const styles = StyleSheet.create({
   },
   descriptionText: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
     lineHeight: 20,
   },
   networksList: {
@@ -190,11 +191,11 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   networkIconDisabled: {
-    backgroundColor: '#333',
+    backgroundColor: colors.border,
   },
   networkIconText: {
     fontSize: 18,
-    color: '#fff',
+    color: colors.white,
   },
   networkIconTextDisabled: {
     opacity: 0.6,
@@ -212,22 +213,22 @@ const styles = StyleSheet.create({
   networkName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text,
     marginBottom: 4,
   },
   networkNameDisabled: {
-    color: '#666',
+    color: colors.textTertiary,
   },
   networkDescription: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
   },
   networkDescriptionDisabled: {
-    color: '#555',
+    color: colors.textDisabled,
   },
   noAddressLabel: {
     fontSize: 12,
-    color: '#FF6B6B',
+    color: colors.error,
     marginTop: 4,
     fontWeight: '500',
   },

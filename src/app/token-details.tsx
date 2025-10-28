@@ -11,6 +11,7 @@ import { FiatCurrency, pricingService } from '../services/pricing-service';
 import { networkConfigs } from '@/config/networks';
 import getDisplaySymbol from '@/utils/get-display-symbol';
 import Header from '@/components/header';
+import { colors } from '@/constants/colors';
 
 export default function TokenDetailsScreen() {
   const router = useDebouncedNavigation();
@@ -158,7 +159,7 @@ export default function TokenDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: colors.background,
   },
   errorContainer: {
     flex: 1,
@@ -166,7 +167,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   errorText: {
-    color: '#FF3B30',
+    color: colors.danger,
     fontSize: 16,
   },
 });

@@ -11,6 +11,7 @@ import React from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
+import { colors } from '@/constants/colors';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -73,7 +74,7 @@ export default function SettingsScreen() {
         {/* Wallet Info Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Wallet size={20} color="#FF6501" />
+            <Wallet size={20} color={colors.primary} />
             <Text style={styles.sectionTitle}>Wallet Information</Text>
           </View>
 
@@ -100,7 +101,7 @@ export default function SettingsScreen() {
         {/* Network Addresses Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Shield size={20} color="#FF6501" />
+            <Shield size={20} color={colors.primary} />
             <Text style={styles.sectionTitle}>Network Addresses</Text>
           </View>
 
@@ -120,7 +121,7 @@ export default function SettingsScreen() {
                     <Text style={styles.networkLabel}>{getNetworkName(network)}</Text>
                     <Text style={styles.addressValue}>{formatAddress(address as string)}</Text>
                   </View>
-                  <Copy size={18} color="#FF6501" />
+                  <Copy size={18} color={colors.primary} />
                 </TouchableOpacity>
               ))}
           </View>
@@ -129,7 +130,7 @@ export default function SettingsScreen() {
         {/* About Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Info size={20} color="#FF6501" />
+            <Info size={20} color={colors.primary} />
             <Text style={styles.sectionTitle}>About</Text>
           </View>
 
@@ -149,12 +150,12 @@ export default function SettingsScreen() {
         {/* Danger Zone */}
         <View style={styles.dangerSection}>
           <View style={styles.sectionHeader}>
-            <Trash2 size={20} color="#FF3B30" />
+            <Trash2 size={20} color={colors.danger} />
             <Text style={[styles.sectionTitle, styles.dangerTitle]}>Danger Zone</Text>
           </View>
 
           <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteWallet}>
-            <Trash2 size={20} color="#fff" />
+            <Trash2 size={20} color={colors.white} />
             <Text style={styles.deleteButtonText}>Delete Wallet</Text>
           </TouchableOpacity>
 
@@ -171,7 +172,7 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: colors.background,
   },
   scrollView: {
     flex: 1,
@@ -192,11 +193,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text,
     marginLeft: 8,
   },
   infoCard: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
   },
@@ -206,27 +207,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
+    borderBottomColor: colors.borderDark,
   },
   infoRowLast: {
     borderBottomWidth: 0,
   },
   infoLabel: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
   },
   infoValue: {
     fontSize: 14,
-    color: '#fff',
+    color: colors.text,
     fontWeight: '500',
   },
   infoValueSmall: {
     fontSize: 12,
-    color: '#fff',
+    color: colors.text,
     fontWeight: '500',
   },
   addressCard: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
   },
@@ -236,7 +237,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
+    borderBottomColor: colors.borderDark,
   },
   addressRowLast: {
     borderBottomWidth: 0,
@@ -247,12 +248,12 @@ const styles = StyleSheet.create({
   },
   networkLabel: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   addressValue: {
     fontSize: 13,
-    color: '#fff',
+    color: colors.text,
     fontFamily: 'monospace',
   },
   dangerSection: {
@@ -261,26 +262,26 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   dangerTitle: {
-    color: '#FF3B30',
+    color: colors.danger,
   },
   deleteButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FF3B30',
+    backgroundColor: colors.danger,
     borderRadius: 12,
     paddingVertical: 16,
     marginBottom: 12,
   },
   deleteButtonText: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
   },
   warningText: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 18,
   },

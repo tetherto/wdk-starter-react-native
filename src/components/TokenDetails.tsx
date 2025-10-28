@@ -6,6 +6,7 @@ import { AssetTicker, NetworkType } from '@tetherto/wdk-react-native-provider';
 import { Send } from 'lucide-react-native';
 import React from 'react';
 import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { colors } from '@/constants/colors';
 
 interface TokenNetworkBalance {
   network: string;
@@ -123,11 +124,11 @@ export function TokenDetails({ tokenData, onSendPress }: TokenDetailsProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: colors.background,
     padding: 20,
   },
   totalBalanceCard: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: colors.card,
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
@@ -143,7 +144,7 @@ const styles = StyleSheet.create({
   },
   tokenIconText: {
     fontSize: 32,
-    color: '#fff',
+    color: colors.white,
     fontWeight: 'bold',
   },
   tokenIconImage: {
@@ -152,28 +153,28 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
     marginBottom: 8,
   },
   totalAmount: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.text,
     marginBottom: 4,
   },
   totalValue: {
     fontSize: 16,
-    color: '#999',
+    color: colors.textSecondary,
     marginBottom: 8,
   },
   priceLabel: {
     fontSize: 12,
-    color: '#666',
+    color: colors.textTertiary,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text,
     marginBottom: 16,
   },
   networkList: {
@@ -183,7 +184,7 @@ const styles = StyleSheet.create({
   networkRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E1E1E',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -203,7 +204,7 @@ const styles = StyleSheet.create({
   },
   networkIconText: {
     fontSize: 16,
-    color: '#fff',
+    color: colors.white,
     fontWeight: 'bold',
   },
   networkDetails: {
@@ -212,12 +213,12 @@ const styles = StyleSheet.create({
   networkName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text,
     marginBottom: 2,
   },
   networkAddress: {
     fontSize: 12,
-    color: '#666',
+    color: colors.textTertiary,
   },
   networkBalance: {
     alignItems: 'flex-end',
@@ -226,12 +227,12 @@ const styles = StyleSheet.create({
   networkAmount: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text,
     marginBottom: 2,
   },
   networkValue: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textSecondary,
   },
   sendButton: {
     padding: 8,
@@ -244,7 +245,7 @@ const styles = StyleSheet.create({
   },
   noBalanceText: {
     fontSize: 16,
-    color: '#999',
+    color: colors.textSecondary,
     textAlign: 'center',
   },
   actionButtons: {
@@ -254,29 +255,29 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     flex: 1,
-    backgroundColor: '#FF6501',
+    backgroundColor: colors.primary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
   },
   primaryButtonText: {
-    color: '#000',
+    color: colors.black,
     fontSize: 16,
     fontWeight: '600',
   },
   secondaryButton: {
     flex: 1,
-    backgroundColor: 'rgba(30, 144, 255, 0.1)',
+    backgroundColor: colors.tintedBackground,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#FF6501',
+    borderColor: colors.primary,
   },
   secondaryButtonText: {
-    color: '#FF6501',
+    color: colors.primary,
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
@@ -290,7 +291,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sendAllButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,

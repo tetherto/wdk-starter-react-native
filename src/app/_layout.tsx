@@ -10,6 +10,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import getChainsConfig from '@/config/get-chains-config';
 import { Toaster } from 'sonner-native';
+import { colors } from '@/constants/colors';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -17,8 +18,8 @@ const CustomDarkTheme = {
   ...DarkTheme,
   colors: {
     ...DarkTheme.colors,
-    background: '#121212',
-    card: '#121212',
+    background: colors.background,
+    card: colors.background,
   },
 };
 
@@ -42,7 +43,7 @@ export default function RootLayout() {
       <ThemeProvider
         defaultMode="dark"
         brandConfig={{
-          primaryColor: '#FF6501',
+          primaryColor: colors.primary,
         }}
       >
         <WalletProvider
@@ -56,11 +57,11 @@ export default function RootLayout() {
           }}
         >
           <NavigationThemeProvider value={CustomDarkTheme}>
-            <View style={{ flex: 1, backgroundColor: '#121212' }}>
+            <View style={{ flex: 1, backgroundColor: colors.background }}>
               <Stack
                 screenOptions={{
                   headerShown: false,
-                  contentStyle: { backgroundColor: '#121212' },
+                  contentStyle: { backgroundColor: colors.background },
                 }}
               />
               <StatusBar style="light" />
@@ -70,9 +71,13 @@ export default function RootLayout() {
         <Toaster
           offset={90}
           toastOptions={{
-            style: { backgroundColor: '#121212', borderWidth: 1, borderColor: '#333' },
-            titleStyle: { color: '#fff' },
-            descriptionStyle: { color: '#fff' },
+            style: {
+              backgroundColor: colors.background,
+              borderWidth: 1,
+              borderColor: colors.border,
+            },
+            titleStyle: { color: colors.text },
+            descriptionStyle: { color: colors.text },
           }}
         />
       </ThemeProvider>

@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import parseWorkletError from '@/utils/parse-worklet-error';
+import { colors } from '@/constants/colors';
 
 export default function AuthorizeScreen() {
   const insets = useSafeAreaInsets();
@@ -57,7 +58,7 @@ export default function AuthorizeScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Shield size={80} color="#FF6501" />
+          <Shield size={80} color={colors.primary} />
         </View>
 
         <Text style={styles.title}>Authorize Access</Text>
@@ -65,7 +66,7 @@ export default function AuthorizeScreen() {
 
         {isLoading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#FF6501" />
+            <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.loadingText}>Initializing wallet...</Text>
           </View>
         ) : (
@@ -75,7 +76,7 @@ export default function AuthorizeScreen() {
               onPress={handleBiometricAuth}
               disabled={isLoading}
             >
-              <Fingerprint size={24} color="#fff" />
+              <Fingerprint size={24} color={colors.white} />
               <Text style={styles.primaryButtonText}>Use Biometric</Text>
             </TouchableOpacity>
           </>
@@ -98,7 +99,7 @@ export default function AuthorizeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
@@ -112,12 +113,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.text,
     marginBottom: 10,
   },
   subtitle: {
     fontSize: 16,
-    color: '#999',
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: 50,
   },
@@ -126,7 +127,7 @@ const styles = StyleSheet.create({
     marginTop: 50,
   },
   loadingText: {
-    color: '#999',
+    color: colors.textSecondary,
     marginTop: 16,
     fontSize: 14,
   },
@@ -134,7 +135,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FF6501',
+    backgroundColor: colors.primary,
     paddingHorizontal: 32,
     paddingVertical: 16,
     borderRadius: 12,
@@ -142,7 +143,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   primaryButtonText: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 12,
@@ -151,16 +152,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#1E1E1E',
+    backgroundColor: colors.card,
     paddingHorizontal: 32,
     paddingVertical: 16,
     borderRadius: 12,
     width: '100%',
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: colors.border,
   },
   secondaryButtonText: {
-    color: '#FF6501',
+    color: colors.primary,
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 12,
@@ -168,12 +169,12 @@ const styles = StyleSheet.create({
   errorContainer: {
     marginTop: 20,
     padding: 12,
-    backgroundColor: '#FF3B301A',
+    backgroundColor: colors.dangerBackground,
     borderRadius: 8,
     width: '100%',
   },
   errorText: {
-    color: '#FF3B30',
+    color: colors.danger,
     fontSize: 14,
     textAlign: 'center',
   },
@@ -183,7 +184,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 12,
-    color: '#666',
+    color: colors.textTertiary,
     textAlign: 'center',
   },
 });

@@ -4,6 +4,7 @@ import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { OnBoardingWelcome } from '@/components/onboarding/onboarding-welcome';
 import * as SplashScreen from 'expo-splash-screen';
+import { colors } from '@/constants/colors';
 
 export default function OnBoardingScreen() {
   const router = useDebouncedNavigation();
@@ -50,6 +51,6 @@ export default function OnBoardingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: colors.background,
   },
 });

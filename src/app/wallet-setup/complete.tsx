@@ -4,6 +4,7 @@ import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors } from '@/constants/colors';
 
 export default function CompleteScreen() {
   const navigation = useNavigation();
@@ -94,7 +95,7 @@ export default function CompleteScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
@@ -105,14 +106,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.text,
     marginBottom: 16,
     textAlign: 'left',
     alignSelf: 'stretch',
   },
   subtitle: {
     fontSize: 16,
-    color: '#999',
+    color: colors.textSecondary,
     textAlign: 'left',
     alignSelf: 'stretch',
   },
@@ -121,7 +122,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   button: {
-    backgroundColor: '#FF6501',
+    backgroundColor: colors.primary,
     height: 56,
     borderRadius: 12,
     alignItems: 'center',
@@ -130,20 +131,20 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000',
+    color: colors.black,
   },
   buttonDisabled: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: colors.card,
   },
   buttonTextDisabled: {
-    color: '#666',
+    color: colors.textTertiary,
   },
   loadingContainer: {
     marginTop: 24,
     alignItems: 'center',
   },
   loadingText: {
-    color: '#999',
+    color: colors.textSecondary,
     fontSize: 14,
   },
 });

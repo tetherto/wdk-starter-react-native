@@ -4,6 +4,7 @@ import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors } from '@/constants/colors';
 
 import { AssetTicker, useWallet } from '@tetherto/wdk-react-native-provider';
 import { AssetSelector, type Token } from '@tetherto/wdk-uikit-react-native';
@@ -152,7 +153,7 @@ export default function SelectTokenScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: colors.background,
   },
   header: {
     marginBottom: 16,

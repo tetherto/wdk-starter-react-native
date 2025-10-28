@@ -6,6 +6,7 @@ import { RefreshCw } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FiatCurrency, pricingService } from '@/services/pricing-service';
 import { useKeyboard } from '@/hooks/use-keyboard';
+import { colors } from '@/constants/colors';
 import {
   getAssetTicker,
   getNetworkType,
@@ -463,7 +464,7 @@ export default function SendDetailsScreen() {
                     placeholder={
                       inputMode === 'token' ? `${getDisplaySymbol(tokenSymbol)} 0.00` : '$ 0.00'
                     }
-                    placeholderTextColor="#666"
+                    placeholderTextColor={colors.textTertiary}
                     value={amount}
                     onChangeText={handleAmountChange}
                     onFocus={handleAmountInputFocus}
@@ -480,7 +481,10 @@ export default function SendDetailsScreen() {
                 <View style={styles.balanceRow}>
                   <TouchableOpacity disabled={isUseMaxDisabled} onPress={handleUseMax}>
                     <Text
-                      style={[styles.useMaxText, { color: isUseMaxDisabled ? '#666' : '#FF6501' }]}
+                      style={[
+                        styles.useMaxText,
+                        { color: isUseMaxDisabled ? colors.textTertiary : colors.primary },
+                      ]}
                     >
                       Use Max
                     </Text>
@@ -502,8 +506,8 @@ export default function SendDetailsScreen() {
                       size={18}
                       color={
                         isLoadingGasEstimate || (tokenId.toLowerCase() === 'btc' && !amount)
-                          ? '#666'
-                          : '#FF6501'
+                          ? colors.textTertiary
+                          : colors.primary
                       }
                       style={isLoadingGasEstimate ? styles.refreshIconLoading : undefined}
                     />
@@ -615,7 +619,7 @@ export default function SendDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: colors.background,
   },
   header: {
     marginBottom: 16,
@@ -632,13 +636,13 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
     marginBottom: 8,
   },
   amountInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E1E1E',
+    backgroundColor: colors.card,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 16,
@@ -648,16 +652,16 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 24,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text,
   },
   currencyToggle: {
-    backgroundColor: '#2C2C2C',
+    backgroundColor: colors.cardDark,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
   },
   currencyToggleText: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -667,16 +671,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   useMaxText: {
-    color: '#FF6501',
+    color: colors.primary,
     fontSize: 14,
     fontWeight: '500',
   },
   balanceText: {
-    color: '#999',
+    color: colors.textSecondary,
     fontSize: 14,
   },
   gasSection: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     marginTop: 24,
@@ -688,7 +692,7 @@ const styles = StyleSheet.create({
   },
   gasTitle: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
   },
   refreshButton: {
     padding: 4,
@@ -699,21 +703,21 @@ const styles = StyleSheet.create({
   gasAmount: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text,
   },
   gasUsd: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   gasError: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textSecondary,
     marginTop: 4,
   },
   amountError: {
     fontSize: 12,
-    color: '#FF6B6B',
+    color: colors.error,
     marginTop: 4,
   },
   bottomContainer: {
@@ -723,36 +727,36 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: 20,
     paddingTop: 16,
-    backgroundColor: '#121212',
+    backgroundColor: colors.background,
     borderTopWidth: 1,
-    borderTopColor: '#2C2C2C',
+    borderTopColor: colors.cardDark,
   },
   sendButton: {
-    backgroundColor: '#FF6501',
+    backgroundColor: colors.primary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
   },
   sendButtonText: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 16,
     fontWeight: '600',
   },
   sendButtonDisabled: {
-    backgroundColor: '#333',
+    backgroundColor: colors.border,
     opacity: 0.5,
   },
   sendButtonTextDisabled: {
-    color: '#999',
+    color: colors.textSecondary,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: colors.card,
     borderRadius: 16,
     padding: 24,
     marginHorizontal: 20,
@@ -763,42 +767,42 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text,
     marginBottom: 12,
     textAlign: 'center',
   },
   modalDescription: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: 4,
   },
   modalButton: {
-    backgroundColor: '#FF6501',
+    backgroundColor: colors.primary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 32,
   },
   modalButtonText: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 16,
     fontWeight: '600',
   },
   transactionDetails: {
-    backgroundColor: '#2C2C2C',
+    backgroundColor: colors.cardDark,
     borderRadius: 8,
     padding: 12,
     marginVertical: 16,
   },
   transactionLabel: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   transactionId: {
     fontSize: 14,
-    color: '#FF6501',
+    color: colors.primary,
     fontFamily: 'monospace',
   },
   transactionSummary: {
@@ -808,23 +812,23 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
   },
   summaryValue: {
     fontSize: 14,
-    color: '#fff',
+    color: colors.text,
     fontWeight: '500',
     flex: 1,
     textAlign: 'right',
     marginLeft: 12,
   },
   transactionRecap: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#2C2C2C',
+    borderColor: colors.cardDark,
   },
   recapRow: {
     flexDirection: 'row',
@@ -834,22 +838,22 @@ const styles = StyleSheet.create({
   },
   recapLabel: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
     fontWeight: '500',
   },
   recapValue: {
     fontSize: 14,
-    color: '#fff',
+    color: colors.text,
     fontWeight: '600',
   },
   recapValueSecondary: {
     fontSize: 12,
-    color: '#666',
+    color: colors.textTertiary,
     fontWeight: '400',
   },
   recapDivider: {
     height: 1,
-    backgroundColor: '#2C2C2C',
+    backgroundColor: colors.cardDark,
     marginVertical: 4,
   },
 });

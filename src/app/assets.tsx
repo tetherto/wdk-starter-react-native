@@ -9,6 +9,7 @@ import formatAmount from '@/utils/format-amount';
 import getDisplaySymbol from '@/utils/get-display-symbol';
 import formatTokenAmount from '@/utils/format-token-amount';
 import Header from '@/components/header';
+import { colors } from '@/constants/colors';
 
 export default function AssetsScreen() {
   const insets = useSafeAreaInsets();
@@ -136,7 +137,7 @@ export default function AssetsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: colors.background,
   },
   scrollView: {
     flex: 1,
@@ -149,7 +150,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#1E1E1E',
+    backgroundColor: colors.card,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
@@ -169,7 +170,7 @@ const styles = StyleSheet.create({
   },
   assetIconText: {
     fontSize: 24,
-    color: '#fff',
+    color: colors.text,
   },
   assetIconImage: {
     width: 32,
@@ -181,7 +182,7 @@ const styles = StyleSheet.create({
   assetName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text,
     marginBottom: 4,
   },
   assetChange: {
@@ -193,12 +194,12 @@ const styles = StyleSheet.create({
   assetAmount: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text,
     marginBottom: 4,
   },
   assetValue: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
   },
   noAssetsContainer: {
     flex: 1,
@@ -208,13 +209,13 @@ const styles = StyleSheet.create({
   },
   noAssetsText: {
     fontSize: 16,
-    color: '#999',
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: 8,
   },
   noAssetsSubtext: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textTertiary,
     textAlign: 'center',
     lineHeight: 20,
   },

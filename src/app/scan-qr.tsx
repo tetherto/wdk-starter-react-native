@@ -5,6 +5,7 @@ import { X } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import { Alert, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors } from '@/constants/colors';
 
 const { width: screenWidth } = Dimensions.get('window');
 const qrSize = screenWidth * 0.7;
@@ -71,7 +72,7 @@ export default function ScanQRScreen() {
         <View style={styles.header}>
           <View style={styles.headerSpacer} />
           <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-            <X size={24} color="#FF6501" />
+            <X size={24} color={colors.primary} />
           </TouchableOpacity>
         </View>
         <View style={styles.centerContent}>
@@ -88,7 +89,7 @@ export default function ScanQRScreen() {
         <View style={styles.header}>
           <View style={styles.headerSpacer} />
           <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-            <X size={24} color="#FF6501" />
+            <X size={24} color={colors.primary} />
           </TouchableOpacity>
         </View>
         <View style={styles.centerContent}>
@@ -149,7 +150,7 @@ export default function ScanQRScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -171,13 +172,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text,
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
     textAlign: 'center',
   },
   cameraContainer: {
@@ -204,7 +205,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 20,
     height: 20,
-    borderColor: '#fff',
+    borderColor: colors.white,
   },
   topLeft: {
     top: 0,
@@ -236,7 +237,7 @@ const styles = StyleSheet.create({
   },
   scanLabel: {
     fontSize: 16,
-    color: '#fff',
+    color: colors.white,
     fontWeight: '500',
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: -1, height: 1 },
@@ -249,13 +250,13 @@ const styles = StyleSheet.create({
   },
   bottomText: {
     fontSize: 16,
-    color: '#999',
+    color: colors.textSecondary,
     marginBottom: 16,
   },
   bottomLine: {
     width: 100,
     height: 2,
-    backgroundColor: '#333',
+    backgroundColor: colors.border,
     borderRadius: 1,
   },
   centerContent: {
@@ -267,25 +268,25 @@ const styles = StyleSheet.create({
   centerTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text,
     textAlign: 'center',
     marginBottom: 16,
   },
   centerText: {
     fontSize: 16,
-    color: '#999',
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 32,
   },
   permissionButton: {
-    backgroundColor: '#FF6501',
+    backgroundColor: colors.primary,
     paddingHorizontal: 32,
     paddingVertical: 16,
     borderRadius: 12,
   },
   permissionButtonText: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 16,
     fontWeight: '600',
   },

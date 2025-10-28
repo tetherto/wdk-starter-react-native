@@ -3,6 +3,7 @@ import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { pricingService } from '../services/pricing-service';
+import { colors } from '@/constants/colors';
 
 export default function Index() {
   const { wallet, isInitialized, isUnlocked } = useWallet();
@@ -31,10 +32,10 @@ export default function Index() {
           flex: 1,
           justifyContent: 'center',
           alignItems: 'center',
-          backgroundColor: '#121212',
+          backgroundColor: colors.background,
         }}
       >
-        <ActivityIndicator size="large" color="#FF6501" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }

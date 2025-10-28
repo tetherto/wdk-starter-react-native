@@ -1,6 +1,7 @@
 import { Download, Wallet } from 'lucide-react-native';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { colors } from '@/constants/colors';
 
 interface ActionButton {
   id: number;
@@ -44,10 +45,16 @@ export const OnBoardingWelcome: React.FC<Props> = ({ title, subtitle, actionButt
             >
               <View style={styles.buttonContent}>
                 {button.iconName === 'wallet' && (
-                  <Wallet size={20} color={button.variant === 'filled' ? '#000' : '#FF6501'} />
+                  <Wallet
+                    size={20}
+                    color={button.variant === 'filled' ? colors.black : colors.primary}
+                  />
                 )}
                 {button.iconName === 'download' && (
-                  <Download size={20} color={button.variant === 'filled' ? '#000' : '#FF6501'} />
+                  <Download
+                    size={20}
+                    color={button.variant === 'filled' ? colors.black : colors.primary}
+                  />
                 )}
                 <Text
                   style={[
@@ -69,7 +76,7 @@ export const OnBoardingWelcome: React.FC<Props> = ({ title, subtitle, actionButt
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
@@ -89,14 +96,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.text,
     textAlign: 'left',
     alignSelf: 'stretch',
     marginBottom: 16,
   },
   subtitle: {
     fontSize: 16,
-    color: '#999',
+    color: colors.textSecondary,
     textAlign: 'left',
     alignSelf: 'stretch',
     marginBottom: 48,
@@ -111,23 +118,23 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: '#FF6501',
+    borderColor: colors.primary,
   },
   filledButton: {
-    backgroundColor: '#FF6501',
-    borderColor: '#FF6501',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   tintedButton: {
-    backgroundColor: 'rgba(30, 144, 255, 0.15)',
-    borderColor: '#FF6501',
+    backgroundColor: colors.tintedBackground,
+    borderColor: colors.primary,
   },
   actionButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FF6501',
+    color: colors.primary,
   },
   filledButtonText: {
-    color: '#000',
+    color: colors.black,
   },
   buttonContent: {
     flexDirection: 'row',

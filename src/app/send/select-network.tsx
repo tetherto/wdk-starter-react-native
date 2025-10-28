@@ -12,6 +12,7 @@ import { FiatCurrency, pricingService } from '@/services/pricing-service';
 import getDisplaySymbol from '@/utils/get-display-symbol';
 import formatTokenAmount from '@/utils/format-token-amount';
 import Header from '@/components/header';
+import { colors } from '@/constants/colors';
 
 export default function SelectNetworkScreen() {
   const insets = useSafeAreaInsets();
@@ -105,14 +106,14 @@ export default function SelectNetworkScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: colors.background,
   },
   header: {
     marginBottom: 16,
   },
   description: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textSecondary,
     paddingHorizontal: 20,
     marginBottom: 24,
   },
