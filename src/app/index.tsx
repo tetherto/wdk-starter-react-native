@@ -41,7 +41,7 @@ export default function Index() {
   }
 
   // Redirect based on wallet existence and unlock status
-  if (wallet === null) {
+  if (!wallet) {
     return <Redirect href="/onboarding" />;
   }
 
