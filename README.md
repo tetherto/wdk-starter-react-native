@@ -1,6 +1,13 @@
 # @tetherto/wdk-starter-react-native
 
-A production-ready Expo + React Native starter demonstrating how to build a secure, multi-chain, non-custodial wallet using the WDK (Wallet Development Kit). Features BareKit worklets for cryptographic operations, secure secret management, and a complete wallet implementation with onboarding, transactions, and asset management.
+> [!WARNING]
+> **Alpha Software**
+> 
+> This starter template is currently in **alpha** stage and under active development. It may contain bugs, incomplete features, and breaking changes. **Do not use in production environments or with real funds.** 
+> 
+> For production use, please wait for the stable release or use at your own risk in development/testing environments only.
+
+An Expo + React Native starter demonstrating how to build a secure, multi-chain, non-custodial wallet using the WDK (Wallet Development Kit). Features BareKit worklets for cryptographic operations, secure secret management, and a complete wallet implementation with onboarding, transactions, and asset management.
 
 Click below to see the wallet in action:
 
