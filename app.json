@@ -4,6 +4,7 @@
     "slug": "wdk-starter-react-native",
     "version": "1.0.0",
     "orientation": "portrait",
+    "developmentClient": false,
     "icon": "./assets/images/icon.png",
     "scheme": "wdkstarterreactnative",
     "newArchEnabled": true,
@@ -47,7 +48,6 @@
     "userInterfaceStyle": "light",
     "plugins": [
       "expo-router",
-      "expo-dev-client",
       [
         "expo-splash-screen",
         {
