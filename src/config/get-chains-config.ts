@@ -1,20 +1,19 @@
 const getChainsConfig = () => {
   return {
     ethereum: {
-      chainId: 1, // Ethereum mainnet (per WDK React Native quickstart docs)
+      chainId: 1,
       blockchain: 'ethereum',
-      provider: 'https://mainnet.infura.io/v3/34cab382dcac4612ba1bc60f74f0c649',
+      provider: 'https://eth.merkle.io',
       bundlerUrl: 'https://api.candide.dev/public/v3/ethereum',
       paymasterUrl: 'https://api.candide.dev/public/v3/ethereum',
       paymasterAddress: '0x8b1f6cb5d062aa2ce8d581942bbb960420d875ba',
       entrypointAddress: '0x0000000071727De22E5E9d8BAf0edAc6f37da032',
-      safeModulesVersion: '0.3.0',
       transferMaxFee: 5000000,
       swapMaxFee: 5000000,
       bridgeMaxFee: 5000000,
       paymasterToken: {
-        address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', // USDT on Ethereum mainnet (per docs)
-      },
+        address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+      }
     },
     arbitrum: {
       chainId: 42161,
