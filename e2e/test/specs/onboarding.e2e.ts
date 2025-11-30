@@ -1,10 +1,11 @@
 import { driver, expect } from '@wdio/globals';
 import { HomeOnboardingScreen } from '../../pageObjects/home-onboarding-screen';
+import { qase } from '../../utils/qase-wrapper';
 
 const homeOnboardingScreen = new HomeOnboardingScreen();
 
-describe('Wallet App E2E Tests', () => {
-  it('should launch the standalone app and verify the create wallet button', async () => {
+describe('Onboarding Screen', () => {
+  it('TW-1: First launch', qase('TW-1', async () => {
     // Wait for app to load
     await driver.pause(3000);
 
@@ -25,10 +26,17 @@ describe('Wallet App E2E Tests', () => {
     await expect(createWalletButton).toBeDisplayed();
     await expect(importWalletButton).toBeDisplayed();
 
-    // Verify buttons have correct content-desc (accessibility label)
-    const contentDesc =  await createWalletButton.getAttribute('content-desc');
-    const importContentDesc =  await importWalletButton.getAttribute('content-desc');
-    expect(contentDesc).toContain('Create Wallet');
-    expect(importContentDesc).toContain('Import Wallet');
-  });
+    // Verify buttons have correct accessibility label
+    // iOS uses 'name' or 'label', Android uses 'content-desc'
+    const isIOS = (driver as any).capabilities.platformName === 'iOS';
+    const createButtonLabel = isIOS 
+      ? (await createWalletButton.getAttribute('name')) || (await createWalletButton.getAttribute('label'))
+      : await createWalletButton.getAttribute('content-desc');
+    const importButtonLabel = isIOS
+      ? (await importWalletButton.getAttribute('name')) || (await importWalletButton.getAttribute('label'))
+      : await importWalletButton.getAttribute('content-desc');
+    
+    expect(createButtonLabel).toContain('Create Wallet');
+    expect(importButtonLabel).toContain('Import Wallet');
+  }));
 });

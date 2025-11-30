@@ -1,80 +1,192 @@
 # E2E Tests
 
-Simple TypeScript E2E testing setup using WebdriverIO and Appium.
+TypeScript E2E testing setup using WebdriverIO and Appium.
 
 ## Setup
 
 ```bash
+cd e2e
 npm install
 ```
 
-## Build APK
+## Qase Integration
+
+Tests are integrated with Qase test management using `qase-javascript-commons`.
+
+### Setup
+
+1. **Get Qase credentials:**
+   - API Token: https://app.qase.io/user/api/token
+   - Project Code: Your Qase project settings
+
+2. **Configure environment variables:**
+
+```bash
+export QASE_API_TOKEN=your_api_token
+export QASE_PROJECT_CODE=your_project_code
+```
+
+Or create a `.env` file in the `e2e` directory:
+
+```
+QASE_API_TOKEN=your_api_token
+QASE_PROJECT_CODE=your_project_code
+QASE_RUN_ID=optional_run_id  # Optional: existing test run ID
+```
+
+### Usage
+
+Tests are wrapped with `qase(testCaseId, testFunction)`:
+
+```typescript
+it(
+  'TW-1: First launch',
+  qase('TW-1', async () => {
+    // test code
+  })
+);
+```
+
+Results are automatically reported to Qase when credentials are configured.
+
+## Generate Release Builds
+
+### iOS
 
 From project root:
 
 ```bash
-npm run e2e:build-apk
+npx expo export --platform ios --output-dir ./dist
+npx expo run:ios --configuration Release
 ```
 
-This builds a **standalone release APK** with the JS bundle embedded and copies
-it to `apps/app-release.apk`.
+This creates a Release build in Xcode DerivedData. The e2e build script will
+copy it.
 
-**Note:** This is a standalone build - no Metro bundler or dev server needed.
-The JS bundle is embedded in the APK.
+### Android
 
-## Run Tests
+From project root:
 
-Update the device capabilities in `wdio.conf.ts` to match your emulator or
-physical device.
+```bash
+npx expo export --platform android --output-dir ./dist
+npx expo prebuild --platform android --clean
+cd android
+./gradlew assembleRelease
+```
 
-For example, in `wdio.conf.ts` (line 13 in the `capabilities` array):
+The APK will be at `android/app/build/outputs/apk/release/app-release.apk`.
+
+## Running Tests
+
+### iOS Tests
+
+1. **Build for E2E** (from project root):
+
+   ```bash
+   cd e2e
+   npm run build-ios
+   ```
+
+   This exports the JS bundle and copies the Release build to
+   `e2e/apps/wdkstarterreactnative.app`.
+
+   **Note:** Requires a Release build (see "Generate Release Builds" above).
+
+2. **Update capabilities** in `wdio.ios.conf.ts` (platform version, device name)
+
+3. **Ensure iOS simulator is running**
+
+4. **Run tests:**
+   ```bash
+   cd e2e
+   npm run test:ios
+   ```
+
+### Android Tests
+
+1. **Build for E2E** (from project root):
+
+   ```bash
+   cd e2e
+   npm run build-apk
+   ```
+
+   This builds a standalone release APK with embedded JS bundle to
+   `e2e/apps/app-release.apk`.
+
+   **Note:** This script handles the full build process (export, prebuild,
+   assemble).
+
+2. **Update capabilities** in `wdio.android.conf.ts` (platform version, device
+   name)
+
+3. **Start Android emulator or connect device**
+
+4. **Run tests:**
+   ```bash
+   cd e2e
+   npm run test:android
+   ```
+
+### Run Both Platforms
+
+To run tests on both iOS and Android sequentially:
+
+```bash
+cd e2e
+npm run test:all
+```
+
+**Note:** `npm test` defaults to iOS tests.
+
+## Configuration
+
+### Platform-Specific Configs
+
+The project uses separate configuration files for each platform:
+
+- **`wdio.base.conf.ts`** - Shared configuration (hooks, timeouts, etc.)
+- **`wdio.ios.conf.ts`** - iOS-specific capabilities
+- **`wdio.android.conf.ts`** - Android-specific capabilities
+
+### Updating Device Capabilities
+
+**iOS** (`wdio.ios.conf.ts`):
+
+```typescript
+capabilities: [
+  {
+    platformName: 'iOS',
+    'appium:platformVersion': '26.1', // Your iOS version
+    'appium:deviceName': 'iPhone 17 Pro', // Your simulator name
+    // ...
+  },
+],
+```
+
+**Android** (`wdio.android.conf.ts`):
 
 ```typescript
 capabilities: [
   {
     platformName: 'Android',
-    'appium:platformVersion': '13', // e.g. set to your device or emulator version
-    'appium:deviceName': 'Pixel_5_API_33', // set to your device or emulator name
-    // ... rest of the config
+    'appium:platformVersion': '14.0', // Your Android version
+    'appium:deviceName': 'Android Emulator', // Your emulator/device name
+    // ...
   },
 ],
-```
-
-Change `'appium:platformVersion'` and `'appium:deviceName'` to match your own
-setup.
-
-Make sure Appium is running:
-
-```bash
-appium
-```
-
-Then run tests:
-
-```bash
-npm test
 ```
 
 ## Structure
 
 ```
 e2e/
-├── wdio.conf.ts          # WebdriverIO config (TypeScript)
-├── tsconfig.json         # TypeScript config
-├── package.json          # Dependencies
-├── test/
-│   └── specs/
-│       └── test.e2e.ts   # Test files
-└── apps/                 # APK files (gitignored)
-    └── app-release.apk   # Standalone release APK
+├── wdio.base.conf.ts     # Base WebdriverIO config (shared settings)
+├── wdio.ios.conf.ts      # iOS-specific config
+├── wdio.android.conf.ts  # Android-specific config
+├── test/specs/           # Test files
+├── pageObjects/          # Page object models
+└── apps/                 # Built apps (gitignored)
+    ├── app-release.apk   # Android APK
+    └── wdkstarterreactnative.app  # iOS app
 ```
-
-## Configuration
-
-The APK path is configured in `wdio.conf.ts`:
-
-```typescript
-'appium:app': path.join(__dirname, 'apps/app-release.apk')
-```
-
-After building, the APK will be in `apps/app-release.apk`.
