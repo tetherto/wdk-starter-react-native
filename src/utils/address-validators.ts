@@ -16,12 +16,6 @@ export function getAddressValidatorForNetwork(
  * EVM: Ethereum / Polygon / Arbitrum
  */
 export function validateEvmAddress(address: string): AddressValidationResult {
-  const trimmed = address.trim();
-
-  if (!trimmed) {
-    return { valid: false, error: 'Recipient address is required' };
-  }
-
   const isValid = WAValidator.validate(address, 'eth');
 
   if (!isValid) {
@@ -38,13 +32,7 @@ export function validateEvmAddress(address: string): AddressValidationResult {
  * Bitcoin (SegWit)
  */
 export function validateBitcoinAddress(address: string): AddressValidationResult {
-  const trimmed = address.trim();
-
-  if (!trimmed) {
-    return { valid: false, error: 'Recipient address is required' };
-  }
-
-  const isValid = WAValidator.validate(trimmed, 'btc');
+  const isValid = WAValidator.validate(address, 'btc');
 
   if (!isValid) {
     return {
@@ -60,14 +48,8 @@ export function validateBitcoinAddress(address: string): AddressValidationResult
  * TON: @ton/core Address.parse
  */
 export function validateTonAddress(address: string): AddressValidationResult {
-  const trimmed = address.trim();
-
-  if (!trimmed) {
-    return { valid: false, error: 'Recipient address is required' };
-  }
-
   try {
-    Address.parse(trimmed);
+    Address.parse(address);
     return { valid: true };
   } catch {
     return {
@@ -81,13 +63,7 @@ export function validateTonAddress(address: string): AddressValidationResult {
  * Tron
  */
 export function validateTronAddress(address: string): AddressValidationResult {
-  const trimmed = address.trim();
-
-  if (!trimmed) {
-    return { valid: false, error: 'Recipient address is required' };
-  }
-
-  const isValid = WAValidator.validate(trimmed, 'trx');
+  const isValid = WAValidator.validate(address, 'trx');
 
   if (!isValid) {
     return {
@@ -103,13 +79,7 @@ export function validateTronAddress(address: string): AddressValidationResult {
  * Solana
  */
 export function validateSolanaAddress(address: string): AddressValidationResult {
-  const trimmed = address.trim();
-
-  if (!trimmed) {
-    return { valid: false, error: 'Recipient address is required' };
-  }
-
-  const isValidFormat = WAValidator.validate(trimmed, 'sol');
+  const isValidFormat = WAValidator.validate(address, 'sol');
 
   if (!isValidFormat) {
     return {
