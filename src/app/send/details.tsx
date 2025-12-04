@@ -450,6 +450,9 @@ export default function SendDetailsScreen() {
     return tokenId.toLowerCase() !== 'btc' && gasEstimate.fee === undefined;
   }, [tokenId, gasEstimate.fee]);
 
+  const isSendDisabled =
+    !!amountError || !!addressError || !amount || !recipientAddress || sendingTransaction;
+
   return (
     <>
       <KeyboardAvoidingView
@@ -578,32 +581,12 @@ export default function SendDetailsScreen() {
               ]}
             >
               <TouchableOpacity
-                style={[
-                  styles.sendButton,
-                  (amountError ||
-                    addressError ||
-                    !amount ||
-                    !recipientAddress ||
-                    sendingTransaction) &&
-                    styles.sendButtonDisabled,
-                ]}
+                style={[styles.sendButton, isSendDisabled && styles.sendButtonDisabled]}
                 onPress={handleSend}
-                disabled={
-                  !!(
-                    amountError ||
-                    addressError ||
-                    !amount ||
-                    !recipientAddress ||
-                    sendingTransaction
-                  )
-                }
+                disabled={isSendDisabled}
               >
                 <Text
-                  style={[
-                    styles.sendButtonText,
-                    (amountError || !amount || !recipientAddress || sendingTransaction) &&
-                      styles.sendButtonTextDisabled,
-                  ]}
+                  style={[styles.sendButtonText, isSendDisabled && styles.sendButtonTextDisabled]}
                 >
                   {sendingTransaction ? 'Sending...' : 'Send'}
                 </Text>
