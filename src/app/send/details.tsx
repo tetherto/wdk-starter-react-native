@@ -39,7 +39,7 @@ import formatTokenAmount from '@/utils/format-token-amount';
 import formatUSDValue from '@/utils/format-usd-value';
 import Header from '@/components/header';
 import { toast } from 'sonner-native';
-import { validateAddressByNetwork } from '@/utils/address-validation';
+import { validateAddressByNetwork } from '@/utils/address-validators';
 
 export default function SendDetailsScreen() {
   const insets = useSafeAreaInsets();
@@ -97,7 +97,7 @@ export default function SendDetailsScreen() {
         return;
       }
 
-      const result = validateAddressByNetwork(networkId as NetworkType, trimmed);
+      const result = validateAddressByNetwork(networkId, trimmed);
 
       if (!result.valid) {
         setAddressError(result.error);

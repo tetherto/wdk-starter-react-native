@@ -1,54 +1,28 @@
 import { networkConfigs } from '@/config/networks';
 import { NetworkType } from '@tetherto/wdk-react-native-provider';
 import { Address } from '@ton/core';
-import { ethers } from 'ethers';
-import { ChainId } from '@/enum';
 import WAValidator from 'multicoin-address-validator';
-import bs58 from 'bs58';
 
 export type AddressValidationResult = { valid: true } | { valid: false; error: string };
+export type AddressValidator = (address: string) => AddressValidationResult;
 
-const NETWORK_TO_CHAIN_MAP: Record<string, ChainId> = Object.fromEntries(
-  Object.values(networkConfigs)
-    .map((config) => config.id)
-    .filter((id): id is ChainId => Object.values(ChainId).includes(id as ChainId))
-    .map((id) => [id, id as ChainId])
-);
-
-const VALIDATORS: Record<ChainId, (address: string) => AddressValidationResult> = {
-  [ChainId.ETHEREUM]: validateEvmAddress,
-  [ChainId.POLYGON]: validateEvmAddress,
-  [ChainId.ARBITRUM]: validateEvmAddress,
-
-  [ChainId.BITCOIN]: validateBitcoinAddress,
-  [ChainId.TON]: validateTonAddress,
-  [ChainId.TRON]: validateTronAddress,
-  [ChainId.SOLANA]: validateSolanaAddress,
-
-  [ChainId.UNKNOWN]: () => ({
-    valid: false,
-    error: 'Address validation is not supported for this network yet.',
-  }),
-};
-
-export function getChainIdFromNetwork(networkId: NetworkType): ChainId | 'unknown' {
-  const config = networkConfigs[networkId];
-  if (!config) return 'unknown';
-
-  return NETWORK_TO_CHAIN_MAP[config.id] ?? 'unknown';
+export function getAddressValidatorForNetwork(
+  networkId: NetworkType
+): AddressValidator | undefined {
+  return networkConfigs[networkId]?.addressValidator;
 }
 
 /**
  * EVM: Ethereum / Polygon / Arbitrum
  */
-function validateEvmAddress(address: string): AddressValidationResult {
+export function validateEvmAddress(address: string): AddressValidationResult {
   const trimmed = address.trim();
 
   if (!trimmed) {
     return { valid: false, error: 'Recipient address is required' };
   }
 
-  const isValid = ethers.isAddress(trimmed);
+  const isValid = WAValidator.validate(address, 'eth');
 
   if (!isValid) {
     return {
@@ -63,7 +37,7 @@ function validateEvmAddress(address: string): AddressValidationResult {
 /**
  * Bitcoin (SegWit)
  */
-function validateBitcoinAddress(address: string): AddressValidationResult {
+export function validateBitcoinAddress(address: string): AddressValidationResult {
   const trimmed = address.trim();
 
   if (!trimmed) {
@@ -85,7 +59,7 @@ function validateBitcoinAddress(address: string): AddressValidationResult {
 /**
  * TON: @ton/core Address.parse
  */
-function validateTonAddress(address: string): AddressValidationResult {
+export function validateTonAddress(address: string): AddressValidationResult {
   const trimmed = address.trim();
 
   if (!trimmed) {
@@ -106,7 +80,7 @@ function validateTonAddress(address: string): AddressValidationResult {
 /**
  * Tron
  */
-function validateTronAddress(address: string): AddressValidationResult {
+export function validateTronAddress(address: string): AddressValidationResult {
   const trimmed = address.trim();
 
   if (!trimmed) {
@@ -128,31 +102,23 @@ function validateTronAddress(address: string): AddressValidationResult {
 /**
  * Solana
  */
-function validateSolanaAddress(address: string): AddressValidationResult {
+export function validateSolanaAddress(address: string): AddressValidationResult {
   const trimmed = address.trim();
 
   if (!trimmed) {
     return { valid: false, error: 'Recipient address is required' };
   }
 
-  try {
-    const decoded = bs58.decode(trimmed);
+  const isValidFormat = WAValidator.validate(trimmed, 'sol');
 
-    // Solana public key = 32 bytes
-    if (decoded.length !== 32) {
-      return {
-        valid: false,
-        error: 'Invalid Solana address. Please check the address and try again.',
-      };
-    }
-
-    return { valid: true };
-  } catch {
+  if (!isValidFormat) {
     return {
       valid: false,
       error: 'Invalid Solana address. Please check the address and try again.',
     };
   }
+
+  return { valid: true };
 }
 
 export function validateAddressByNetwork(
@@ -164,8 +130,14 @@ export function validateAddressByNetwork(
     return { valid: false, error: 'Recipient address is required' };
   }
 
-  const chainId = getChainIdFromNetwork(networkId);
-  const validator = VALIDATORS[chainId];
+  const validator = getAddressValidatorForNetwork(networkId);
+
+  if (!validator) {
+    return {
+      valid: false,
+      error: 'Address validation is not supported for this network.',
+    };
+  }
 
   return validator(trimmed);
 }

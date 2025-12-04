@@ -1,4 +1,12 @@
 import { NetworkType } from '@tetherto/wdk-react-native-provider';
+import {
+  validateEvmAddress,
+  validateBitcoinAddress,
+  validateTonAddress,
+  validateTronAddress,
+  validateSolanaAddress,
+  AddressValidator,
+} from '@/utils/address-validators';
 
 export interface Network {
   id: string;
@@ -7,6 +15,7 @@ export interface Network {
   gasColor: string;
   icon: string | any;
   color: string;
+  addressValidator?: AddressValidator;
 }
 
 export const networkConfigs: Record<NetworkType, Network> = {
@@ -17,6 +26,7 @@ export const networkConfigs: Record<NetworkType, Network> = {
     gasColor: '#FF3B30',
     icon: require('../../assets/images/chains/ethereum-eth-logo.png'),
     color: '#627EEA',
+    addressValidator: validateEvmAddress,
   },
   [NetworkType.POLYGON]: {
     id: 'polygon',
@@ -25,6 +35,7 @@ export const networkConfigs: Record<NetworkType, Network> = {
     gasColor: '#34C759',
     icon: require('../../assets/images/chains/polygon-matic-logo.png'),
     color: '#8247E5',
+    addressValidator: validateEvmAddress,
   },
   [NetworkType.ARBITRUM]: {
     id: 'arbitrum',
@@ -33,6 +44,7 @@ export const networkConfigs: Record<NetworkType, Network> = {
     gasColor: '#FF9500',
     icon: require('../../assets/images/chains/arbitrum-arb-logo.png'),
     color: '#28A0F0',
+    addressValidator: validateEvmAddress,
   },
   [NetworkType.TON]: {
     id: 'ton',
@@ -41,6 +53,7 @@ export const networkConfigs: Record<NetworkType, Network> = {
     gasColor: '#34C759',
     icon: require('../../assets/images/chains/ton-logo.png'),
     color: '#0088CC',
+    addressValidator: validateTonAddress,
   },
   [NetworkType.TRON]: {
     id: 'tron',
@@ -49,6 +62,7 @@ export const networkConfigs: Record<NetworkType, Network> = {
     gasColor: '#34C759',
     icon: require('../../assets/images/chains/tron-trx-logo.png'),
     color: '#FF060A',
+    addressValidator: validateTronAddress,
   },
   [NetworkType.SOLANA]: {
     id: 'solana',
@@ -57,6 +71,7 @@ export const networkConfigs: Record<NetworkType, Network> = {
     gasColor: '#34C759',
     icon: require('../../assets/images/chains/solana-sol-logo.png'),
     color: '#9945FF',
+    addressValidator: validateSolanaAddress,
   },
   [NetworkType.SEGWIT]: {
     id: 'bitcoin',
@@ -65,6 +80,7 @@ export const networkConfigs: Record<NetworkType, Network> = {
     gasColor: '#FF9500',
     icon: require('../../assets/images/chains/bitcoin-btc-logo.png'),
     color: '#F7931A',
+    addressValidator: validateBitcoinAddress,
   },
   [NetworkType.LIGHTNING]: {
     id: 'lightning',
