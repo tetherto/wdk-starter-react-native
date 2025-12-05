@@ -89,8 +89,6 @@
     "stream-http": "^3.2.0"
   },
   "devDependencies": {
-    "@testing-library/jest-native": "^5.4.3",
-    "@testing-library/react-native": "^13.3.3",
     "@types/b4a": "^1.6.5",
     "@types/jest": "29.5.14",
     "@types/react": "~19.1.0",
