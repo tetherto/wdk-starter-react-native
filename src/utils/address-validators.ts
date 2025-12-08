@@ -68,7 +68,7 @@ export function validateTronAddress(address: string): AddressValidationResult {
   if (!isValid) {
     return {
       valid: false,
-      error: 'Invalid Tron address. Tron addresses usually start with "T".',
+      error: 'Invalid Tron address. Please check the address and try again.',
     };
   }
 
