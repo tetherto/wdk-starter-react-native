@@ -40,6 +40,7 @@ import formatUSDValue from '@/utils/format-usd-value';
 import Header from '@/components/header';
 import { toast } from 'sonner-native';
 import { validateAddressByNetwork } from '@/utils/address-validators';
+import { useDebouncedCallback } from '@/hooks/use-debounced-callback';
 
 export default function SendDetailsScreen() {
   const insets = useSafeAreaInsets();
@@ -87,25 +88,28 @@ export default function SendDetailsScreen() {
   const [isAmountInputFocused, setIsAmountInputFocused] = useState(false);
   const keyboard = useKeyboard();
 
+  const debouncedValidateAddress = useDebouncedCallback((value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      setAddressError('');
+      return;
+    }
+
+    const result = validateAddressByNetwork(networkId, trimmed);
+
+    if (!result.valid) {
+      setAddressError(result.error);
+    } else {
+      setAddressError('');
+    }
+  }, 300);
+
   const handleRecipientAddressChange = useCallback(
     (value: string) => {
       setRecipientAddress(value);
-
-      const trimmed = value.trim();
-      if (!trimmed) {
-        setAddressError('');
-        return;
-      }
-
-      const result = validateAddressByNetwork(networkId, trimmed);
-
-      if (!result.valid) {
-        setAddressError(result.error);
-      } else {
-        setAddressError('');
-      }
+      debouncedValidateAddress(value);
     },
-    [networkId]
+    [debouncedValidateAddress]
   );
 
   // Handle scanned address from QR scanner
