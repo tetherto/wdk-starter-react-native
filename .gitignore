@@ -47,11 +47,5 @@ app-example
 .npmrc
 
 # E2E tests
-e2e/apps/
-e2e/node_modules/
-
-docs
-
-#i am ignoring this file for now so that my changes to the config file don't get pushed, since they are config changes, will remove it after
-get-chains-config.ts
+test/apps/
 
