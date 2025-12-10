@@ -50,9 +50,9 @@ export const baseConfig: Partial<Options.Testrunner> = {
   before: async function (capabilities, specs) {
     // Set platform name for Qase test run naming
     // Check both platformName and appium:platformName
-    const caps = Array.isArray(capabilities) ? capabilities[0] : capabilities;
-    const platformName = (caps as any)?.platformName || 
-                         (caps as any)?.['appium:platformName'] ||
+    const caps = (Array.isArray(capabilities) ? capabilities[0] : capabilities) as WebdriverIO.Capabilities;
+    const platformName = caps?.platformName || 
+                         caps?.['appium:platformName'] ||
                          process.env.QASE_PLATFORM;
     if (platformName) {
       const { initQase } = await import('./test/e2e/utils/qase-wrapper');

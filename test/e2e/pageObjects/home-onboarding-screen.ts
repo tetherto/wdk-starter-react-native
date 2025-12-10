@@ -1,4 +1,4 @@
-import { $ } from '@wdio/globals';
+import { $, driver } from '@wdio/globals';
 
 export class HomeOnboardingScreen {
   /**
@@ -9,7 +9,8 @@ export class HomeOnboardingScreen {
     // Cross-platform text selector
     // For iOS: Use class chain or accessibility ID
     // For Android: UiSelector works
-    const isIOS = (driver as any).capabilities.platformName === 'iOS';
+    const caps = driver.capabilities as WebdriverIO.Capabilities;
+    const isIOS = (caps.platformName || caps['appium:platformName']) === 'iOS';
     
     const titleElement = isIOS 
       ? $('-ios class chain:**/XCUIElementTypeStaticText[`name == "Welcome!" OR label == "Welcome!"`]')

@@ -21,7 +21,8 @@ describe('Onboarding Screen', () => {
 
     // Verify buttons have correct accessibility label
     // iOS uses 'name' or 'label', Android uses 'content-desc'
-    const isIOS = (driver as any).capabilities.platformName === 'iOS';
+    const caps = driver.capabilities as WebdriverIO.Capabilities;
+    const isIOS = (caps.platformName || caps['appium:platformName']) === 'iOS';
     const createButtonLabel = isIOS 
       ? (await createWalletButton.getAttribute('name')) || (await createWalletButton.getAttribute('label'))
       : await createWalletButton.getAttribute('content-desc');

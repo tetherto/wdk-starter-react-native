@@ -109,9 +109,11 @@ async function reportTestResult(
         let platformName = qaseConfig.platform;
         try {
           // Access WebdriverIO global driver to get platform
-          const driver = (global as any).driver || (global as any).browser;
-          if (driver?.capabilities?.platformName) {
-            platformName = driver.capabilities.platformName;
+          const globalDriver = (global as typeof globalThis & { driver?: { capabilities?: WebdriverIO.Capabilities }; browser?: { capabilities?: WebdriverIO.Capabilities } }).driver || 
+                              (global as typeof globalThis & { driver?: { capabilities?: WebdriverIO.Capabilities }; browser?: { capabilities?: WebdriverIO.Capabilities } }).browser;
+          if (globalDriver?.capabilities) {
+            const caps = globalDriver.capabilities as WebdriverIO.Capabilities;
+            platformName = (caps.platformName || caps['appium:platformName']) as string | undefined;
           }
         } catch (e) {
           // Ignore if driver not available
@@ -158,9 +160,10 @@ async function reportTestResult(
         errorStr = error.message || error.toString();
       } else if (typeof error === 'object' && error !== null) {
         // Try common error object properties
-        errorStr = (error as any).message || 
-                   (error as any).error || 
-                   (error as any).stack ||
+        const errorObj = error as Record<string, unknown>;
+        errorStr = (errorObj.message as string) || 
+                   (errorObj.error as string) || 
+                   (errorObj.stack as string) ||
                    JSON.stringify(error);
       } else {
         errorStr = String(error);
@@ -231,15 +234,16 @@ async function reportTestResult(
       const resultHash = response.data.result?.hash || 'N/A';
       console.log(`[Qase] ✓ API request successful - Result hash: ${resultHash}`);
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     // Log error but don't break tests
-    const errorMsg = err?.response?.data?.errorMessage || err?.message || String(err);
+    const errorObj = err as { response?: { data?: { errorMessage?: string }; status?: number }; message?: string };
+    const errorMsg = errorObj?.response?.data?.errorMessage || errorObj?.message || String(err);
     console.warn(`[Qase] ✗ API request failed: ${errorMsg}`);
-    if (err?.response?.status) {
-      console.warn(`[Qase] HTTP Status: ${err.response.status}`);
+    if (errorObj?.response?.status) {
+      console.warn(`[Qase] HTTP Status: ${errorObj.response.status}`);
     }
-    if (err?.response?.data) {
-      console.warn(`[Qase] Response:`, JSON.stringify(err.response.data, null, 2));
+    if (errorObj?.response?.data) {
+      console.warn(`[Qase] Response:`, JSON.stringify(errorObj.response.data, null, 2));
     }
   }
 }
@@ -266,8 +270,9 @@ export async function completeTestRun(): Promise<void> {
     console.log(`[Qase] Completing test run ${testRunId} (Total duration: ${totalDuration}ms)`);
     await runsApi.completeRun(qaseConfig.projectCode!, testRunId);
     console.log(`[Qase] ✓ Test run completed`);
-  } catch (err: any) {
-    const errorMsg = err?.response?.data?.errorMessage || err?.message || String(err);
+  } catch (err: unknown) {
+    const errorObj = err as { response?: { data?: { errorMessage?: string } }; message?: string };
+    const errorMsg = errorObj?.response?.data?.errorMessage || errorObj?.message || String(err);
     console.warn(`[Qase] ✗ Failed to complete test run: ${errorMsg}`);
   }
 }

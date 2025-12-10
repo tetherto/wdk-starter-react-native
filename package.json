@@ -16,7 +16,7 @@
     "prebuild:clean": "expo prebuild --clean",
     "test:e2e": "export ANDROID_HOME=$HOME/Library/Android/sdk && export PATH=$PATH:$ANDROID_HOME/platform-tools && wdio run wdio.conf.ts",
     "test:e2e:ios": "export ANDROID_HOME=$HOME/Library/Android/sdk && export PATH=$PATH:$ANDROID_HOME/platform-tools && wdio run wdio.ios.conf.ts",
-    "test:e2e:android": "export ANDROID_HOME=$HOME/Library/Android/sdk && export PATH=$PATH:$ANDROID_HOME/platform-tools && wdio run wdio.conf.ts",
+    "test:e2e:android": "export ANDROID_HOME=$HOME/Library/Android/sdk && export PATH=$PATH:$ANDROID_HOME/platform-tools && wdio run wdio.android.conf.ts",
     "build:e2e:android": "export JAVA_HOME=$(/usr/libexec/java_home -v 21) && export PATH=$JAVA_HOME/bin:$PATH && npx expo export --platform android --output-dir ./dist && npx expo prebuild --platform android --clean && echo \"sdk.dir=$HOME/Library/Android/sdk\" > android/local.properties && cd android && ./gradlew assembleRelease && cp app/build/outputs/apk/release/app-release.apk ../test/apps/app-release.apk",
     "build:e2e:ios": "export NVM_DIR=\"$HOME/.nvm\" && [ -s \"$NVM_DIR/nvm.sh\" ] && \\. \"$NVM_DIR/nvm.sh\" && npx expo export --platform ios --output-dir ./dist && cp -r dist/_expo ios/ 2>/dev/null || true && RELEASE_APP=$(find ~/Library/Developer/Xcode/DerivedData -name 'wdkstarterreactnative.app' -path '*/Release-iphonesimulator/*' -type d | head -1) && if [ -n \"$RELEASE_APP\" ]; then rm -rf test/apps/wdkstarterreactnative.app && cp -r \"$RELEASE_APP\" test/apps/wdkstarterreactnative.app && echo 'Copied existing Release build'; else echo 'No existing Release build found. Please run: npx expo run:ios --configuration Release first'; exit 1; fi"
   },
