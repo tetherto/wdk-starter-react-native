@@ -5,23 +5,23 @@ import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { assetConfig } from '../config/assets';
 import { FiatCurrency, pricingService } from '../services/pricing-service';
-import formatTokenAmount from '@/utils/format-token-amount';
-import formatUSDValue from '@/utils/format-usd-value';
+import { formatTokenAmountBN } from '@/utils/format-token-amount';
+import { formatUSDValueBN } from '@/utils/format-usd-value';
 import Header from '@/components/header';
 import { colors } from '@/constants/colors';
+import { bn } from '@/utils/bignumber';
 
 export default function ActivityScreen() {
   const insets = useSafeAreaInsets();
   const { transactions: walletTransactions, addresses } = useWallet();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-
   // Transform wallet transactions to display format with fiat values
   const getTransactionsWithFiatValues = async () => {
     if (!walletTransactions.list) return [];
 
     // Get the wallet's own addresses for comparison
     const walletAddresses = addresses
-      ? Object.values(addresses).map(addr => addr.toLowerCase())
+      ? Object.values(addresses).map((addr) => addr.toLowerCase())
       : [];
 
     // Sort transactions by timestamp (newest first) and calculate fiat values
@@ -31,11 +31,11 @@ export default function ActivityScreen() {
         .map(async (tx, index) => {
           const fromAddress = tx.from?.toLowerCase();
           const isSent = walletAddresses.includes(fromAddress);
-          const amount = parseFloat(tx.amount);
+          const amount = bn(tx.amount);
           const config = assetConfig[tx.token as keyof typeof assetConfig];
 
           // Calculate fiat amount using pricing service
-          const fiatAmount = await pricingService.getFiatValue(
+          const fiatAmount = await pricingService.getFiatValueBN(
             amount,
             tx.token as AssetTicker,
             FiatCurrency.USD
@@ -45,8 +45,8 @@ export default function ActivityScreen() {
             id: `${tx.transactionHash}-${index}`,
             type: isSent ? ('sent' as const) : ('received' as const),
             token: config?.name || tx.token.toUpperCase(),
-            amount: `${formatTokenAmount(amount, tx.token as AssetTicker)}`,
-            fiatAmount: formatUSDValue(fiatAmount, false),
+            amount: `${formatTokenAmountBN(amount, tx.token as AssetTicker)}`,
+            fiatAmount: formatUSDValueBN(fiatAmount, false),
             fiatCurrency: FiatCurrency.USD,
             network: tx.blockchain,
           };
