@@ -15,4 +15,15 @@ module.exports = defineConfig([
       'prettier/prettier': 'error',
     },
   },
+  {
+    files: [
+      '**/__tests__/**/*.ts',
+      '**/__tests__/**/*.tsx',
+      '**/jest.setup.js',
+      '**/jest.setup.ts',
+    ],
+    env: {
+      jest: true,
+    },
+  },
 ]);
