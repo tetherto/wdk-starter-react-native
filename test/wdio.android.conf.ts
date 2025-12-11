@@ -13,7 +13,7 @@ export const config: Options.Testrunner = {
       platformName: 'Android',
       'appium:platformVersion': '16', // Android version
       'appium:deviceName': 'emulator-5554', // Device/emulator name
-      'appium:app': path.join(__dirname, 'test/apps/app-release.apk'),
+      'appium:app': path.join(__dirname, 'apps/app-release.apk'),
       'appium:automationName': 'UiAutomator2',
       'appium:appPackage': 'com.anonymous.wdkstarterreactnative',
       'appium:appActivity': '.MainActivity',
@@ -26,4 +26,3 @@ export const config: Options.Testrunner = {
     },
   ],
 } as Options.Testrunner;
-

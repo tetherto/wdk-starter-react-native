@@ -3,8 +3,8 @@ import * as path from 'path';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const dotenv = require('dotenv');
 
-// Load environment variables from .env file
-dotenv.config({ path: path.join(__dirname, '.env') });
+// Load environment variables from .env file (in root directory)
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 /**
  * Base WebdriverIO configuration shared by all platforms
@@ -13,7 +13,7 @@ export const baseConfig: Partial<Options.Testrunner> = {
   runner: 'local',
   port: 4723,
   
-  specs: ['./test/e2e/specs/**/*.ts'],
+  specs: ['./e2e/specs/**/*.ts'],
   exclude: [],
 
   maxInstances: 1,
@@ -55,7 +55,7 @@ export const baseConfig: Partial<Options.Testrunner> = {
                          caps?.['appium:platformName'] ||
                          process.env.QASE_PLATFORM;
     if (platformName) {
-      const { initQase } = await import('./test/e2e/utils/qase-wrapper');
+      const { initQase } = await import('./e2e/utils/qase-wrapper');
       initQase({ platform: platformName });
       console.log(`[Qase] Platform set to: ${platformName}`);
     }
@@ -70,11 +70,10 @@ export const baseConfig: Partial<Options.Testrunner> = {
    */
   after: async function (result, capabilities, specs) {
     try {
-      const { completeTestRun } = await import('./test/e2e/utils/qase-wrapper');
+      const { completeTestRun } = await import('./e2e/utils/qase-wrapper');
       await completeTestRun();
     } catch (error) {
       console.warn('[Qase] Error completing test run:', error);
     }
   },
 };
-
