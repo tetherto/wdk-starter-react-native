@@ -5,11 +5,13 @@ import React, { useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Asset, assetConfig } from '../config/assets';
-import formatAmount from '@/utils/format-amount';
+import { formatAmountBN } from '@/utils/format-amount';
 import getDisplaySymbol from '@/utils/get-display-symbol';
-import formatTokenAmount from '@/utils/format-token-amount';
+import { formatTokenAmountBN } from '@/utils/format-token-amount';
 import Header from '@/components/header';
 import { colors } from '@/constants/colors';
+import BigNumber from 'bignumber.js';
+import { add, bn } from '@/utils/bignumber';
 
 export default function AssetsScreen() {
   const insets = useSafeAreaInsets();
@@ -21,13 +23,13 @@ export default function AssetsScreen() {
   const getAssetsWithFiatValue = async () => {
     if (!balances.list) return [];
 
-    const balanceMap = new Map<string, { totalBalance: number }>();
+    const balanceMap = new Map<string, { totalBalance: BigNumber }>();
 
     // Sum up balances by denomination across all networks
     balances.list.forEach(balance => {
-      const current = balanceMap.get(balance.denomination) || { totalBalance: 0 };
+      const current = balanceMap.get(balance.denomination) || { totalBalance: bn('0') };
       balanceMap.set(balance.denomination, {
-        totalBalance: current.totalBalance + parseFloat(balance.value),
+        totalBalance: add(current.totalBalance, bn(balance.value)),
       });
     });
 
@@ -39,7 +41,7 @@ export default function AssetsScreen() {
         const symbol = getDisplaySymbol(denomination);
 
         // Calculate fiat value using pricing service
-        const fiatValue = await pricingService.getFiatValue(
+        const fiatValue = await pricingService.getFiatValueBN(
           totalBalance,
           denomination as AssetTicker,
           FiatCurrency.USD
@@ -49,7 +51,7 @@ export default function AssetsScreen() {
           id: denomination,
           name: config.name,
           symbol,
-          amount: formatTokenAmount(totalBalance, denomination as AssetTicker, false),
+          amount: formatTokenAmountBN(totalBalance, denomination as AssetTicker, false),
           fiatValue: fiatValue,
           fiatCurrency: FiatCurrency.USD,
           icon: config.icon,
@@ -63,7 +65,7 @@ export default function AssetsScreen() {
 
     // Sort by USD value descending
     return assetList.sort((a, b) => {
-      return b.fiatValue - a.fiatValue;
+      return b.fiatValue.toNumber() - a.fiatValue.toNumber();
     });
   };
 
@@ -116,7 +118,7 @@ export default function AssetsScreen() {
               <View style={styles.assetBalance}>
                 <Text style={styles.assetAmount}>{asset.amount}</Text>
                 <Text style={styles.assetValue}>
-                  {formatAmount(asset.fiatValue)} {asset.fiatCurrency}
+                  {formatAmountBN(asset.fiatValue)} {asset.fiatCurrency}
                 </Text>
               </View>
             </TouchableOpacity>

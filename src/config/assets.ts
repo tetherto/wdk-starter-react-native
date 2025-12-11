@@ -1,5 +1,6 @@
 import { FiatCurrency } from '@/services/pricing-service';
 import { NetworkType } from '@tetherto/wdk-react-native-provider';
+import BigNumber from 'bignumber.js';
 
 export interface AssetConfig {
   name: string;
@@ -14,7 +15,7 @@ export interface Asset {
   name: string;
   symbol: string;
   amount: string;
-  fiatValue: number;
+  fiatValue: BigNumber;
   fiatCurrency: FiatCurrency;
   icon: string | any;
   color: string;
