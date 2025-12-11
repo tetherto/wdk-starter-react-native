@@ -89,7 +89,7 @@ export default function WalletScreen() {
     const map = new Map<string, { totalBalance: number }>();
 
     // Sum up balances by denomination across all networks
-    balances.list.forEach(balance => {
+    balances.list.forEach((balance) => {
       const current = map.get(balance.denomination) || { totalBalance: 0 };
       map.set(balance.denomination, {
         totalBalance: current.totalBalance + parseFloat(balance.value),
@@ -117,7 +117,7 @@ export default function WalletScreen() {
 
     return (await Promise.all(promises))
       .filter(Boolean)
-      .filter(asset => asset && asset.balance > 0) // Only show tokens with positive balance
+      .filter((asset) => asset && asset.balance > 0) // Only show tokens with positive balance
       .sort((a, b) => (b?.usdValue || 0) - (a?.usdValue || 0)); // Sort by USD value descending
   };
 
@@ -163,7 +163,7 @@ export default function WalletScreen() {
 
     // Get the wallet's own addresses for comparison
     const walletAddresses = addresses
-      ? Object.values(addresses).map(addr => addr?.toLowerCase())
+      ? Object.values(addresses).map((addr) => addr?.toLowerCase())
       : [];
 
     const result = await Promise.all(
@@ -351,7 +351,7 @@ export default function WalletScreen() {
         {/* Portfolio */}
         <View style={styles.portfolioSection}>
           {aggregatedBalances.length > 0 ? (
-            aggregatedBalances.map(asset => {
+            aggregatedBalances.map((asset) => {
               if (!asset) return null;
 
               return (
@@ -405,7 +405,7 @@ export default function WalletScreen() {
           </View>
 
           <View style={styles.suggestionsGrid}>
-            {suggestions.map(suggestion => (
+            {suggestions.map((suggestion) => (
               <TouchableOpacity
                 onPress={() => {
                   Linking.openURL(suggestion.url);
@@ -434,7 +434,7 @@ export default function WalletScreen() {
           </View>
 
           {transactions.length > 0 ? (
-            transactions.map(tx => (
+            transactions.map((tx) => (
               <View key={tx.id} style={styles.transactionRow}>
                 <View style={styles.transactionIcon}>
                   <tx.icon size={16} color={tx.iconColor} />
