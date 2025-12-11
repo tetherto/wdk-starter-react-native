@@ -1,43 +1,44 @@
-import BN from 'bignumber.js';
+import BigNumber from 'bignumber.js';
 
 // Configure global BigNumber settings
 // DECIMAL_PLACES: maximum number of decimal places to use in calculations
 // ROUNDING_MODE: rounding mode (ROUND_DOWN to avoid overestimating amounts)
-BN.config({
+BigNumber.config({
   DECIMAL_PLACES: 20,
-  ROUNDING_MODE: BN.ROUND_DOWN,
+  ROUNDING_MODE: BigNumber.ROUND_DOWN,
 });
 
 // Type representing values that can be converted to BN
-export type BNValue = string | number | BN;
+export type BNValue = string | number | BigNumber;
 
 /**
  * Factory function to create a BN instance safely
  * - Accepts string, number, or BN instance
  * - Avoids precision loss from floating point numbers
  */
-export function bn(value: BNValue): BN {
-  if (value instanceof BN) return value; // already a BN instance
+export function bn(value: BNValue): BigNumber {
+  if (BigNumber.isBigNumber(value)) return value; // already a BN instance
+
   if (typeof value === 'number') {
     // convert number to string to prevent floating-point precision issues
-    return new BN(value.toString());
+    return new BigNumber(value.toString());
   }
-  return new BN(value); // assume string input
+  return new BigNumber(value); // assume string input
 }
 
 // ------------------- Arithmetic operations -------------------
 
 /** Add two BN values */
-export const add = (a: BNValue, b: BNValue): BN => bn(a).plus(b);
+export const add = (a: BNValue, b: BNValue): BigNumber => bn(a).plus(b);
 
 /** Subtract b from a */
-export const sub = (a: BNValue, b: BNValue): BN => bn(a).minus(b);
+export const sub = (a: BNValue, b: BNValue): BigNumber => bn(a).minus(b);
 
 /** Multiply two BN values */
-export const mul = (a: BNValue, b: BNValue): BN => bn(a).multipliedBy(b);
+export const mul = (a: BNValue, b: BNValue): BigNumber => bn(a).multipliedBy(b);
 
 /** Divide a by b */
-export const div = (a: BNValue, b: BNValue): BN => bn(a).dividedBy(b);
+export const div = (a: BNValue, b: BNValue): BigNumber => bn(a).dividedBy(b);
 
 // ------------------- Comparison operations -------------------
 

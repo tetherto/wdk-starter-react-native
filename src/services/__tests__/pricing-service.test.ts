@@ -1,4 +1,4 @@
-import BN from 'bignumber.js';
+import BigNumber from 'bignumber.js';
 import { pricingService, FiatCurrency } from '../pricing-service';
 
 // Define local enum for type safety in tests
@@ -86,14 +86,14 @@ describe('PricingService', () => {
 
   it('getFiatValueBN should return correct BN', async () => {
     const valueBN = await service.getFiatValueBN(0.5, AssetTicker.BTC, FiatCurrency.USD);
-    expect(valueBN).toBeInstanceOf(BN);
-    expect(valueBN.toString()).toBe(new BN(0.5).multipliedBy(60000).toString());
+    expect(valueBN).toBeInstanceOf(BigNumber);
+    expect(valueBN.toString()).toBe(new BigNumber(0.5).multipliedBy(60000).toString());
   });
 
   it('getFiatValueBN should work with BN input', async () => {
-    const inputBN = new BN(0.25);
+    const inputBN = new BigNumber(0.25);
     const valueBN = await service.getFiatValueBN(inputBN, AssetTicker.BTC, FiatCurrency.USD);
-    expect(valueBN.toString()).toBe(new BN(0.25).multipliedBy(60000).toString());
+    expect(valueBN.toString()).toBe(new BigNumber(0.25).multipliedBy(60000).toString());
   });
 
   it('should throw error if service not initialized', async () => {

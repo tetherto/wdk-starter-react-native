@@ -3,7 +3,7 @@ import { PricingProvider } from '@tetherto/wdk-pricing-provider';
 import { AssetTicker } from '@tetherto/wdk-react-native-provider';
 import DecimalJS from 'decimal.js';
 import { BNValue, mul } from '@/utils/bignumber';
-import BN from 'bignumber.js';
+import BigNumber from 'bignumber.js';
 
 export enum FiatCurrency {
   USD = 'USD',
@@ -63,7 +63,11 @@ class PricingService {
     return new DecimalJS(value).mul(this.fiatExchangeRateCache[currency][asset]).toNumber();
   }
 
-  async getFiatValueBN(value: BNValue, asset: AssetTicker, currency: FiatCurrency): Promise<BN> {
+  async getFiatValueBN(
+    value: BNValue,
+    asset: AssetTicker,
+    currency: FiatCurrency
+  ): Promise<BigNumber> {
     if (!this.isInitialized || !this.fiatExchangeRateCache) {
       throw new Error('Pricing service not initialized. Call initialize() first.');
     }
