@@ -45,7 +45,7 @@ export default function SelectTokenScreen() {
       // Group balances by denomination
       const balanceMap = new Map<string, { totalBalance: number }>();
 
-      balances.list.forEach(balance => {
+      balances.list.forEach((balance) => {
         const current = balanceMap.get(balance.denomination) || { totalBalance: 0 };
         balanceMap.set(balance.denomination, {
           totalBalance: current.totalBalance + parseFloat(balance.value),

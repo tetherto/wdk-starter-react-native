@@ -1,4 +1,9 @@
-import { AssetTicker, useWallet, WDKService } from '@tetherto/wdk-react-native-provider';
+import {
+  AssetTicker,
+  useWallet,
+  WDKService,
+  NetworkType,
+} from '@tetherto/wdk-react-native-provider';
 import { CryptoAddressInput } from '@tetherto/wdk-uikit-react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
@@ -34,6 +39,8 @@ import formatTokenAmount from '@/utils/format-token-amount';
 import formatUSDValue from '@/utils/format-usd-value';
 import Header from '@/components/header';
 import { toast } from 'sonner-native';
+import { validateAddressByNetwork } from '@/utils/address-validators';
+import { useDebouncedCallback } from '@/hooks/use-debounced-callback';
 
 export default function SendDetailsScreen() {
   const insets = useSafeAreaInsets();
@@ -57,11 +64,12 @@ export default function SendDetailsScreen() {
     tokenBalance: string;
     tokenBalanceUSD: string;
     networkName: string;
-    networkId: string;
+    networkId: NetworkType;
     scannedAddress?: string;
   };
 
   const [recipientAddress, setRecipientAddress] = useState('');
+  const [addressError, setAddressError] = useState<string>('');
   const [amount, setAmount] = useState('');
   const [inputMode, setInputMode] = useState<'token' | 'fiat'>('token');
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -80,12 +88,36 @@ export default function SendDetailsScreen() {
   const [isAmountInputFocused, setIsAmountInputFocused] = useState(false);
   const keyboard = useKeyboard();
 
+  const debouncedValidateAddress = useDebouncedCallback((value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      setAddressError('');
+      return;
+    }
+
+    const result = validateAddressByNetwork(networkId, trimmed);
+
+    if (!result.valid) {
+      setAddressError(result.error);
+    } else {
+      setAddressError('');
+    }
+  }, 300);
+
+  const handleRecipientAddressChange = useCallback(
+    (value: string) => {
+      setRecipientAddress(value);
+      debouncedValidateAddress(value);
+    },
+    [debouncedValidateAddress]
+  );
+
   // Handle scanned address from QR scanner
   useEffect(() => {
     if (scannedAddress) {
-      setRecipientAddress(scannedAddress);
+      handleRecipientAddressChange(scannedAddress);
     }
-  }, [scannedAddress]);
+  }, [scannedAddress, handleRecipientAddressChange]);
 
   // Auto-scroll when keyboard opens
   useEffect(() => {
@@ -135,7 +167,7 @@ export default function SendDetailsScreen() {
     async (showLoading = true, amountValue?: string) => {
       if (showLoading) {
         setIsLoadingGasEstimate(true);
-        setGasEstimate(prev => ({ ...prev, error: undefined }));
+        setGasEstimate((prev) => ({ ...prev, error: undefined }));
       }
 
       // Convert amount to token value if provided
@@ -213,8 +245,8 @@ export default function SendDetailsScreen() {
   ]);
 
   const handlePasteAddress = useCallback(() => {
-    Clipboard.getStringAsync().then(setRecipientAddress);
-  }, []);
+    Clipboard.getStringAsync().then(handleRecipientAddressChange);
+  }, [handleRecipientAddressChange]);
 
   const handleUseMax = useCallback(() => {
     const numericBalance = parseFloat(tokenBalance.replace(/,/g, ''));
@@ -242,7 +274,7 @@ export default function SendDetailsScreen() {
   }, [inputMode, tokenBalance, tokenBalanceUSD, gasEstimate.fee, tokenPrice]);
 
   const toggleInputMode = useCallback(() => {
-    setInputMode(prev => (prev === 'token' ? 'fiat' : 'token'));
+    setInputMode((prev) => (prev === 'token' ? 'fiat' : 'token'));
     setAmount('');
     setAmountError(null);
   }, []);
@@ -313,6 +345,12 @@ export default function SendDetailsScreen() {
       Alert.alert('Error', 'Please enter a recipient address');
       return false;
     }
+
+    if (addressError) {
+      Alert.alert('Error', addressError);
+      return false;
+    }
+
     if (!amount || parseFloat(amount) <= 0) {
       Alert.alert('Error', 'Please enter a valid amount');
       return false;
@@ -328,7 +366,7 @@ export default function SendDetailsScreen() {
     }
 
     return true;
-  }, [recipientAddress, amount, tokenBalance, inputMode]);
+  }, [recipientAddress, addressError, amount, tokenBalance, inputMode]);
 
   const handleSend = useCallback(async () => {
     if (!validateTransaction()) {
@@ -416,6 +454,9 @@ export default function SendDetailsScreen() {
     return tokenId.toLowerCase() !== 'btc' && gasEstimate.fee === undefined;
   }, [tokenId, gasEstimate.fee]);
 
+  const isSendDisabled =
+    !!amountError || !!addressError || !amount || !recipientAddress || sendingTransaction;
+
   return (
     <>
       <KeyboardAvoidingView
@@ -451,9 +492,10 @@ export default function SendDetailsScreen() {
 
               <CryptoAddressInput
                 value={recipientAddress}
-                onChangeText={setRecipientAddress}
+                onChangeText={handleRecipientAddressChange}
                 onPaste={handlePasteAddress}
                 onQRScan={handleQRScan}
+                error={addressError}
               />
 
               <View style={styles.section} onLayout={handleAmountSectionLayout}>
@@ -543,20 +585,12 @@ export default function SendDetailsScreen() {
               ]}
             >
               <TouchableOpacity
-                style={[
-                  styles.sendButton,
-                  (amountError || !amount || !recipientAddress || sendingTransaction) &&
-                    styles.sendButtonDisabled,
-                ]}
+                style={[styles.sendButton, isSendDisabled && styles.sendButtonDisabled]}
                 onPress={handleSend}
-                disabled={!!(amountError || !amount || !recipientAddress || sendingTransaction)}
+                disabled={isSendDisabled}
               >
                 <Text
-                  style={[
-                    styles.sendButtonText,
-                    (amountError || !amount || !recipientAddress || sendingTransaction) &&
-                      styles.sendButtonTextDisabled,
-                  ]}
+                  style={[styles.sendButtonText, isSendDisabled && styles.sendButtonTextDisabled]}
                 >
                   {sendingTransaction ? 'Sending...' : 'Send'}
                 </Text>
