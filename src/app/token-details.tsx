@@ -1,5 +1,5 @@
 import { assetConfig } from '@/config/assets';
-import formatAmount from '@/utils/format-amount';
+import { formatAmountBN } from '@/utils/format-amount';
 import { AssetTicker, NetworkType, useWallet } from '@tetherto/wdk-react-native-provider';
 import { useLocalSearchParams } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
@@ -12,6 +12,7 @@ import { networkConfigs } from '@/config/networks';
 import getDisplaySymbol from '@/utils/get-display-symbol';
 import Header from '@/components/header';
 import { colors } from '@/constants/colors';
+import { add, bn, gt } from '@/utils/bignumber';
 
 export default function TokenDetailsScreen() {
   const router = useDebouncedNavigation();
@@ -27,15 +28,15 @@ export default function TokenDetailsScreen() {
     name: string;
     icon: any;
     color: string;
-    totalBalance: number;
-    totalUSDValue: number;
+    totalBalance: BigNumber;
+    totalUSDValue: BigNumber;
     networkBalances: {
       network: string;
-      balance: number;
-      usdValue: number;
+      balance: BigNumber;
+      usdValue: BigNumber;
       address: string;
     }[];
-    priceUSD: number;
+    priceUSD: BigNumber;
   } | null>(null);
 
   // Calculate token balances from wallet data with async pricing
@@ -47,16 +48,16 @@ export default function TokenDetailsScreen() {
       }
 
       // Filter balances for this specific token
-      const tokenBalances = balances.list.filter(balance => balance.denomination === tokenSymbol);
+      const tokenBalances = balances.list.filter((balance) => balance.denomination === tokenSymbol);
 
       // Calculate total balance and network breakdown with fiat values
-      let totalBalance = 0;
-      const networkBalancesPromises = tokenBalances.map(async balance => {
-        const amount = parseFloat(balance.value);
-        totalBalance += amount;
+      let totalBalance = bn('0');
+      const networkBalancesPromises = tokenBalances.map(async (balance) => {
+        const amount = bn(balance.value);
+        totalBalance = add(totalBalance, amount);
 
         // Calculate fiat value using pricing service
-        const usdValue = await pricingService.getFiatValue(
+        const usdValue = await pricingService.getFiatValueBN(
           amount,
           tokenSymbol as AssetTicker,
           FiatCurrency.USD
@@ -70,17 +71,17 @@ export default function TokenDetailsScreen() {
         };
       });
 
-      const networkBalances = (await Promise.all(networkBalancesPromises)).filter(
-        item => item.balance > 0
+      const networkBalances = (await Promise.all(networkBalancesPromises)).filter((item) =>
+        gt(item.balance, 0)
       );
 
-      const tokenPrice = await pricingService.getFiatValue(
-        1,
+      const tokenPrice = await pricingService.getFiatValueBN(
+        bn('1'),
         tokenSymbol as AssetTicker,
         FiatCurrency.USD
       );
 
-      const totalUSDValue = await pricingService.getFiatValue(
+      const totalUSDValue = await pricingService.getFiatValueBN(
         totalBalance,
         tokenSymbol as AssetTicker,
         FiatCurrency.USD
@@ -105,7 +106,7 @@ export default function TokenDetailsScreen() {
     if (!tokenData || !network) return;
 
     // Find the specific network balance
-    const networkBalance = tokenData.networkBalances.find(nb => nb.network === network);
+    const networkBalance = tokenData.networkBalances.find((nb) => nb.network === network);
     if (!networkBalance) return;
 
     // Capitalize network name (e.g., "polygon" -> "Polygon")
@@ -118,7 +119,7 @@ export default function TokenDetailsScreen() {
         network: networkName,
         networkId: network,
         tokenBalance: networkBalance.balance.toString(),
-        tokenBalanceUSD: `${formatAmount(networkBalance.usdValue)} USD`,
+        tokenBalanceUSD: `${formatAmountBN(networkBalance.usdValue)} USD`,
         tokenId: tokenSymbol,
         tokenName: tokenData.symbol,
         tokenSymbol: tokenData.symbol,

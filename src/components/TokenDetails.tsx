@@ -1,17 +1,18 @@
 import { networkConfigs } from '@/config/networks';
-import formatAmount from '@/utils/format-amount';
-import formatTokenAmount from '@/utils/format-token-amount';
-import formatUSDValue from '@/utils/format-usd-value';
+import formatAmount, { formatAmountBN } from '@/utils/format-amount';
+import formatTokenAmount, { formatTokenAmountBN } from '@/utils/format-token-amount';
+import formatUSDValue, { formatUSDValueBN } from '@/utils/format-usd-value';
 import { AssetTicker, NetworkType } from '@tetherto/wdk-react-native-provider';
 import { Send } from 'lucide-react-native';
 import React from 'react';
 import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors } from '@/constants/colors';
+import { gt } from '@/utils/bignumber';
 
 interface TokenNetworkBalance {
   network: string;
-  balance: number;
-  usdValue: number;
+  balance: BigNumber;
+  usdValue: BigNumber;
   address: string;
 }
 
@@ -20,10 +21,10 @@ interface TokenData {
   name: string;
   icon: any;
   color: string;
-  totalBalance: number;
-  totalUSDValue: number;
+  totalBalance: BigNumber;
+  totalUSDValue: BigNumber;
   networkBalances: TokenNetworkBalance[];
-  priceUSD: number;
+  priceUSD: BigNumber;
 }
 
 interface TokenDetailsProps {
@@ -54,12 +55,12 @@ export function TokenDetails({ tokenData, onSendPress }: TokenDetailsProps) {
         </View>
         <Text style={styles.totalLabel}>Total {tokenData.name} Balance</Text>
         <Text style={styles.totalAmount}>
-          {formatTokenAmount(tokenData.totalBalance, tokenData.symbol as AssetTicker)}
+          {formatTokenAmountBN(tokenData.totalBalance, tokenData.symbol as AssetTicker)}
         </Text>
-        <Text style={styles.totalValue}>{formatUSDValue(tokenData.totalUSDValue)}</Text>
-        {tokenData.priceUSD > 0 && (
+        <Text style={styles.totalValue}>{formatUSDValueBN(tokenData.totalUSDValue)}</Text>
+        {gt(tokenData.priceUSD, 0) && (
           <Text style={styles.priceLabel}>
-            ${formatAmount(tokenData.priceUSD)} per {tokenData.symbol}
+            ${formatAmountBN(tokenData.priceUSD)} per {tokenData.symbol}
           </Text>
         )}
       </View>
@@ -94,12 +95,12 @@ export function TokenDetails({ tokenData, onSendPress }: TokenDetailsProps) {
 
                   <View style={styles.networkBalance}>
                     <Text style={styles.networkAmount}>
-                      {formatTokenAmount(item.balance, tokenData.symbol as AssetTicker)}
+                      {formatTokenAmountBN(item.balance, tokenData.symbol as AssetTicker)}
                     </Text>
-                    <Text style={styles.networkValue}>{formatUSDValue(item.usdValue)}</Text>
+                    <Text style={styles.networkValue}>{formatUSDValueBN(item.usdValue)}</Text>
                   </View>
 
-                  {item.balance > 0 && (
+                  {gt(item.balance, 0) && (
                     <TouchableOpacity
                       style={styles.sendButton}
                       onPress={() => handleSend(item.network as NetworkType)}
