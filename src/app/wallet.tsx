@@ -25,18 +25,19 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AssetConfig, assetConfig } from '../config/assets';
-import { FiatCurrency, pricingService } from '../services/pricing-service';
-import formatAmount from '@/utils/format-amount';
-import formatTokenAmount from '@/utils/format-token-amount';
-import formatUSDValue from '@/utils/format-usd-value';
+import { AssetConfig, assetConfig } from '@/config/assets';
+import { FiatCurrency, pricingService } from '@/services/pricing-service';
+import { formatAmountBN } from '@/utils/format-amount';
+import { formatTokenAmountBN } from '@/utils/format-token-amount';
+import { formatUSDValueBN } from '@/utils/format-usd-value';
 import useWalletAvatar from '@/hooks/use-wallet-avatar';
 import { colors } from '@/constants/colors';
+import { bn, add, gt } from '@/utils/bignumber';
 
 type AggregatedBalance = ({
   denomination: string;
-  balance: number;
-  usdValue: number;
+  balance: BigNumber;
+  usdValue: BigNumber;
   config: AssetConfig;
 } | null)[];
 
@@ -50,7 +51,7 @@ type Transaction = {
   iconColor: string;
   blockchain: string;
   hash: string;
-  fiatAmount: number;
+  fiatAmount: BigNumber;
   currency: FiatCurrency;
 };
 
@@ -66,6 +67,7 @@ export default function WalletScreen() {
     addresses,
     transactions: walletTransactions,
   } = useWallet();
+
   const [refreshing, setRefreshing] = useState(false);
   const [aggregatedBalances, setAggregatedBalances] = useState<AggregatedBalance>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -86,13 +88,14 @@ export default function WalletScreen() {
   const getAggregatedBalances = async () => {
     if (!balances) return [];
 
-    const map = new Map<string, { totalBalance: number }>();
+    const map = new Map<string, { totalBalance: BigNumber }>();
 
     // Sum up balances by denomination across all networks
     balances.list.forEach((balance) => {
-      const current = map.get(balance.denomination) || { totalBalance: 0 };
+      const current = map.get(balance.denomination) || { totalBalance: bn(0) };
+
       map.set(balance.denomination, {
-        totalBalance: current.totalBalance + parseFloat(balance.value),
+        totalBalance: add(current.totalBalance, balance.value),
       });
     });
 
@@ -101,7 +104,7 @@ export default function WalletScreen() {
       if (!config) return null;
 
       // Calculate fiat value using pricing service
-      const fiatValue = await pricingService.getFiatValue(
+      const fiatValue = await pricingService.getFiatValueBN(
         totalBalance,
         denomination as AssetTicker,
         FiatCurrency.USD
@@ -117,13 +120,19 @@ export default function WalletScreen() {
 
     return (await Promise.all(promises))
       .filter(Boolean)
-      .filter((asset) => asset && asset.balance > 0) // Only show tokens with positive balance
-      .sort((a, b) => (b?.usdValue || 0) - (a?.usdValue || 0)); // Sort by USD value descending
+      .filter((asset) => asset && gt(asset.balance, 0)) // Only show tokens with positive balance
+      .sort((a, b) => {
+        // Sort by USD value descending
+        return b!.usdValue.minus(a!.usdValue).toNumber();
+      });
   };
 
   // Calculate total portfolio value
   const totalPortfolioValue = useMemo(() => {
-    return aggregatedBalances.reduce((sum, asset) => sum + (asset?.usdValue || 0), 0);
+    return aggregatedBalances.reduce(
+      (sum, asset) => (asset ? add(sum, asset.usdValue) : sum),
+      bn(0)
+    );
   }, [aggregatedBalances]);
 
   // Animated border opacity based on scroll position
@@ -173,11 +182,11 @@ export default function WalletScreen() {
         .map(async (tx, index) => {
           const fromAddress = tx.from?.toLowerCase();
           const isSent = walletAddresses.includes(fromAddress);
-          const amount = parseFloat(tx.amount);
+          const amount = bn(tx.amount);
           const config = assetConfig[tx.token];
 
           // Calculate fiat amount using pricing service
-          const fiatAmount = await pricingService.getFiatValue(
+          const fiatAmount = await pricingService.getFiatValueBN(
             amount,
             tx.token as AssetTicker,
             FiatCurrency.USD
@@ -188,7 +197,7 @@ export default function WalletScreen() {
             type: isSent ? 'sent' : 'received',
             asset: config?.name || tx.token.toUpperCase(),
             token: tx.token,
-            amount: `${formatTokenAmount(amount, tx.token as AssetTicker)}`,
+            amount: `${formatTokenAmountBN(amount, tx.token as AssetTicker)}`,
             icon: isSent ? ArrowUpRight : ArrowDownLeft,
             iconColor: isSent ? colors.danger : colors.success,
             blockchain: tx.blockchain,
@@ -335,7 +344,7 @@ export default function WalletScreen() {
             }}
           >
             <Balance
-              value={totalPortfolioValue}
+              value={totalPortfolioValue.toNumber()}
               currency="USD"
               isLoading={isLoading}
               Loader={BalanceLoader}
@@ -380,9 +389,9 @@ export default function WalletScreen() {
                   </View>
                   <View style={styles.assetBalance}>
                     <Text style={styles.assetAmount}>
-                      {formatTokenAmount(asset.balance, asset.denomination as AssetTicker)}
+                      {formatTokenAmountBN(asset.balance, asset.denomination as AssetTicker)}
                     </Text>
-                    <Text style={styles.assetValue}>{formatAmount(asset.usdValue)} USD</Text>
+                    <Text style={styles.assetValue}>{formatAmountBN(asset.usdValue)} USD</Text>
                   </View>
                 </TouchableOpacity>
               );
@@ -447,7 +456,7 @@ export default function WalletScreen() {
                 </View>
                 <View style={styles.transactionAmount}>
                   <Text style={styles.transactionAssetAmount}>{tx.amount}</Text>
-                  <Text style={styles.transactionUsdAmount}>{formatUSDValue(tx.fiatAmount)}</Text>
+                  <Text style={styles.transactionUsdAmount}>{formatUSDValueBN(tx.fiatAmount)}</Text>
                 </View>
               </View>
             ))
