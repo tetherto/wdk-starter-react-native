@@ -9,18 +9,20 @@ import { colors } from '@/constants/colors';
 import { AssetTicker, useWallet } from '@tetherto/wdk-react-native-provider';
 import { AssetSelector, type Token } from '@tetherto/wdk-uikit-react-native';
 import { FiatCurrency, pricingService } from '@/services/pricing-service';
-import formatAmount from '@/utils/format-amount';
 import getDisplaySymbol from '@/utils/get-display-symbol';
 import { getRecentTokens, addToRecentTokens } from '@/utils/recent-tokens';
-import formatTokenAmount from '@/utils/format-token-amount';
 import Header from '@/components/header';
+
+import { bn, add, gt } from '@/utils/bignumber';
+import BigNumber from 'bignumber.js';
+import { formatAmountBN } from '@/utils/format-amount';
+import { formatTokenAmountBN } from '@/utils/format-token-amount';
 
 export default function SelectTokenScreen() {
   const insets = useSafeAreaInsets();
   const router = useDebouncedNavigation();
   const params = useLocalSearchParams();
   const { wallet, balances } = useWallet();
-
   // Get the scanned address from params (passed from QR scanner)
   const { scannedAddress } = params as { scannedAddress?: string };
   const [recentTokens, setRecentTokens] = useState<string[]>([]);
@@ -43,12 +45,12 @@ export default function SelectTokenScreen() {
       }
 
       // Group balances by denomination
-      const balanceMap = new Map<string, { totalBalance: number }>();
+      const balanceMap = new Map<string, { totalBalance: BigNumber }>();
 
       balances.list.forEach((balance) => {
-        const current = balanceMap.get(balance.denomination) || { totalBalance: 0 };
+        const current = balanceMap.get(balance.denomination) || { totalBalance: bn(0) };
         balanceMap.set(balance.denomination, {
-          totalBalance: current.totalBalance + parseFloat(balance.value),
+          totalBalance: add(current.totalBalance, bn(balance.value)),
         });
       });
 
@@ -60,12 +62,12 @@ export default function SelectTokenScreen() {
         const config = assetConfig[assetSymbol as keyof typeof assetConfig];
         if (!config) continue;
 
-        const totalBalance = balanceMap.get(assetSymbol)?.totalBalance || 0;
+        const totalBalance = balanceMap.get(assetSymbol)?.totalBalance || bn('0');
 
         // Calculate fiat value using pricing service
-        let usdValue = 0;
+        let usdValue = bn(0);
         try {
-          usdValue = await pricingService.getFiatValue(
+          usdValue = await pricingService.getFiatValueBN(
             totalBalance,
             assetSymbol as AssetTicker,
             FiatCurrency.USD
@@ -73,18 +75,18 @@ export default function SelectTokenScreen() {
         } catch (error) {
           console.error(`Error calculating fiat value for ${assetSymbol}:`, error);
           // Fallback to 0 if pricing service fails
-          usdValue = 0;
+          usdValue = bn(0);
         }
 
         tokensWithBalances.push({
           id: assetSymbol,
           symbol: getDisplaySymbol(assetSymbol),
           name: config.name,
-          balance: formatTokenAmount(totalBalance, assetSymbol as AssetTicker, false),
-          balanceUSD: `${formatAmount(usdValue)} USD`,
+          balance: formatTokenAmountBN(totalBalance, assetSymbol as AssetTicker, false),
+          balanceUSD: `${formatAmountBN(usdValue)} USD`,
           icon: config.icon,
           color: config.color,
-          hasBalance: totalBalance > 0,
+          hasBalance: gt(totalBalance, 0),
         });
       }
 
