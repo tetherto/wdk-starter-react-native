@@ -45,3 +45,7 @@ app-example
 
 .env
 .npmrc
+
+# E2E tests
+test/apps/
+
