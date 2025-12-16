@@ -23,7 +23,12 @@ export function bn(value: BNValue): BigNumber {
     // convert number to string to prevent floating-point precision issues
     return new BigNumber(value.toString());
   }
-  return new BigNumber(value); // assume string input
+  const res = new BigNumber(value);
+  if (res.isNaN()) {
+    console.warn('Incorrect value, received', value);
+    return new BigNumber(0);
+  }
+  return res; // assume string input
 }
 
 // ------------------- Arithmetic operations -------------------
