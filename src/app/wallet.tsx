@@ -27,9 +27,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AssetConfig, assetConfig } from '@/config/assets';
 import { FiatCurrency, pricingService } from '@/services/pricing-service';
-import { formatAmountBN } from '@/utils/format-amount';
-import { formatTokenAmountBN } from '@/utils/format-token-amount';
-import { formatUSDValueBN } from '@/utils/format-usd-value';
+import formatAmount from '@/utils/format-amount';
+import formatTokenAmount from '@/utils/format-token-amount';
+import formatUSDValue from '@/utils/format-usd-value';
 import useWalletAvatar from '@/hooks/use-wallet-avatar';
 import { colors } from '@/constants/colors';
 import { bn, add, gt } from '@/utils/bignumber';
@@ -197,7 +197,7 @@ export default function WalletScreen() {
             type: isSent ? 'sent' : 'received',
             asset: config?.name || tx.token.toUpperCase(),
             token: tx.token,
-            amount: `${formatTokenAmountBN(amount, tx.token as AssetTicker)}`,
+            amount: `${formatTokenAmount(amount, tx.token as AssetTicker)}`,
             icon: isSent ? ArrowUpRight : ArrowDownLeft,
             iconColor: isSent ? colors.danger : colors.success,
             blockchain: tx.blockchain,
@@ -389,9 +389,9 @@ export default function WalletScreen() {
                   </View>
                   <View style={styles.assetBalance}>
                     <Text style={styles.assetAmount}>
-                      {formatTokenAmountBN(asset.balance, asset.denomination as AssetTicker)}
+                      {formatTokenAmount(asset.balance, asset.denomination as AssetTicker)}
                     </Text>
-                    <Text style={styles.assetValue}>{formatAmountBN(asset.usdValue)} USD</Text>
+                    <Text style={styles.assetValue}>{formatAmount(asset.usdValue)} USD</Text>
                   </View>
                 </TouchableOpacity>
               );
@@ -456,7 +456,7 @@ export default function WalletScreen() {
                 </View>
                 <View style={styles.transactionAmount}>
                   <Text style={styles.transactionAssetAmount}>{tx.amount}</Text>
-                  <Text style={styles.transactionUsdAmount}>{formatUSDValueBN(tx.fiatAmount)}</Text>
+                  <Text style={styles.transactionUsdAmount}>{formatUSDValue(tx.fiatAmount)}</Text>
                 </View>
               </View>
             ))

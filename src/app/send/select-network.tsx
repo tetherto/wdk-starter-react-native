@@ -1,7 +1,7 @@
 import { Network, NetworkSelector } from '@/components/NetworkSelector';
 import { assetConfig } from '@/config/assets';
 import { networkConfigs } from '@/config/networks';
-import { formatAmountBN } from '@/utils/format-amount';
+import { formatAmount } from '@/utils/format-amount';
 import { AssetTicker, useWallet } from '@tetherto/wdk-react-native-provider';
 import { useLocalSearchParams } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
@@ -10,7 +10,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FiatCurrency, pricingService } from '@/services/pricing-service';
 import getDisplaySymbol from '@/utils/get-display-symbol';
-import { formatTokenAmountBN } from '@/utils/format-token-amount';
+import { formatTokenAmount } from '@/utils/format-token-amount';
 import Header from '@/components/header';
 import { colors } from '@/constants/colors';
 import { bn } from '@/utils/bignumber';
@@ -58,8 +58,8 @@ export default function SelectNetworkScreen() {
 
           return {
             ...network,
-            balance: formatTokenAmountBN(balanceValue, tokenId as AssetTicker, false),
-            balanceFiat: formatAmountBN(balanceUSD),
+            balance: formatTokenAmount(balanceValue, tokenId as AssetTicker, false),
+            balanceFiat: formatAmount(balanceUSD),
             fiatCurrency: FiatCurrency.USD,
             token: getDisplaySymbol(tokenId),
           };

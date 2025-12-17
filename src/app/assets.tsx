@@ -5,9 +5,9 @@ import React, { useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Asset, assetConfig } from '../config/assets';
-import { formatAmountBN } from '@/utils/format-amount';
+import formatAmount from '@/utils/format-amount';
 import getDisplaySymbol from '@/utils/get-display-symbol';
-import { formatTokenAmountBN } from '@/utils/format-token-amount';
+import formatTokenAmount from '@/utils/format-token-amount';
 import Header from '@/components/header';
 import { colors } from '@/constants/colors';
 import BigNumber from 'bignumber.js';
@@ -51,7 +51,7 @@ export default function AssetsScreen() {
           id: denomination,
           name: config.name,
           symbol,
-          amount: formatTokenAmountBN(totalBalance, denomination as AssetTicker, false),
+          amount: formatTokenAmount(totalBalance, denomination as AssetTicker, false),
           fiatValue: fiatValue,
           fiatCurrency: FiatCurrency.USD,
           icon: config.icon,
@@ -118,7 +118,7 @@ export default function AssetsScreen() {
               <View style={styles.assetBalance}>
                 <Text style={styles.assetAmount}>{asset.amount}</Text>
                 <Text style={styles.assetValue}>
-                  {formatAmountBN(asset.fiatValue)} {asset.fiatCurrency}
+                  {formatAmount(asset.fiatValue)} {asset.fiatCurrency}
                 </Text>
               </View>
             </TouchableOpacity>

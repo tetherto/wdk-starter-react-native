@@ -1,5 +1,5 @@
 import { assetConfig } from '@/config/assets';
-import { formatAmountBN } from '@/utils/format-amount';
+import formatAmount from '@/utils/format-amount';
 import { AssetTicker, NetworkType, useWallet } from '@tetherto/wdk-react-native-provider';
 import { useLocalSearchParams } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
@@ -119,7 +119,7 @@ export default function TokenDetailsScreen() {
         network: networkName,
         networkId: network,
         tokenBalance: networkBalance.balance.toString(),
-        tokenBalanceUSD: `${formatAmountBN(networkBalance.usdValue)} USD`,
+        tokenBalanceUSD: `${formatAmount(networkBalance.usdValue)} USD`,
         tokenId: tokenSymbol,
         tokenName: tokenData.symbol,
         tokenSymbol: tokenData.symbol,

@@ -15,8 +15,8 @@ import Header from '@/components/header';
 
 import { bn, add, gt } from '@/utils/bignumber';
 import BigNumber from 'bignumber.js';
-import { formatAmountBN } from '@/utils/format-amount';
-import { formatTokenAmountBN } from '@/utils/format-token-amount';
+import { formatAmount } from '@/utils/format-amount';
+import { formatTokenAmount } from '@/utils/format-token-amount';
 
 export default function SelectTokenScreen() {
   const insets = useSafeAreaInsets();
@@ -82,8 +82,8 @@ export default function SelectTokenScreen() {
           id: assetSymbol,
           symbol: getDisplaySymbol(assetSymbol),
           name: config.name,
-          balance: formatTokenAmountBN(totalBalance, assetSymbol as AssetTicker, false),
-          balanceUSD: `${formatAmountBN(usdValue)} USD`,
+          balance: formatTokenAmount(totalBalance, assetSymbol as AssetTicker, false),
+          balanceUSD: `${formatAmount(usdValue)} USD`,
           icon: config.icon,
           color: config.color,
           hasBalance: gt(totalBalance, 0),

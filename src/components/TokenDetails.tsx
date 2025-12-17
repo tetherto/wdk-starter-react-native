@@ -1,7 +1,7 @@
 import { networkConfigs } from '@/config/networks';
-import formatAmount, { formatAmountBN } from '@/utils/format-amount';
-import formatTokenAmount, { formatTokenAmountBN } from '@/utils/format-token-amount';
-import formatUSDValue, { formatUSDValueBN } from '@/utils/format-usd-value';
+import formatAmount from '@/utils/format-amount';
+import formatTokenAmount from '@/utils/format-token-amount';
+import formatUSDValue from '@/utils/format-usd-value';
 import { AssetTicker, NetworkType } from '@tetherto/wdk-react-native-provider';
 import { Send } from 'lucide-react-native';
 import React from 'react';
@@ -55,12 +55,12 @@ export function TokenDetails({ tokenData, onSendPress }: TokenDetailsProps) {
         </View>
         <Text style={styles.totalLabel}>Total {tokenData.name} Balance</Text>
         <Text style={styles.totalAmount}>
-          {formatTokenAmountBN(tokenData.totalBalance, tokenData.symbol as AssetTicker)}
+          {formatTokenAmount(tokenData.totalBalance, tokenData.symbol as AssetTicker)}
         </Text>
-        <Text style={styles.totalValue}>{formatUSDValueBN(tokenData.totalUSDValue)}</Text>
+        <Text style={styles.totalValue}>{formatUSDValue(tokenData.totalUSDValue)}</Text>
         {gt(tokenData.priceUSD, 0) && (
           <Text style={styles.priceLabel}>
-            ${formatAmountBN(tokenData.priceUSD)} per {tokenData.symbol}
+            ${formatAmount(tokenData.priceUSD)} per {tokenData.symbol}
           </Text>
         )}
       </View>
@@ -95,9 +95,9 @@ export function TokenDetails({ tokenData, onSendPress }: TokenDetailsProps) {
 
                   <View style={styles.networkBalance}>
                     <Text style={styles.networkAmount}>
-                      {formatTokenAmountBN(item.balance, tokenData.symbol as AssetTicker)}
+                      {formatTokenAmount(item.balance, tokenData.symbol as AssetTicker)}
                     </Text>
-                    <Text style={styles.networkValue}>{formatUSDValueBN(item.usdValue)}</Text>
+                    <Text style={styles.networkValue}>{formatUSDValue(item.usdValue)}</Text>
                   </View>
 
                   {gt(item.balance, 0) && (

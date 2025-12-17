@@ -5,8 +5,8 @@ import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { assetConfig } from '../config/assets';
 import { FiatCurrency, pricingService } from '../services/pricing-service';
-import { formatTokenAmountBN } from '@/utils/format-token-amount';
-import { formatUSDValueBN } from '@/utils/format-usd-value';
+import formatTokenAmount from '@/utils/format-token-amount';
+import formatUSDValue from '@/utils/format-usd-value';
 import Header from '@/components/header';
 import { colors } from '@/constants/colors';
 import { bn } from '@/utils/bignumber';
@@ -45,8 +45,8 @@ export default function ActivityScreen() {
             id: `${tx.transactionHash}-${index}`,
             type: isSent ? ('sent' as const) : ('received' as const),
             token: config?.name || tx.token.toUpperCase(),
-            amount: `${formatTokenAmountBN(amount, tx.token as AssetTicker)}`,
-            fiatAmount: formatUSDValueBN(fiatAmount, false),
+            amount: `${formatTokenAmount(amount, tx.token as AssetTicker)}`,
+            fiatAmount: formatUSDValue(fiatAmount, false),
             fiatCurrency: FiatCurrency.USD,
             network: tx.blockchain,
           };

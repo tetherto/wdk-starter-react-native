@@ -35,8 +35,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import getDisplaySymbol from '@/utils/get-display-symbol';
-import { formatTokenAmountBN } from '@/utils/format-token-amount';
-import { formatUSDValueBN } from '@/utils/format-usd-value';
+import { formatTokenAmount } from '@/utils/format-token-amount';
+import { formatUSDValue } from '@/utils/format-usd-value';
 import Header from '@/components/header';
 import { toast } from 'sonner-native';
 import { validateAddressByNetwork } from '@/utils/address-validators';
@@ -301,7 +301,7 @@ export default function SendDetailsScreen() {
 
       if (inputMode === 'token') {
         if (gt(amountBn, balanceBn)) {
-          setAmountError(`Maximum: ${formatTokenAmountBN(balanceBn, tokenSymbol as AssetTicker)}`);
+          setAmountError(`Maximum: ${formatTokenAmount(balanceBn, tokenSymbol as AssetTicker)}`);
         } else {
           setAmountError(null);
         }
@@ -431,12 +431,12 @@ export default function SendDetailsScreen() {
 
   const balanceDisplay = useMemo(() => {
     if (inputMode === 'token') {
-      return `Balance: ${formatTokenAmountBN(
+      return `Balance: ${formatTokenAmount(
         bn(tokenBalance.replace(/,/g, '')),
         tokenSymbol as AssetTicker
       )}`;
     }
-    return `Balance: ${formatUSDValueBN(bn(tokenBalanceUSD.replace(/[$,]/g, '')))}`;
+    return `Balance: ${formatUSDValue(bn(tokenBalanceUSD.replace(/[$,]/g, '')))}`;
   }, [inputMode, tokenBalance, tokenBalanceUSD, tokenSymbol]);
 
   const getFeeFromTransactionResult = (
@@ -444,21 +444,21 @@ export default function SendDetailsScreen() {
     token: AssetTicker
   ) => {
     const fee = transactionResult.txId?.fee;
-    if (!fee) return formatTokenAmountBN(bn(0), token);
+    if (!fee) return formatTokenAmount(bn(0), token);
 
     const value = Number(fee) / WDKService.getDenominationValue(token);
     const valueBn = div(bn(fee), value);
-    return formatTokenAmountBN(valueBn, token);
+    return formatTokenAmount(valueBn, token);
   };
 
   const getTransactionAmout = useCallback(() => {
     const normalized = amount.replace(/,/g, '') || '0';
     const amountBn = bn(normalized);
     if (inputMode === 'fiat' && gt(tokenPrice, 0)) {
-      return formatUSDValueBN(amountBn);
+      return formatUSDValue(amountBn);
     }
 
-    return formatTokenAmountBN(amountBn, tokenSymbol as AssetTicker);
+    return formatTokenAmount(amountBn, tokenSymbol as AssetTicker);
   }, [inputMode, tokenPrice, amount, tokenSymbol]);
 
   const isUseMaxDisabled = useMemo(() => {
@@ -576,10 +576,10 @@ export default function SendDetailsScreen() {
                 ) : gasEstimate.fee !== undefined ? (
                   <>
                     <Text style={styles.gasAmount}>
-                      {formatTokenAmountBN(gasEstimate.fee ?? bn(0), tokenSymbol as AssetTicker)}
+                      {formatTokenAmount(gasEstimate.fee ?? bn(0), tokenSymbol as AssetTicker)}
                     </Text>
                     <Text style={styles.gasUsd}>
-                      ≈ {formatUSDValueBN(mul(gasEstimate.fee ?? bn(0), tokenPrice))}
+                      ≈ {formatUSDValue(mul(gasEstimate.fee ?? bn(0), tokenPrice))}
                     </Text>
                   </>
                 ) : (
