@@ -97,7 +97,7 @@ describe('BN utility functions', () => {
 
     it('should handle very large numbers', () => {
       const large = bn('123456789012345678901234567890');
-      expect(large.toString()).toBe('123456789012345678901234567890');
+      expect(large.toFixed()).toBe('123456789012345678901234567890');
     });
   });
 });

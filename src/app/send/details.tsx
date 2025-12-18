@@ -145,7 +145,7 @@ export default function SendDetailsScreen() {
     const calculateTokenPrice = async () => {
       try {
         const assetTicker = getAssetTicker(tokenId);
-        const price = await pricingService.getFiatValueBN(bn(1), assetTicker, FiatCurrency.USD);
+        const price = await pricingService.getFiatValue(bn(1), assetTicker, FiatCurrency.USD);
         setTokenPrice(bn(price));
       } catch (error) {
         console.error('Failed to get token price:', error);

@@ -101,7 +101,7 @@ export default function WalletScreen() {
       if (!config) return null;
 
       // Calculate fiat value using pricing service
-      const fiatValue = await pricingService.getFiatValueBN(
+      const fiatValue = await pricingService.getFiatValue(
         totalBalance,
         denomination as AssetTicker,
         FiatCurrency.USD
@@ -183,7 +183,7 @@ export default function WalletScreen() {
           const config = assetConfig[tx.token];
 
           // Calculate fiat amount using pricing service
-          const fiatAmount = await pricingService.getFiatValueBN(
+          const fiatAmount = await pricingService.getFiatValue(
             amount,
             tx.token as AssetTicker,
             FiatCurrency.USD

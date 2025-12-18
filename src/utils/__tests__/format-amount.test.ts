@@ -1,6 +1,6 @@
 import BigNumber from 'bignumber.js';
 import formatAmount from '../format-amount';
-import { bn } from '@/utils';
+import { bn } from '@/utils/bignumber';
 
 describe('formatAmount', () => {
   test('formats a number with default 2 decimal places', () => {

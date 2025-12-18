@@ -33,7 +33,7 @@ export default function ActivityScreen() {
           const config = assetConfig[tx.token as keyof typeof assetConfig];
 
           // Calculate fiat amount using pricing service
-          const fiatAmount = await pricingService.getFiatValueBN(
+          const fiatAmount = await pricingService.getFiatValue(
             amount,
             tx.token as AssetTicker,
             FiatCurrency.USD

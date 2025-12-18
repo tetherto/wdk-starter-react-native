@@ -1,5 +1,5 @@
 import formatTokenAmount from '../format-token-amount';
-import { bn } from '@/utils';
+import { bn } from '@/utils/bignumber';
 
 jest.mock('@/config/assets', () => ({
   assetConfig: {

@@ -1,8 +1,7 @@
 import { BitfinexPricingClient } from '@tetherto/wdk-pricing-bitfinex-http';
 import { PricingProvider } from '@tetherto/wdk-pricing-provider';
 import { AssetTicker } from '@tetherto/wdk-react-native-provider';
-import DecimalJS from 'decimal.js';
-import { BNValue, mul } from '@/utils';
+import { BNValue, mul } from '@/utils/bignumber';
 import BigNumber from 'bignumber.js';
 
 export enum FiatCurrency {
@@ -51,19 +50,7 @@ class PricingService {
     }
   }
 
-  async getFiatValue(value: number, asset: AssetTicker, currency: FiatCurrency): Promise<number> {
-    /*console.warn(
-      'PricingService.getFiatValue is deprecated. Use getFiatValueBN instead for better precision.'
-    );*/
-
-    if (!this.isInitialized || !this.fiatExchangeRateCache) {
-      throw new Error('Pricing service not initialized. Call initialize() first.');
-    }
-
-    return new DecimalJS(value).mul(this.fiatExchangeRateCache[currency][asset]).toNumber();
-  }
-
-  async getFiatValueBN(
+  async getFiatValue(
     value: BNValue,
     asset: AssetTicker,
     currency: FiatCurrency

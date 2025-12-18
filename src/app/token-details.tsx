@@ -55,7 +55,7 @@ export default function TokenDetailsScreen() {
         totalBalance = add(totalBalance, amount);
 
         // Calculate fiat value using pricing service
-        const usdValue = await pricingService.getFiatValueBN(
+        const usdValue = await pricingService.getFiatValue(
           amount,
           tokenSymbol as AssetTicker,
           FiatCurrency.USD
@@ -73,13 +73,13 @@ export default function TokenDetailsScreen() {
         gt(item.balance, 0)
       );
 
-      const tokenPrice = await pricingService.getFiatValueBN(
+      const tokenPrice = await pricingService.getFiatValue(
         bn('1'),
         tokenSymbol as AssetTicker,
         FiatCurrency.USD
       );
 
-      const totalUSDValue = await pricingService.getFiatValueBN(
+      const totalUSDValue = await pricingService.getFiatValue(
         totalBalance,
         tokenSymbol as AssetTicker,
         FiatCurrency.USD

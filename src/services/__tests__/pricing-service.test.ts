@@ -68,31 +68,20 @@ describe('PricingService', () => {
     expect(service.getExchangeRate(AssetTicker.XAUT, FiatCurrency.USD)).toBe(2000);
   });
 
-  it('getFiatValueBN should match getFiatValue when converted to number', async () => {
-    const input = 0.12345;
-
-    const resultNumber = await service.getFiatValue(input, AssetTicker.BTC, FiatCurrency.USD);
-    const resultBN = await service.getFiatValueBN(input, AssetTicker.BTC, FiatCurrency.USD);
-
-    // Convert BN to number for comparison
-    expect(resultBN.toNumber()).toBeCloseTo(resultNumber, 10);
-    // Use toBeCloseTo because of possible floating-point rounding issues
-  });
-
   it('getFiatValue should return correct number', async () => {
     const result = await service.getFiatValue(0.5, AssetTicker.BTC, FiatCurrency.USD);
-    expect(result).toBe(30000);
+    expect(result.toNumber()).toBe(30000);
   });
 
-  it('getFiatValueBN should return correct BN', async () => {
-    const valueBN = await service.getFiatValueBN(0.5, AssetTicker.BTC, FiatCurrency.USD);
+  it('getFiatValue should return correct BN', async () => {
+    const valueBN = await service.getFiatValue(0.5, AssetTicker.BTC, FiatCurrency.USD);
     expect(valueBN).toBeInstanceOf(BigNumber);
     expect(valueBN.toString()).toBe(new BigNumber(0.5).multipliedBy(60000).toString());
   });
 
-  it('getFiatValueBN should work with BN input', async () => {
+  it('getFiatValue should work with BN input', async () => {
     const inputBN = new BigNumber(0.25);
-    const valueBN = await service.getFiatValueBN(inputBN, AssetTicker.BTC, FiatCurrency.USD);
+    const valueBN = await service.getFiatValue(inputBN, AssetTicker.BTC, FiatCurrency.USD);
     expect(valueBN.toString()).toBe(new BigNumber(0.25).multipliedBy(60000).toString());
   });
 
@@ -103,13 +92,13 @@ describe('PricingService', () => {
       'Pricing service not initialized. Call initialize() first.'
     );
 
-    await expect(service.getFiatValueBN(1, AssetTicker.BTC, FiatCurrency.USD)).rejects.toThrow(
+    await expect(service.getFiatValue(1, AssetTicker.BTC, FiatCurrency.USD)).rejects.toThrow(
       'Pricing service not initialized. Call initialize() first.'
     );
   });
 
-  it('getFiatValueBN should throw if exchange rate missing', async () => {
-    await expect(service.getFiatValueBN(1, 'fake' as any, FiatCurrency.USD)).rejects.toThrow(
+  it('getFiatValue should throw if exchange rate missing', async () => {
+    await expect(service.getFiatValue(1, 'fake' as any, FiatCurrency.USD)).rejects.toThrow(
       'No exchange rate for fake -> USD'
     );
   });

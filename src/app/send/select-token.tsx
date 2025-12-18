@@ -70,7 +70,7 @@ export default function SelectTokenScreen() {
         // Calculate fiat value using pricing service
         let usdValue = bn(0);
         try {
-          usdValue = await pricingService.getFiatValueBN(
+          usdValue = await pricingService.getFiatValue(
             totalBalance,
             assetSymbol as AssetTicker,
             FiatCurrency.USD

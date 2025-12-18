@@ -38,7 +38,7 @@ export default function AssetsScreen() {
         const symbol = getDisplaySymbol(denomination);
 
         // Calculate fiat value using pricing service
-        const fiatValue = await pricingService.getFiatValueBN(
+        const fiatValue = await pricingService.getFiatValue(
           totalBalance,
           denomination as AssetTicker,
           FiatCurrency.USD

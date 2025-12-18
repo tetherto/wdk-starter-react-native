@@ -47,7 +47,7 @@ export default function SelectNetworkScreen() {
           const balanceValue: BigNumber = balance ? bn(balance.value) : bn(0);
 
           // Calculate fiat value using pricing service
-          const balanceUSD = await pricingService.getFiatValueBN(
+          const balanceUSD = await pricingService.getFiatValue(
             balanceValue,
             tokenId as AssetTicker,
             FiatCurrency.USD
