@@ -1,8 +1,5 @@
 import BigNumber from 'bignumber.js';
 
-// Configure global BigNumber settings
-// DECIMAL_PLACES: maximum number of decimal places to use in calculations
-// ROUNDING_MODE: rounding mode (ROUND_DOWN to avoid overestimating amounts)
 BigNumber.config({
   DECIMAL_PLACES: 20,
   ROUNDING_MODE: BigNumber.ROUND_DOWN,
@@ -20,7 +17,6 @@ export function bn(value: BNValue): BigNumber {
   if (BigNumber.isBigNumber(value)) return value;
 
   if (typeof value === 'number') {
-    // convert number to string to prevent floating-point precision issues
     return new BigNumber(value.toString());
   }
   const res = new BigNumber(value);
@@ -32,32 +28,15 @@ export function bn(value: BNValue): BigNumber {
 }
 
 // ------------------- Arithmetic operations -------------------
-
-/** Add two BN values */
 export const add = (a: BNValue, b: BNValue): BigNumber => bn(a).plus(b);
-
-/** Subtract b from a */
 export const sub = (a: BNValue, b: BNValue): BigNumber => bn(a).minus(b);
-
-/** Multiply two BN values */
 export const mul = (a: BNValue, b: BNValue): BigNumber => bn(a).multipliedBy(b);
-
-/** Divide a by b */
 export const div = (a: BNValue, b: BNValue): BigNumber => bn(a).dividedBy(b);
 
 // ------------------- Comparison operations -------------------
 
-/** Check if two BN values are equal */
 export const eq = (a: BNValue, b: BNValue): boolean => bn(a).isEqualTo(b);
-
-/** Check if a > b */
 export const gt = (a: BNValue, b: BNValue): boolean => bn(a).isGreaterThan(b);
-
-/** Check if a >= b */
 export const gte = (a: BNValue, b: BNValue): boolean => bn(a).isGreaterThanOrEqualTo(b);
-
-/** Check if a < b */
 export const lt = (a: BNValue, b: BNValue): boolean => bn(a).isLessThan(b);
-
-/** Check if a <= b */
 export const lte = (a: BNValue, b: BNValue): boolean => bn(a).isLessThanOrEqualTo(b);

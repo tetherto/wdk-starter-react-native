@@ -8,12 +8,10 @@ const formatUSDValue = (usdValue: BigNumber, includeSymbol: boolean = true): str
     return `0.00${suffix}`;
   }
 
-  // < 0.01 → render as "< 0.01 USD"
   if (usdValue.lt(0.01)) {
     return `< 0.01${suffix}`;
   }
 
-  // Default formatting: 2 decimal places
   return formatAmount(usdValue, 2, BigNumber.ROUND_HALF_UP, {
     suffix,
   });

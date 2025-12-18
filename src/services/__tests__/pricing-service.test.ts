@@ -2,7 +2,7 @@ import BigNumber from 'bignumber.js';
 import { pricingService, FiatCurrency } from '../pricing-service';
 
 // Define local enum for type safety in tests
-export enum AssetTicker {
+enum AssetTicker {
   BTC = 'btc',
   USDT = 'usdt',
   XAUT = 'xaut',
@@ -10,7 +10,6 @@ export enum AssetTicker {
 
 // ------------------- Mock external modules -------------------
 
-// Mock for ESM package @tetherto/wdk-react-native-provider
 jest.mock('@tetherto/wdk-react-native-provider', () => ({
   AssetTicker: {
     BTC: 'btc',
@@ -23,12 +22,10 @@ jest.mock('@tetherto/wdk-react-native-provider', () => ({
   })),
 }));
 
-// Mock for BitfinexPricingClient
 jest.mock('@tetherto/wdk-pricing-bitfinex-http', () => ({
   BitfinexPricingClient: jest.fn().mockImplementation(() => ({})),
 }));
 
-// Mock for PricingProvider
 jest.mock('@tetherto/wdk-pricing-provider', () => ({
   PricingProvider: jest.fn().mockImplementation(() => ({
     getLastPrice: jest.fn((asset: string) => {
@@ -52,12 +49,10 @@ describe('PricingService', () => {
   const service = pricingService;
 
   beforeEach(async () => {
-    // Reset service state before each test
     (service as any).provider = null;
     (service as any).fiatExchangeRateCache = undefined;
     (service as any).isInitialized = false;
 
-    // Initialize service
     await service.initialize();
   });
 
