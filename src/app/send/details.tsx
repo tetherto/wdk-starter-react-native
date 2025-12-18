@@ -16,8 +16,18 @@ import {
   getAssetTicker,
   getNetworkType,
   calculateGasFee,
-  type GasFeeEstimate,
-} from '@/utils/gas-fee-calculator';
+  GasFeeEstimate,
+  getDisplaySymbol,
+  formatTokenAmount,
+  formatUSDValue,
+  validateAddressByNetwork,
+  bn,
+  gt,
+  div,
+  lte,
+  sub,
+  mul,
+} from '@/utils';
 import {
   Alert,
   Keyboard,
@@ -34,14 +44,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
-import getDisplaySymbol from '@/utils/get-display-symbol';
-import { formatTokenAmount } from '@/utils/format-token-amount';
-import { formatUSDValue } from '@/utils/format-usd-value';
 import Header from '@/components/header';
 import { toast } from 'sonner-native';
-import { validateAddressByNetwork } from '@/utils/address-validators';
 import { useDebouncedCallback } from '@/hooks/use-debounced-callback';
-import { bn, gt, div, lte, sub, mul } from '@/utils/bignumber';
 
 export default function SendDetailsScreen() {
   const insets = useSafeAreaInsets();

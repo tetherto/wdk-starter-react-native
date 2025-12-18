@@ -1,18 +1,16 @@
 import { assetConfig } from '@/config/assets';
-import formatAmount from '@/utils/format-amount';
 import { AssetTicker, NetworkType, useWallet } from '@tetherto/wdk-react-native-provider';
 import { useLocalSearchParams } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { TokenDetails } from '../components/TokenDetails';
-import { FiatCurrency, pricingService } from '../services/pricing-service';
+import { TokenDetails } from '@/components/TokenDetails';
+import { FiatCurrency, pricingService } from '@/services/pricing-service';
 import { networkConfigs } from '@/config/networks';
-import getDisplaySymbol from '@/utils/get-display-symbol';
 import Header from '@/components/header';
 import { colors } from '@/constants/colors';
-import { add, bn, gt } from '@/utils/bignumber';
+import { formatAmount, getDisplaySymbol, add, bn, gt } from '@/utils';
 
 export default function TokenDetailsScreen() {
   const router = useDebouncedNavigation();

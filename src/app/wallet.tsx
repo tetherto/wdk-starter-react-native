@@ -27,12 +27,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AssetConfig, assetConfig } from '@/config/assets';
 import { FiatCurrency, pricingService } from '@/services/pricing-service';
-import formatAmount from '@/utils/format-amount';
-import formatTokenAmount from '@/utils/format-token-amount';
-import formatUSDValue from '@/utils/format-usd-value';
 import useWalletAvatar from '@/hooks/use-wallet-avatar';
 import { colors } from '@/constants/colors';
-import { bn, add, gt } from '@/utils/bignumber';
+import { formatAmount, formatTokenAmount, formatUSDValue, bn, add, gt } from '@/utils';
 
 type AggregatedBalance = ({
   denomination: string;

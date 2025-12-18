@@ -4,14 +4,11 @@ import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import React, { useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Asset, assetConfig } from '../config/assets';
-import formatAmount from '@/utils/format-amount';
-import getDisplaySymbol from '@/utils/get-display-symbol';
-import formatTokenAmount from '@/utils/format-token-amount';
+import { Asset, assetConfig } from '@/config/assets';
 import Header from '@/components/header';
 import { colors } from '@/constants/colors';
 import BigNumber from 'bignumber.js';
-import { add, bn } from '@/utils/bignumber';
+import { formatAmount, getDisplaySymbol, formatTokenAmount, add, bn } from '@/utils';
 
 export default function AssetsScreen() {
   const insets = useSafeAreaInsets();

@@ -3,13 +3,11 @@ import { Transaction, TransactionList } from '@tetherto/wdk-uikit-react-native';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { assetConfig } from '../config/assets';
-import { FiatCurrency, pricingService } from '../services/pricing-service';
-import formatTokenAmount from '@/utils/format-token-amount';
-import formatUSDValue from '@/utils/format-usd-value';
+import { assetConfig } from '@/config/assets';
+import { FiatCurrency, pricingService } from '@/services/pricing-service';
 import Header from '@/components/header';
 import { colors } from '@/constants/colors';
-import { bn } from '@/utils/bignumber';
+import { formatTokenAmount, formatUSDValue, bn } from '@/utils';
 
 export default function ActivityScreen() {
   const insets = useSafeAreaInsets();

@@ -5,18 +5,21 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
-
 import { AssetTicker, useWallet } from '@tetherto/wdk-react-native-provider';
 import { AssetSelector, type Token } from '@tetherto/wdk-uikit-react-native';
 import { FiatCurrency, pricingService } from '@/services/pricing-service';
-import getDisplaySymbol from '@/utils/get-display-symbol';
-import { getRecentTokens, addToRecentTokens } from '@/utils/recent-tokens';
 import Header from '@/components/header';
-
-import { bn, add, gt } from '@/utils/bignumber';
 import BigNumber from 'bignumber.js';
-import { formatAmount } from '@/utils/format-amount';
-import { formatTokenAmount } from '@/utils/format-token-amount';
+import {
+  formatAmount,
+  formatTokenAmount,
+  getRecentTokens,
+  addToRecentTokens,
+  getDisplaySymbol,
+  bn,
+  add,
+  gt,
+} from '@/utils';
 
 export default function SelectTokenScreen() {
   const insets = useSafeAreaInsets();

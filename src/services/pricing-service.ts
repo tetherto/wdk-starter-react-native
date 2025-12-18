@@ -2,7 +2,7 @@ import { BitfinexPricingClient } from '@tetherto/wdk-pricing-bitfinex-http';
 import { PricingProvider } from '@tetherto/wdk-pricing-provider';
 import { AssetTicker } from '@tetherto/wdk-react-native-provider';
 import DecimalJS from 'decimal.js';
-import { BNValue, mul } from '@/utils/bignumber';
+import { BNValue, mul } from '@/utils';
 import BigNumber from 'bignumber.js';
 
 export enum FiatCurrency {
