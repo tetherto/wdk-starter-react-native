@@ -17,7 +17,7 @@ export type BNValue = string | number | BigNumber;
  * - Avoids precision loss from floating point numbers
  */
 export function bn(value: BNValue): BigNumber {
-  if (BigNumber.isBigNumber(value)) return value; // already a BN instance
+  if (BigNumber.isBigNumber(value)) return value;
 
   if (typeof value === 'number') {
     // convert number to string to prevent floating-point precision issues
@@ -28,7 +28,7 @@ export function bn(value: BNValue): BigNumber {
     console.warn('Incorrect value, received', value);
     return new BigNumber(0);
   }
-  return res; // assume string input
+  return res;
 }
 
 // ------------------- Arithmetic operations -------------------
