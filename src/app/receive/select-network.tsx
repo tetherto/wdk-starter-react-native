@@ -23,7 +23,7 @@ const NETWORK_DESCRIPTIONS = {
   [NetworkType.TON]: 'TON Network',
   [NetworkType.TRON]: 'Tron Network',
   [NetworkType.SOLANA]: 'Solana Network',
-  [NetworkType.SEGWIT]: 'Native Bitcoin Network',
+  [NetworkType.BITCOIN]: 'Native Bitcoin Network',
   [NetworkType.LIGHTNING]: 'Lightning Network',
 };
 
