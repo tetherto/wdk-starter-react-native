@@ -84,7 +84,7 @@ export const calculateGasFee = async (
       assetTicker === AssetTicker.BTC
         ? bn(amountBn!).decimalPlaces(8, BigNumber.ROUND_DOWN)
         : bn(1);
-    const quoteAmountForSdk = Number(quoteAmountBn.toString());
+    const quoteAmountForSdk = quoteAmountBn.toNumber();
 
     const gasFee = await WDKService.quoteSendByNetwork(
       networkType,

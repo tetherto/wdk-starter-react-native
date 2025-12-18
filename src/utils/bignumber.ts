@@ -34,7 +34,6 @@ export const mul = (a: BNValue, b: BNValue): BigNumber => bn(a).multipliedBy(b);
 export const div = (a: BNValue, b: BNValue): BigNumber => bn(a).dividedBy(b);
 
 // ------------------- Comparison operations -------------------
-
 export const eq = (a: BNValue, b: BNValue): boolean => bn(a).isEqualTo(b);
 export const gt = (a: BNValue, b: BNValue): boolean => bn(a).isGreaterThan(b);
 export const gte = (a: BNValue, b: BNValue): boolean => bn(a).isGreaterThanOrEqualTo(b);
