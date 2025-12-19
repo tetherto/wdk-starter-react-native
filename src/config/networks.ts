@@ -73,7 +73,7 @@ export const networkConfigs: Record<NetworkType, Network> = {
     color: '#9945FF',
     addressValidator: validateSolanaAddress,
   },
-  [NetworkType.SEGWIT]: {
+  [NetworkType.BITCOIN]: {
     id: 'bitcoin',
     name: 'Bitcoin',
     gasLevel: 'Normal',

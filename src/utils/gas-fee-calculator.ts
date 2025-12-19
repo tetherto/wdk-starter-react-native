@@ -8,7 +8,7 @@ export interface GasFeeEstimate {
 const QUOTE_RECIPIENTS = {
   [AssetTicker.BTC]: {
     networks: {
-      [NetworkType.SEGWIT]: 'bc1qh96eg54ddu4q2cmn0n6g8uymuqlw402jndphu9',
+      [NetworkType.BITCOIN]: 'bc1qh96eg54ddu4q2cmn0n6g8uymuqlw402jndphu9',
     },
   },
   [AssetTicker.USDT]: {
@@ -37,7 +37,7 @@ export const getNetworkType = (networkId: string): NetworkType => {
     ethereum: NetworkType.ETHEREUM,
     polygon: NetworkType.POLYGON,
     arbitrum: NetworkType.ARBITRUM,
-    bitcoin: NetworkType.SEGWIT,
+    bitcoin: NetworkType.BITCOIN,
     lightning: NetworkType.LIGHTNING,
     ton: NetworkType.TON,
     tron: NetworkType.TRON,
@@ -71,7 +71,7 @@ export const calculateGasFee = async (
     // @ts-expect-error
     const quoteRecipient = QUOTE_RECIPIENTS[assetTicker].networks[networkType];
 
-    if (!amount && networkType === NetworkType.SEGWIT) {
+    if (!amount && networkType === NetworkType.BITCOIN) {
       return {
         fee: undefined,
         error: 'Insufficient balance for fee calculation',
@@ -91,7 +91,7 @@ export const calculateGasFee = async (
     console.error('Gas fee pre-calculation failed:', error);
     const networkType = getNetworkType(networkId);
     const isBitcoinNetwork =
-      networkType === NetworkType.SEGWIT || networkType === NetworkType.LIGHTNING;
+      networkType === NetworkType.BITCOIN || networkType === NetworkType.LIGHTNING;
 
     if (
       isBitcoinNetwork &&
