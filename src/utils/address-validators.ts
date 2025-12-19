@@ -29,7 +29,7 @@ export function validateEvmAddress(address: string): AddressValidationResult {
 }
 
 /**
- * Bitcoin (SegWit)
+ * Bitcoin
  */
 export function validateBitcoinAddress(address: string): AddressValidationResult {
   const isValid = WAValidator.validate(address, 'btc');
