@@ -13,6 +13,7 @@ module.exports = defineConfig([
     },
     rules: {
       'prettier/prettier': 'error',
+      'import/no-named-as-default': 'off',
     },
   },
   {

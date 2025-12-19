@@ -4,12 +4,11 @@ import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import React, { useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Asset, assetConfig } from '../config/assets';
-import formatAmount from '@/utils/format-amount';
-import getDisplaySymbol from '@/utils/get-display-symbol';
-import formatTokenAmount from '@/utils/format-token-amount';
+import { Asset, assetConfig } from '@/config/assets';
 import Header from '@/components/header';
 import { colors } from '@/constants/colors';
+import BigNumber from 'bignumber.js';
+import { formatAmount, getDisplaySymbol, formatTokenAmount, add, bn } from '@/utils';
 
 export default function AssetsScreen() {
   const insets = useSafeAreaInsets();
@@ -21,13 +20,13 @@ export default function AssetsScreen() {
   const getAssetsWithFiatValue = async () => {
     if (!balances.list) return [];
 
-    const balanceMap = new Map<string, { totalBalance: number }>();
+    const balanceMap = new Map<string, { totalBalance: BigNumber }>();
 
     // Sum up balances by denomination across all networks
     balances.list.forEach(balance => {
-      const current = balanceMap.get(balance.denomination) || { totalBalance: 0 };
+      const current = balanceMap.get(balance.denomination) || { totalBalance: bn('0') };
       balanceMap.set(balance.denomination, {
-        totalBalance: current.totalBalance + parseFloat(balance.value),
+        totalBalance: add(current.totalBalance, bn(balance.value)),
       });
     });
 
@@ -63,7 +62,7 @@ export default function AssetsScreen() {
 
     // Sort by USD value descending
     return assetList.sort((a, b) => {
-      return b.fiatValue - a.fiatValue;
+      return b.fiatValue.toNumber() - a.fiatValue.toNumber();
     });
   };
 

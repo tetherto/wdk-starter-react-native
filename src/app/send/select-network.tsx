@@ -1,7 +1,6 @@
 import { Network, NetworkSelector } from '@/components/NetworkSelector';
 import { assetConfig } from '@/config/assets';
 import { networkConfigs } from '@/config/networks';
-import formatAmount from '@/utils/format-amount';
 import { AssetTicker, useWallet } from '@tetherto/wdk-react-native-provider';
 import { useLocalSearchParams } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
@@ -9,8 +8,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FiatCurrency, pricingService } from '@/services/pricing-service';
-import getDisplaySymbol from '@/utils/get-display-symbol';
-import formatTokenAmount from '@/utils/format-token-amount';
+import { getDisplaySymbol, formatAmount, formatTokenAmount, bn } from '@/utils';
 import Header from '@/components/header';
 import { colors } from '@/constants/colors';
 
@@ -46,7 +44,7 @@ export default function SelectNetworkScreen() {
             b => networkType === b.networkType && b.denomination === tokenId
           );
 
-          const balanceValue = balance ? parseFloat(balance.value) : 0;
+          const balanceValue: BigNumber = balance ? bn(balance.value) : bn(0);
 
           // Calculate fiat value using pricing service
           const balanceUSD = await pricingService.getFiatValue(

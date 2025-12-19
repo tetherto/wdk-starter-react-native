@@ -1,7 +1,8 @@
 import { BitfinexPricingClient } from '@tetherto/wdk-pricing-bitfinex-http';
 import { PricingProvider } from '@tetherto/wdk-pricing-provider';
 import { AssetTicker } from '@tetherto/wdk-react-native-provider';
-import DecimalJS from 'decimal.js';
+import { BNValue, mul } from '@/utils/bignumber';
+import BigNumber from 'bignumber.js';
 
 export enum FiatCurrency {
   USD = 'USD',
@@ -49,12 +50,19 @@ class PricingService {
     }
   }
 
-  async getFiatValue(value: number, asset: AssetTicker, currency: FiatCurrency): Promise<number> {
+  async getFiatValue(
+    value: BNValue,
+    asset: AssetTicker,
+    currency: FiatCurrency
+  ): Promise<BigNumber> {
     if (!this.isInitialized || !this.fiatExchangeRateCache) {
       throw new Error('Pricing service not initialized. Call initialize() first.');
     }
 
-    return new DecimalJS(value).mul(this.fiatExchangeRateCache[currency][asset]).toNumber();
+    const rate = this.getExchangeRate(asset, currency);
+    if (!rate) throw new Error(`No exchange rate for ${asset} -> ${currency}`);
+
+    return mul(value, rate);
   }
 
   async refreshExchangeRates(): Promise<void> {

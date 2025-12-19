@@ -16,8 +16,18 @@ import {
   getAssetTicker,
   getNetworkType,
   calculateGasFee,
-  type GasFeeEstimate,
-} from '@/utils/gas-fee-calculator';
+  GasFeeEstimate,
+  getDisplaySymbol,
+  formatTokenAmount,
+  formatUSDValue,
+  validateAddressByNetwork,
+  bn,
+  gt,
+  div,
+  lte,
+  sub,
+  mul,
+} from '@/utils';
 import {
   Alert,
   Keyboard,
@@ -34,12 +44,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
-import getDisplaySymbol from '@/utils/get-display-symbol';
-import formatTokenAmount from '@/utils/format-token-amount';
-import formatUSDValue from '@/utils/format-usd-value';
 import Header from '@/components/header';
 import { toast } from 'sonner-native';
-import { validateAddressByNetwork } from '@/utils/address-validators';
 import { useDebouncedCallback } from '@/hooks/use-debounced-callback';
 
 export default function SendDetailsScreen() {
@@ -84,7 +90,7 @@ export default function SendDetailsScreen() {
     txId?: { fee: string; hash: string };
     error?: string;
   } | null>(null);
-  const [tokenPrice, setTokenPrice] = useState<number>(0);
+  const [tokenPrice, setTokenPrice] = useState(bn(0));
   const [isAmountInputFocused, setIsAmountInputFocused] = useState(false);
   const keyboard = useKeyboard();
 
@@ -139,11 +145,11 @@ export default function SendDetailsScreen() {
     const calculateTokenPrice = async () => {
       try {
         const assetTicker = getAssetTicker(tokenId);
-        const price = await pricingService.getFiatValue(1, assetTicker, FiatCurrency.USD);
-        setTokenPrice(price);
+        const price = await pricingService.getFiatValue(bn(1), assetTicker, FiatCurrency.USD);
+        setTokenPrice(bn(price));
       } catch (error) {
         console.error('Failed to get token price:', error);
-        setTokenPrice(0);
+        setTokenPrice(bn(0));
       }
     };
 
@@ -153,11 +159,13 @@ export default function SendDetailsScreen() {
   // Helper function to convert amount to token value based on input mode
   const getTokenAmount = useCallback(
     (amountValue: string) => {
-      const numericAmount = parseFloat(amountValue.replace(/,/g, ''));
-      if (inputMode === 'fiat' && tokenPrice > 0) {
-        return numericAmount / tokenPrice;
+      const normalized = amountValue.replace(/,/g, '');
+      const amountValueBn = normalized ? bn(normalized) : bn(0);
+      if (inputMode === 'fiat' && gt(tokenPrice, 0)) {
+        return div(amountValueBn, tokenPrice);
       }
-      return numericAmount;
+
+      return amountValueBn;
     },
     [inputMode, tokenPrice]
   );
@@ -171,9 +179,9 @@ export default function SendDetailsScreen() {
       }
 
       // Convert amount to token value if provided
-      const numericAmount = amountValue ? getTokenAmount(amountValue) : undefined;
+      const tokenAmountBn = amountValue ? getTokenAmount(amountValue) : undefined;
 
-      const estimate = await calculateGasFee(networkId, tokenId, numericAmount);
+      const estimate = await calculateGasFee(networkId, tokenId, tokenAmountBn);
 
       setGasEstimate(estimate);
       setIsLoadingGasEstimate(false);
@@ -192,7 +200,8 @@ export default function SendDetailsScreen() {
   // For BTC, calculate gas fee when amount changes
   useEffect(() => {
     const isBtc = tokenId.toLowerCase() === 'btc';
-    if (isBtc && amount && parseFloat(amount) > 0) {
+    const amountBn = amount ? bn(amount.replace(/,/g, '') || bn(0)) : bn(0);
+    if (isBtc && gt(amountBn, 0)) {
       handleCalculateGasFee(true, amount);
     }
   }, [amount, tokenId, handleCalculateGasFee]);
@@ -204,14 +213,17 @@ export default function SendDetailsScreen() {
       try {
         const assetTicker = getAssetTicker(tokenId);
         const price = await pricingService.getFiatValue(1, assetTicker, FiatCurrency.USD);
-        setTokenPrice(price);
+        setTokenPrice(bn(price));
       } catch (error) {
         console.error('Failed to refresh token price:', error);
       }
 
       // Refetch gas fee without showing loading state
       const isBtc = tokenId.toLowerCase() === 'btc';
-      if (!isBtc || (isBtc && amount && parseFloat(amount) > 0)) {
+      const normalized = (amount ?? '').replace(/,/g, '').trim();
+      const amountBn = normalized && normalized !== '.' ? bn(normalized) : bn(0);
+
+      if (!isBtc || (isBtc && gt(amountBn, 0))) {
         handleCalculateGasFee(false, amount);
       }
     }, 30000); // 30 seconds
@@ -249,26 +261,25 @@ export default function SendDetailsScreen() {
   }, [handleRecipientAddressChange]);
 
   const handleUseMax = useCallback(() => {
-    const numericBalance = parseFloat(tokenBalance.replace(/,/g, ''));
-    const numericBalanceUSD = parseFloat(tokenBalanceUSD.replace(/[$,]/g, ''));
-
+    const balanceBn = bn(tokenBalance.replace(/,/g, ''));
+    const balanceUsdBn = bn(tokenBalanceUSD.replace(/[$,]/g, ''));
     if (inputMode === 'token') {
       // Subtract gas fee from token balance
-      let maxAmount = numericBalance;
+      let maxAmountBn = balanceBn;
       if (gasEstimate.fee !== undefined) {
-        maxAmount = Math.max(0, numericBalance - gasEstimate.fee);
+        maxAmountBn = sub(balanceBn, gasEstimate.fee);
         toast.info('To avoid transaction failure, the max amount has been reduced by the gas fee');
       }
-      setAmount(maxAmount.toString());
+      setAmount(maxAmountBn.toString());
     } else {
       // Subtract gas fee (converted to USD) from balance USD
-      let maxAmountUSD = numericBalanceUSD;
-      if (gasEstimate.fee !== undefined && tokenPrice > 0) {
-        const gasFeeUSD = gasEstimate.fee * tokenPrice;
-        maxAmountUSD = Math.max(0, numericBalanceUSD - gasFeeUSD);
+      let maxUsdBn = balanceUsdBn;
+      if (gasEstimate.fee !== undefined && gt(tokenPrice, 0)) {
+        const gasFeeUsdBn = mul(gasEstimate.fee, tokenPrice);
+        maxUsdBn = sub(balanceUsdBn, gasFeeUsdBn);
       }
       // Format fiat amount to 2 decimal places
-      setAmount(maxAmountUSD.toFixed(2));
+      setAmount(maxUsdBn.toFixed(2));
     }
     setAmountError(null);
   }, [inputMode, tokenBalance, tokenBalanceUSD, gasEstimate.fee, tokenPrice]);
@@ -282,25 +293,25 @@ export default function SendDetailsScreen() {
   // Validate amount when it changes
   const validateAmount = useCallback(
     (value: string) => {
-      if (!value || parseFloat(value) <= 0) {
+      const normalized = value.replace(/,/g, '');
+      const amountBn = normalized ? bn(normalized) : bn(0);
+
+      if (!value || lte(amountBn, 0)) {
         setAmountError(null);
         return;
       }
 
-      const numericBalance = parseFloat(tokenBalance.replace(/,/g, ''));
-      const numericBalanceUSD = parseFloat(tokenBalanceUSD.replace(/[$,]/g, ''));
-      const numericAmount = parseFloat(value.replace(/,/g, ''));
+      const balanceBn = bn(tokenBalance.replace(/,/g, ''));
+      const balanceUsdBn = bn(tokenBalanceUSD.replace(/[$,]/g, ''));
 
       if (inputMode === 'token') {
-        if (numericAmount > numericBalance) {
-          setAmountError(
-            `Maximum: ${formatTokenAmount(numericBalance, tokenSymbol as AssetTicker)}`
-          );
+        if (gt(amountBn, balanceBn)) {
+          setAmountError(`Maximum: ${formatTokenAmount(balanceBn, tokenSymbol as AssetTicker)}`);
         } else {
           setAmountError(null);
         }
       } else {
-        if (numericAmount > numericBalanceUSD) {
+        if (gt(amountBn, balanceUsdBn)) {
           setAmountError(`Maximum: ${tokenBalanceUSD}`);
         } else {
           setAmountError(null);
@@ -321,7 +332,6 @@ export default function SendDetailsScreen() {
       // Prevent multiple decimal points
       const parts = normalized.split('.');
       const formatted = parts[0] + (parts.length > 1 ? '.' + parts[1] : '');
-
       setAmount(formatted);
       validateAmount(formatted);
     },
@@ -351,16 +361,17 @@ export default function SendDetailsScreen() {
       return false;
     }
 
-    if (!amount || parseFloat(amount) <= 0) {
+    // Check if amount exceeds balance
+    const normalizedAmount = amount.replace(/,/g, '');
+    const amountBn = normalizedAmount ? bn(normalizedAmount) : bn(0);
+    const balanceBn = bn(tokenBalance.replace(/,/g, ''));
+
+    if (!amount || lte(amountBn, 0)) {
       Alert.alert('Error', 'Please enter a valid amount');
       return false;
     }
 
-    // Check if amount exceeds balance
-    const numericBalance = parseFloat(tokenBalance.replace(',', ''));
-    const numericAmount = parseFloat(amount.replace(',', ''));
-
-    if (inputMode === 'token' && numericAmount > numericBalance) {
+    if (inputMode === 'token' && gt(amountBn, balanceBn)) {
       Alert.alert('Error', 'Insufficient balance');
       return false;
     }
@@ -381,15 +392,15 @@ export default function SendDetailsScreen() {
       const assetTicker = getAssetTicker(tokenId);
 
       // Convert fiat to token amount if in fiat mode
-      let numericAmount = parseFloat(amount);
-      if (inputMode === 'fiat' && tokenPrice > 0) {
-        numericAmount = numericAmount / tokenPrice;
+      let amountBn = bn(amount.replace(/,/g, ''));
+      if (inputMode === 'fiat' && gt(tokenPrice, 0)) {
+        amountBn = div(amountBn, tokenPrice);
       }
 
       const sendResult = await WDKService.sendByNetwork(
         networkType,
         0, // account index
-        numericAmount,
+        amountBn.toNumber(),
         recipientAddress,
         assetTicker
       );
@@ -425,9 +436,12 @@ export default function SendDetailsScreen() {
 
   const balanceDisplay = useMemo(() => {
     if (inputMode === 'token') {
-      return `Balance: ${formatTokenAmount(parseFloat(tokenBalance), tokenSymbol as AssetTicker)}`;
+      return `Balance: ${formatTokenAmount(
+        bn(tokenBalance.replace(/,/g, '')),
+        tokenSymbol as AssetTicker
+      )}`;
     }
-    return `Balance: ${formatUSDValue(parseFloat(tokenBalanceUSD))}`;
+    return `Balance: ${formatUSDValue(bn(tokenBalanceUSD.replace(/[$,]/g, '')))}`;
   }, [inputMode, tokenBalance, tokenBalanceUSD, tokenSymbol]);
 
   const getFeeFromTransactionResult = (
@@ -435,19 +449,21 @@ export default function SendDetailsScreen() {
     token: AssetTicker
   ) => {
     const fee = transactionResult.txId?.fee;
-    if (!fee) return formatTokenAmount(0, token);
+    if (!fee) return formatTokenAmount(bn(0), token);
 
     const value = Number(fee) / WDKService.getDenominationValue(token);
-    return formatTokenAmount(value, token);
+    const valueBn = div(bn(fee), value);
+    return formatTokenAmount(valueBn, token);
   };
 
   const getTransactionAmout = useCallback(() => {
-    const numericAmount = parseFloat(amount.replace(/,/g, ''));
-    if (inputMode === 'fiat' && tokenPrice > 0) {
-      return formatUSDValue(numericAmount);
+    const normalized = amount.replace(/,/g, '') || '0';
+    const amountBn = bn(normalized);
+    if (inputMode === 'fiat' && gt(tokenPrice, 0)) {
+      return formatUSDValue(amountBn);
     }
 
-    return formatTokenAmount(parseFloat(amount || '0'), tokenSymbol as AssetTicker);
+    return formatTokenAmount(amountBn, tokenSymbol as AssetTicker);
   }, [inputMode, tokenPrice, amount, tokenSymbol]);
 
   const isUseMaxDisabled = useMemo(() => {
@@ -559,15 +575,16 @@ export default function SendDetailsScreen() {
                   <Text style={styles.gasAmount}>Calculating...</Text>
                 ) : gasEstimate.error ? (
                   <Text style={styles.gasError}>{gasEstimate.error}</Text>
-                ) : tokenId.toLowerCase() === 'btc' && (!amount || parseFloat(amount) <= 0) ? (
+                ) : tokenId.toLowerCase() === 'btc' &&
+                  (!amount || lte(bn(amount.replace(/,/g, '') || '0'), 0)) ? (
                   <Text style={styles.gasError}>Insert amount for gas fee estimation</Text>
                 ) : gasEstimate.fee !== undefined ? (
                   <>
                     <Text style={styles.gasAmount}>
-                      {formatTokenAmount(gasEstimate.fee, tokenSymbol as AssetTicker)}
+                      {formatTokenAmount(gasEstimate.fee ?? bn(0), tokenSymbol as AssetTicker)}
                     </Text>
                     <Text style={styles.gasUsd}>
-                      ≈ {formatUSDValue(gasEstimate.fee * tokenPrice)}
+                      ≈ {formatUSDValue(mul(gasEstimate.fee ?? bn(0), tokenPrice))}
                     </Text>
                   </>
                 ) : (

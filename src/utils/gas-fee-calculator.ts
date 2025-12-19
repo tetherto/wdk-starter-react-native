@@ -1,7 +1,8 @@
 import { AssetTicker, NetworkType, WDKService } from '@tetherto/wdk-react-native-provider';
+import { bn, lte, type BNValue } from '@/utils/bignumber';
 
 export interface GasFeeEstimate {
-  fee?: number;
+  fee?: BigNumber;
   error?: string;
 }
 
@@ -63,13 +64,14 @@ export const getAssetTicker = (tokenId: string): AssetTicker => {
 export const calculateGasFee = async (
   networkId: string,
   tokenId: string,
-  amount?: number
+  amount?: BNValue
 ): Promise<GasFeeEstimate> => {
   try {
     const networkType = getNetworkType(networkId);
     const assetTicker = getAssetTicker(tokenId);
     // @ts-expect-error
     const quoteRecipient = QUOTE_RECIPIENTS[assetTicker].networks[networkType];
+    const amountBn = amount === undefined ? undefined : bn(amount);
 
     if (!amount && networkType === NetworkType.BITCOIN) {
       return {
@@ -78,15 +80,21 @@ export const calculateGasFee = async (
       };
     }
 
+    const quoteAmountBn =
+      assetTicker === AssetTicker.BTC
+        ? bn(amountBn!).decimalPlaces(8, BigNumber.ROUND_DOWN)
+        : bn(1);
+    const quoteAmountForSdk = quoteAmountBn.toNumber();
+
     const gasFee = await WDKService.quoteSendByNetwork(
       networkType,
       0, // account index
-      assetTicker === AssetTicker.BTC ? parseFloat(amount!.toFixed(8)) : 1,
+      quoteAmountForSdk,
       quoteRecipient,
       assetTicker
     );
 
-    return { fee: gasFee };
+    return { fee: bn(gasFee as any) };
   } catch (error) {
     console.error('Gas fee pre-calculation failed:', error);
     const networkType = getNetworkType(networkId);
