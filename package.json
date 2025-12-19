@@ -30,7 +30,7 @@
     "@tetherto/pear-wrk-wdk": "^1.0.0-beta.4",
     "@tetherto/wdk-pricing-bitfinex-http": "^1.0.0-beta.1",
     "@tetherto/wdk-pricing-provider": "^1.0.0-beta.1",
-    "@tetherto/wdk-react-native-provider": "^1.0.0-beta.3",
+    "@tetherto/wdk-react-native-provider": "github:tetherto/wdk-react-native-provider#develop",
     "@tetherto/wdk-uikit-react-native": "^1.0.0-beta.2",
     "@ton/core": "^0.62.0",
     "b4a": "^1.7.2",
