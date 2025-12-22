@@ -17,11 +17,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
+import { useMnemonicClipboardCleanup } from '@/hooks/useMnemonicClipboardCleanup';
 
 export default function ImportWalletScreen() {
   const router = useDebouncedNavigation();
   const insets = useSafeAreaInsets();
   const [secretWords, setSecretWords] = useState<string[]>(Array(12).fill(''));
+  const { scheduleClearClipboard } = useMnemonicClipboardCleanup();
 
   const handleWordChange = (index: number, text: string) => {
     const newWords = [...secretWords];
@@ -56,6 +58,7 @@ export default function ImportWalletScreen() {
       setSecretWords(newWords);
 
       toast.success('12 words have been pasted from clipboard');
+      scheduleClearClipboard(words.join(' '));
     } catch (error) {
       console.error('Paste error:', error);
       toast.error('Could not paste from clipboard');
@@ -69,7 +72,7 @@ export default function ImportWalletScreen() {
   };
 
   const isFormValid = () => {
-    return secretWords.every(word => word.trim().length > 0);
+    return secretWords.every((word) => word.trim().length > 0);
   };
 
   const validateSeedPhrase = (phrase: string): boolean => {
