@@ -1,7 +1,7 @@
 {
   "name": "@tetherto/wdk-starter-react-native",
   "main": "expo-router/entry",
-  "version": "1.0.0-alpha.1",
+  "version": "1.0.0-alpha.2",
   "scripts": {
     "start": "expo start --dev-client",
     "android": "expo run:android",
@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit",
     "prebuild": "expo prebuild",
     "prebuild:clean": "expo prebuild --clean",
+    "preinstall": "npm install @tetherto/pear-wrk-wdk --ignore-scripts --legacy-peer-deps 2>/dev/null || true",
     "test:e2e": "export ANDROID_HOME=$HOME/Library/Android/sdk && export PATH=$PATH:$ANDROID_HOME/platform-tools && wdio run test/wdio.conf.ts",
     "test:e2e:ios": "export ANDROID_HOME=$HOME/Library/Android/sdk && export PATH=$PATH:$ANDROID_HOME/platform-tools && wdio run test/wdio.ios.conf.ts",
     "test:e2e:android": "export ANDROID_HOME=$HOME/Library/Android/sdk && export PATH=$PATH:$ANDROID_HOME/platform-tools && wdio run test/wdio.conf.ts",
