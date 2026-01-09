@@ -56,7 +56,6 @@ export default function SendDetailsScreen() {
   const [networkMode, setNetworkMode] = useState<NetworkMode>('mainnet');
   const [networkModeLoaded, setNetworkModeLoaded] = useState(false);
 
-  // Load network mode on focus to pick up changes from settings
   useFocusEffect(
     useCallback(() => {
       getNetworkMode().then((mode) => {
@@ -237,7 +236,7 @@ export default function SendDetailsScreen() {
       if (!isBtc || (isBtc && amount && parseFloat(amount) > 0)) {
         handleCalculateGasFee(false, amount);
       }
-    }, 60000); // 60 seconds to avoid API rate limits
+    }, 60000);
 
     return () => clearInterval(interval);
   }, [tokenId, handleCalculateGasFee, amount]);
@@ -439,36 +438,28 @@ export default function SendDetailsScreen() {
         }
       }
 
-      // Convert amount to smallest unit (wei/satoshi/etc)
-      // Use string-based conversion to avoid floating point precision issues
       const amountStr = numericAmount.toFixed(decimals);
       const [intPart, decPart = ''] = amountStr.split('.');
       const paddedDecimal = decPart.padEnd(decimals, '0').slice(0, decimals);
       const amountInSmallestUnit = BigInt(intPart + paddedDecimal);
 
-      // Validate amount is positive
       if (amountInSmallestUnit <= 0n) {
         Alert.alert('Error', 'Amount must be greater than 0');
         setSendingTransaction(false);
         return;
       }
 
-      // Call the transfer method on the account
-      // For native tokens (ETH), use zero address
       const tokenContractAddress = tokenAddress || '0x0000000000000000000000000000000000000000';
 
-      // Build transfer parameters based on network type
       let transferParams: Record<string, unknown>;
 
       if (networkId === 'spark') {
         // Spark WDK: sendTransaction({ to, value }) for native BTC
-        // This calls wallet.transfer({ receiverSparkAddress: to, amountSats: value })
         transferParams = {
           to: recipientAddress,
           value: Number(amountInSmallestUnit),
         };
 
-        // Use sendTransaction method for Spark native BTC
         const result = await callAccountMethod<{ fee: string; hash: string }>(
           networkId,
           0,
@@ -480,8 +471,6 @@ export default function SendDetailsScreen() {
         toast.success('Transaction sent successfully!');
         return;
       } else {
-        // EVM networks (Safe accounts) use standard transfer params
-        // Adjust transferMaxFee based on network (mainnet needs higher fees)
         const maxFeeByNetwork: Record<string, number> = {
           ethereum: 2000000,  // 2 USDT for Ethereum mainnet (higher gas)
           arbitrum: 500000,   // 0.5 USDT for Arbitrum
@@ -569,15 +558,11 @@ export default function SendDetailsScreen() {
     const networkConfig = networkConfigs[network as NetworkType];
     if (!networkConfig) return null;
 
-    // For ERC-4337 networks (Safe smart wallets), use UserOp explorer
-    // The hash returned is a userOperationHash, not a regular tx hash
     if (networkConfig.userOpExplorerUrl) {
       return `${networkConfig.userOpExplorerUrl}${hash}`;
     }
 
-    // Fallback to regular explorer for non-ERC-4337 networks
     if (networkConfig.explorerUrl) {
-      // Spark explorer requires network parameter
       if (network === 'spark') {
         const sparkNetwork = networkMode === 'testnet' ? 'regtest' : 'mainnet';
         return `${networkConfig.explorerUrl}${hash}?network=${sparkNetwork}`;

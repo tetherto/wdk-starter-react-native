@@ -95,12 +95,10 @@ const getChainsConfig = (sparkNetwork: SparkNetworkMode = 'MAINNET', networkMode
     },
   };
 
-  // If no network mode specified, return all chains
   if (!networkMode) {
     return allChains;
   }
 
-  // Filter chains by network mode
   const allowedChains = networkMode === 'testnet' ? TESTNET_CHAINS : MAINNET_CHAINS;
   return Object.fromEntries(
     Object.entries(allChains).filter(([key]) => allowedChains.includes(key))

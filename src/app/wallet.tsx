@@ -253,7 +253,7 @@ export default function WalletScreen() {
     const intervalId = setInterval(() => {
       refreshBalance({ accountIndex: 0, type: 'wallet' });
       refetch();
-    }, 60000); // 60 seconds to avoid API rate limits
+    }, 60000);
 
     return () => clearInterval(intervalId);
   }, [isInitialized, networkModeLoaded, refreshBalance, refetch]);

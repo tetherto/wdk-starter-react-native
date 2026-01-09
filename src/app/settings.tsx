@@ -33,7 +33,6 @@ export default function SettingsScreen() {
   }, []);
 
   useEffect(() => {
-    // Wait for network mode to be loaded from storage before fetching addresses
     if (!networkModeLoaded) return;
 
     const fetchAddresses = async () => {
@@ -47,7 +46,6 @@ export default function SettingsScreen() {
 
       const addressMap: Record<string, string> = {};
 
-      // Only process networks allowed for current mode
       for (const network of allowedNetworks) {
         console.log(`[Settings] Processing network: ${network}`);
         try {
@@ -66,7 +64,6 @@ export default function SettingsScreen() {
             }
           }
 
-          // If no address found and WDK is initialized, try to derive it with timeout
           if (!address && isInitialized) {
             console.log(`[Settings] ${network} - No cached address, calling getAddress with 10s timeout...`);
             const startTime = Date.now();
@@ -164,7 +161,7 @@ export default function SettingsScreen() {
     if (config?.accountType === 'Safe') {
       return 'Safe';
     }
-    return null; // No tag for native addresses
+    return null;
   };
 
   const filteredAddresses = Object.entries(walletAddresses).filter(([network]) => {

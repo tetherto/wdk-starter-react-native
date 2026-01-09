@@ -29,13 +29,11 @@ export function validateBitcoinAddress(address: string): AddressValidationResult
   return { valid: true };
 }
 
-// Spark addresses use Bech32 encoding with custom prefixes
 const SPARK_ADDRESS_PREFIXES = ['spark1', 'sparkt1', 'sparkrt1'];
 
 export function validateSparkAddress(address: string): AddressValidationResult {
   const trimmed = address.trim().toLowerCase();
 
-  // Check if address starts with a valid Spark prefix
   const hasValidPrefix = SPARK_ADDRESS_PREFIXES.some(prefix => trimmed.startsWith(prefix));
 
   if (!hasValidPrefix) {
@@ -45,7 +43,6 @@ export function validateSparkAddress(address: string): AddressValidationResult {
     };
   }
 
-  // Basic length validation for Bech32 addresses (typically 62-90 characters)
   if (trimmed.length < 40 || trimmed.length > 100) {
     return {
       valid: false,
@@ -53,7 +50,6 @@ export function validateSparkAddress(address: string): AddressValidationResult {
     };
   }
 
-  // Bech32 character set validation (lowercase alphanumeric excluding 1, b, i, o)
   const bech32Regex = /^(spark1|sparkt1|sparkrt1)[ac-hj-np-z02-9]+$/;
   if (!bech32Regex.test(trimmed)) {
     return {
@@ -75,7 +71,6 @@ export function validateAddressByNetwork(
     return { valid: false, error: 'Recipient address is required' };
   }
 
-  // Use Spark validator for spark network, EVM validator for EVM networks
   const effectiveValidator = validator || (networkId === 'spark' ? validateSparkAddress : validateEvmAddress);
 
   return effectiveValidator(trimmed);
