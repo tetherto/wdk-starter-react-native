@@ -1,12 +1,13 @@
-import { assetConfig } from '@/config/assets';
+import { assetConfig, AssetTicker } from '@/config/assets';
 import { useLocalSearchParams } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
-import React, { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
-
-import { AssetTicker, useWallet } from '@tetherto/wdk-react-native-provider';
+import { useWallet, useWalletManager, useBalancesForWallet } from '@tetherto/wdk-react-native-core';
+import getTokenConfigs from '@/config/get-token-configs';
 import { AssetSelector, type Token } from '@tetherto/wdk-uikit-react-native';
 import { FiatCurrency, pricingService } from '@/services/pricing-service';
 import formatAmount from '@/utils/format-amount';
@@ -14,65 +15,96 @@ import getDisplaySymbol from '@/utils/get-display-symbol';
 import { getRecentTokens, addToRecentTokens } from '@/utils/recent-tokens';
 import formatTokenAmount from '@/utils/format-token-amount';
 import Header from '@/components/header';
+import { getNetworkMode, filterNetworksByMode, NetworkMode } from '@/services/network-mode-service';
 
 export default function SelectTokenScreen() {
   const insets = useSafeAreaInsets();
   const router = useDebouncedNavigation();
   const params = useLocalSearchParams();
-  const { wallet, balances } = useWallet();
+  const { wallets, activeWalletId } = useWalletManager();
+  const currentWalletId = activeWalletId || wallets[0]?.identifier || 'default';
+  const { isInitialized } = useWallet({ walletId: currentWalletId });
 
-  // Get the scanned address from params (passed from QR scanner)
   const { scannedAddress } = params as { scannedAddress?: string };
   const [recentTokens, setRecentTokens] = useState<string[]>([]);
   const [tokens, setTokens] = useState<Token[]>([]);
+  const [networkMode, setNetworkMode] = useState<NetworkMode>('mainnet');
+  const [networkModeLoaded, setNetworkModeLoaded] = useState(false);
 
-  useEffect(() => {
-    const loadRecentTokens = async () => {
-      const recent = await getRecentTokens('send');
-      setRecentTokens(recent);
-    };
-    loadRecentTokens();
-  }, []);
+  // Load network mode on focus to pick up changes from settings
+  useFocusEffect(
+    useCallback(() => {
+      const loadData = async () => {
+        const [recent, mode] = await Promise.all([
+          getRecentTokens('send'),
+          getNetworkMode(),
+        ]);
+        setRecentTokens(recent);
+        setNetworkMode(mode);
+        setNetworkModeLoaded(true);
+      };
+      loadData();
+    }, [])
+  );
 
-  // Calculate token balances from wallet data with fiat values
+  const tokenConfigs = useMemo(() => {
+    if (!networkModeLoaded) return {};
+    return getTokenConfigs(networkMode);
+  }, [networkMode, networkModeLoaded]);
+
+  const { data: balanceResults } = useBalancesForWallet(0, tokenConfigs, {
+    enabled: isInitialized && networkModeLoaded && Object.keys(tokenConfigs).length > 0
+  });
+
   useEffect(() => {
     const calculateTokensWithFiatValues = async () => {
-      if (!balances.list || !wallet?.enabledAssets) {
+      if (!balanceResults) {
         setTokens([]);
         return;
       }
 
-      // Group balances by denomination
       const balanceMap = new Map<string, { totalBalance: number }>();
 
-      balances.list.forEach((balance) => {
-        const current = balanceMap.get(balance.denomination) || { totalBalance: 0 };
-        balanceMap.set(balance.denomination, {
-          totalBalance: current.totalBalance + parseFloat(balance.value),
-        });
+      balanceResults.forEach((result) => {
+        if (!result.success || !result.balance) return;
+
+        const networkTokens = tokenConfigs[result.network];
+        if (!networkTokens) return;
+
+        let denomination = '';
+        let decimals = 18;
+
+        if (result.tokenAddress === null) {
+          denomination = networkTokens.native.symbol.toLowerCase();
+          decimals = networkTokens.native.decimals;
+        } else {
+          const token = networkTokens.tokens.find((t) => t.address?.toLowerCase() === result.tokenAddress?.toLowerCase());
+          if (token) {
+            denomination = token.symbol.toLowerCase();
+            decimals = token.decimals;
+          }
+        }
+
+        if (!denomination) return;
+
+        const balanceNum = parseFloat(result.balance) / Math.pow(10, decimals);
+        const current = balanceMap.get(denomination) || { totalBalance: 0 };
+        balanceMap.set(denomination, { totalBalance: current.totalBalance + balanceNum });
       });
 
-      // Convert to Token array with real balances
       const tokensWithBalances: Token[] = [];
 
-      // Only process enabled assets that we have configuration for
-      for (const assetSymbol of wallet.enabledAssets) {
+      for (const [assetSymbol, { totalBalance }] of balanceMap.entries()) {
         const config = assetConfig[assetSymbol as keyof typeof assetConfig];
         if (!config) continue;
 
-        const totalBalance = balanceMap.get(assetSymbol)?.totalBalance || 0;
+        const availableNetworks = filterNetworksByMode(config.supportedNetworks, networkMode);
+        if (availableNetworks.length === 0) continue;
 
-        // Calculate fiat value using pricing service
         let usdValue = 0;
         try {
-          usdValue = await pricingService.getFiatValue(
-            totalBalance,
-            assetSymbol as AssetTicker,
-            FiatCurrency.USD
-          );
-        } catch (error) {
-          console.error(`Error calculating fiat value for ${assetSymbol}:`, error);
-          // Fallback to 0 if pricing service fails
+          usdValue = await pricingService.getFiatValue(totalBalance, assetSymbol as AssetTicker, FiatCurrency.USD);
+        } catch {
           usdValue = 0;
         }
 
@@ -88,21 +120,12 @@ export default function SelectTokenScreen() {
         });
       }
 
-      // Sort by USD value (highest first), but keep tokens with 0 balance at the end
       const sortedTokens = tokensWithBalances.sort((a, b) => {
         const aValue = parseFloat(a.balanceUSD.replace(/[$,]/g, ''));
         const bValue = parseFloat(b.balanceUSD.replace(/[$,]/g, ''));
-
-        // If both have 0 balance, sort alphabetically
-        if (aValue === 0 && bValue === 0) {
-          return a.name.localeCompare(b.name);
-        }
-
-        // If one has 0 balance, put it at the end
+        if (aValue === 0 && bValue === 0) return a.name.localeCompare(b.name);
         if (aValue === 0) return 1;
         if (bValue === 0) return -1;
-
-        // Otherwise sort by value (highest first)
         return bValue - aValue;
       });
 
@@ -110,16 +133,12 @@ export default function SelectTokenScreen() {
     };
 
     calculateTokensWithFiatValues();
-  }, [balances.list, wallet?.enabledAssets]);
+  }, [balanceResults, tokenConfigs, networkMode]);
 
   const handleSelectToken = useCallback(
     async (token: Token) => {
-      // Don't allow selection of tokens with zero balance
-      if (!token.hasBalance) {
-        return;
-      }
+      if (!token.hasBalance) return;
 
-      // Save token to recent tokens
       const updatedRecent = await addToRecentTokens(token.name, 'send');
       setRecentTokens(updatedRecent);
 
@@ -141,11 +160,7 @@ export default function SelectTokenScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Header title="Send funds" style={styles.header} />
-      <AssetSelector
-        tokens={tokens}
-        recentTokens={recentTokens}
-        onSelectToken={handleSelectToken}
-      />
+      <AssetSelector tokens={tokens} recentTokens={recentTokens} onSelectToken={handleSelectToken} />
     </View>
   );
 }

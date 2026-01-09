@@ -1,4 +1,4 @@
-import { AssetTicker } from '@tetherto/wdk-react-native-provider';
+import { AssetTicker } from '@/config/assets';
 import formatAmount from './format-amount';
 import getDisplaySymbol from './get-display-symbol';
 

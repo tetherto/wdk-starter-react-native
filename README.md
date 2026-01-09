@@ -7,7 +7,9 @@
 > 
 > For production use, please wait for the stable release or use at your own risk in development/testing environments only.
 
-An Expo + React Native starter demonstrating how to build a secure, multi-chain, non-custodial wallet using the WDK (Wallet Development Kit). Features BareKit worklets for cryptographic operations, secure secret management, and a complete wallet implementation with onboarding, transactions, and asset management.
+An Expo + React Native starter demonstrating how to build a secure, multi-chain, non-custodial wallet using the WDK (Wallet Development Kit). This wallet uses **ERC-4337 (Account Abstraction)** with **Safe smart contract accounts** on EVM networks, enabling gasless transactions through paymasters. Features BareKit worklets for cryptographic operations, secure secret management, and a complete wallet implementation with onboarding, transactions, and asset management.
+
+> **Note**: This starter currently implements ERC-4337 Safe accounts for EVM networks. Support for regular EOA (Externally Owned Account) wallets on additional networks is planned for future releases.
 
 Click below to see the wallet in action:
 
@@ -21,18 +23,22 @@ For detailed documentation about the complete WDK ecosystem, visit [docs.wallet.
 
 ## 🌟 Features
 
-### Multi-Chain Support
-- **Bitcoin (SegWit)**: Native bitcoin transfers with SegWit addresses
-- **Ethereum**: EVM transactions with gas sponsorship support
-- **Polygon**: Low-cost EVM transactions with gas sponsorship
-- **Arbitrum**: Layer 2 scaling with gas sponsorship support
-- **TON**: Native TON blockchain transfers
-- **Tron**: TRC-20 token support with low fees
-- **Solana**: High-performance blockchain support
+### Multi-Chain Support (ERC-4337 Safe Accounts)
+- **Ethereum**: Safe smart contract account with gas sponsorship via paymaster
+- **Polygon**: Safe account with low-cost transactions and gas sponsorship
+- **Arbitrum**: Safe account on Layer 2 with gas sponsorship support
+- **Plasma**: Safe account on Tether's native Layer 2 network
+- **Sepolia**: Safe account on Ethereum testnet for development
+- **Spark**: Bitcoin Layer 2 with instant transfers (native Bitcoin addresses)
+
+### Network Mode Toggle
+- **Mainnet/Testnet Switch**: Easy toggle between mainnet and testnet in settings
+- **Automatic Refresh**: Balance and token lists update when switching modes
+- **Consistent State**: All screens respect the current network mode
 
 ### Multi-Token Support
-- **BTC**: Native Bitcoin on SegWit and Lightning networks
-- **USD₮ (Tether USD)**: Multi-chain USD₮ support (Ethereum, Polygon, Arbitrum, TON, Tron, Solana)
+- **BTC**: Bitcoin on Spark network
+- **USD₮ (Tether USD)**: Multi-chain USD₮ support (Ethereum, Polygon, Arbitrum, Plasma, Spark)
 - **XAU₮ (Tether Gold)**: Gold-backed stablecoin on Ethereum
 
 ### Wallet Management
@@ -59,7 +65,7 @@ For detailed documentation about the complete WDK ecosystem, visit [docs.wallet.
 
 ## 🧱 Platform Prerequisites
 
-- Node.js 22+
+- Node.js >= 20.19.4
 - iOS: Xcode toolchain
 - Android: SDK (see `app.json` build properties for version requirements)
 
@@ -179,7 +185,7 @@ src/
 The app follows a clean architecture pattern with clear separation of concerns:
 
 1. **Providers Layer** (`_layout.tsx`)
-   - `WalletProvider`: Manages wallet state, blockchain interactions, and WDK service
+   - `WalletProvider`: Manages wallet state, ERC-4337 Safe accounts, blockchain interactions, and WDK service
    - `ThemeProvider`: Handles dark mode and custom theming
    - `NavigationThemeProvider`: React Navigation theme configuration
 
@@ -237,27 +243,32 @@ The app follows a clean architecture pattern with clear separation of concerns:
 
 This starter supports the following blockchain networks and operations:
 
-| Network | Balance | History | Send | Receive | Gas Sponsorship |
-|---------|---------|---------|------|---------|-----------------|
-| **Bitcoin (SegWit)** | ✅ | ✅ | ✅ | ✅ | N/A |
-| **Lightning** | ✅ | ✅ | ✅ | ✅ | N/A |
-| **Ethereum** | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Polygon** | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Arbitrum** | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **TON** | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Tron** | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Solana** | ✅ | ✅ | ✅ | ✅ | ✅ |
+### Mainnet Networks (ERC-4337 Safe Accounts)
+| Network | Account Type | Balance | History | Send | Receive | Gas Sponsorship |
+|---------|--------------|---------|---------|------|---------|-----------------|
+| **Ethereum** | Safe (ERC-4337) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Polygon** | Safe (ERC-4337) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Arbitrum** | Safe (ERC-4337) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Plasma** | Safe (ERC-4337) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Spark** | Native (Bitcoin) | ✅ | ✅ | ✅ | ✅ | N/A |
+
+### Testnet Networks
+| Network | Account Type | Balance | History | Send | Receive | Gas Sponsorship |
+|---------|--------------|---------|---------|------|---------|-----------------|
+| **Sepolia** | Safe (ERC-4337) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Spark (Regtest)** | Native (Bitcoin) | ✅ | ✅ | ✅ | ✅ | N/A |
 
 ### Token Support
 
-| Token | Symbol | Networks |
-|-------|--------|----------|
-| **Bitcoin** | BTC | Bitcoin (SegWit), Lightning |
-| **Tether USD** | USD₮ | Ethereum, Polygon, Arbitrum, TON, Tron, Solana |
-| **Tether Gold** | XAU₮ | Ethereum |
+| Token | Symbol | Networks (Account Type) |
+|-------|--------|-------------------------|
+| **Bitcoin** | BTC | Spark (Native) |
+| **Tether USD** | USD₮ | Ethereum (Safe), Polygon (Safe), Arbitrum (Safe), Plasma (Safe), Spark (Native), Sepolia (Safe) |
+| **Tether Gold** | XAU₮ | Ethereum (Safe) |
 
 ### Key Features
-- **Gas Sponsorship**: EVM networks (Ethereum, Polygon, Arbitrum) and other supported chains offer gasless transactions via paymasters
+- **ERC-4337 Safe Accounts**: All EVM networks use Safe smart contract accounts for enhanced security and flexibility
+- **Gas Sponsorship**: EVM networks (Ethereum, Polygon, Arbitrum, Plasma) offer gasless transactions via paymasters - users don't need native tokens for gas
 - **Multi-Network**: Send the same token across different networks based on preference and fees
 - **Real-Time Data**: Live balance and transaction updates via WDK Indexer
 - **QR Code Support**: Generate and scan QR codes for easy address sharing
@@ -265,6 +276,12 @@ This starter supports the following blockchain networks and operations:
 ## 🔒 Security Features
 
 This starter implements multiple layers of security for protecting user assets:
+
+### Smart Contract Account Security (ERC-4337)
+- **Safe Accounts**: EVM networks use battle-tested Safe smart contract accounts
+- **Account Abstraction**: Enhanced transaction validation and execution logic
+- **Gasless Transactions**: Users don't need native tokens for gas - transactions are sponsored via paymasters
+- **Future Flexibility**: Smart contract accounts enable future features like social recovery, spending limits, and multi-sig
 
 ### Secure Key Management
 - **BareKit Worklets**: Cryptographic operations run in isolated worklet context
@@ -292,7 +309,7 @@ This starter implements multiple layers of security for protecting user assets:
 ## ⚙️ Polyfills & Build Configuration
 
 ### Node.js Polyfills
-The app includes comprehensive Node.js polyfills for React Native compatibility via `@tetherto/wdk-react-native-provider/metro-polyfills`
+The app includes comprehensive Node.js polyfills for React Native compatibility via `@tetherto/wdk-react-native-core/metro-polyfills`
 ### Native Modules
 - **Sodium**: `sodium-javascript` (WebAssembly-based cryptography)
 - **Random**: `react-native-get-random-values` (secure randomness)
@@ -318,27 +335,26 @@ The app includes comprehensive Node.js polyfills for React Native compatibility 
 ## 🔗 Version & Compatibility
 
 ### Core Dependencies
-- **Expo**: ~54.0.8
+- **Expo**: 54.0.31
 - **React**: 19.1.0
 - **React Native**: 0.81.4
-- **TypeScript**: ~5.9.2
+- **TypeScript**: 5.9.2
 
 ### Key Features
 - **New Architecture**: Enabled in `app.json` for improved performance
-- **React Native Reanimated**: ~4.1.0 for smooth animations
+- **React Native Reanimated**: 4.1.6 for smooth animations
 - **React Compiler**: Enabled for automatic memoization
 
 ### Platform Requirements
 - **Android**: minSdkVersion 29, compileSdkVersion 36
 - **iOS**: Latest Xcode toolchain recommended
-- **Node.js**: 22+ required
+- **Node.js**: >= 20.19.4 required
 
 ### WDK Packages
-- `@tetherto/wdk-react-native-provider`: Main wallet provider
+- `@tetherto/wdk-react-native-core`: Core wallet provider with hooks and state management
 - `@tetherto/wdk-uikit-react-native`: UI components library
 - `@tetherto/wdk-pricing-provider`: Fiat pricing integration
 - `@tetherto/wdk-pricing-bitfinex-http`: Bitfinex price data provider
-- `@tetherto/pear-wrk-wdk`: BareKit worklets runtime
 
 ## 🎨 Customization Guide
 

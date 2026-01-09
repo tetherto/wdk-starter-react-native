@@ -1,17 +1,16 @@
-import { useWallet } from '@tetherto/wdk-react-native-provider';
+import { useWalletManager } from '@tetherto/wdk-react-native-core';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
-import { Fingerprint, Shield } from 'lucide-react-native';
+import { Fingerprint, Shield, Trash2 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import parseWorkletError from '@/utils/parse-worklet-error';
 import { colors } from '@/constants/colors';
 import getErrorMessage from '@/utils/get-error-message';
 
 export default function AuthorizeScreen() {
   const insets = useSafeAreaInsets();
   const router = useDebouncedNavigation();
-  const { wallet, unlockWallet } = useWallet();
+  const { hasWallet, initializeWallet, deleteWallet, wallets } = useWalletManager();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,7 +20,7 @@ export default function AuthorizeScreen() {
   }, []);
 
   const handleAuthorize = async () => {
-    if (!wallet) {
+    if (wallets.length === 0) {
       Alert.alert('Error', 'No wallet found');
       router.replace('/onboarding');
       return;
@@ -31,10 +30,9 @@ export default function AuthorizeScreen() {
     setError(null);
 
     try {
-      const isDone = await unlockWallet();
-      if (isDone) {
-        router.replace('/wallet');
-      }
+      const walletId = wallets[0].identifier;
+      await initializeWallet({ walletId });
+      router.replace('/wallet');
     } catch (error) {
       console.error('Failed to unlock wallet:', error);
       setError(getErrorMessage(error, 'Failed to unlock wallet'));
@@ -46,6 +44,33 @@ export default function AuthorizeScreen() {
 
   const handleBiometricAuth = async () => {
     handleAuthorize();
+  };
+
+  const handleResetWallet = () => {
+    Alert.alert(
+      'Reset Wallet',
+      'This will delete all wallet data. You will need to create or import a wallet again. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            setIsLoading(true);
+            try {
+              for (const wallet of wallets) {
+                await deleteWallet(wallet.identifier);
+              }
+              router.replace('/onboarding');
+            } catch (err) {
+              setError(getErrorMessage(err, 'Failed to reset wallet'));
+            } finally {
+              setIsLoading(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -80,6 +105,17 @@ export default function AuthorizeScreen() {
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
           </View>
+        )}
+
+        {error && (
+          <TouchableOpacity
+            style={styles.resetButton}
+            onPress={handleResetWallet}
+            disabled={isLoading}
+          >
+            <Trash2 size={20} color={colors.danger} />
+            <Text style={styles.resetButtonText}>Reset Wallet</Text>
+          </TouchableOpacity>
         )}
       </View>
 
@@ -171,6 +207,19 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontSize: 14,
     textAlign: 'center',
+  },
+  resetButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    padding: 12,
+  },
+  resetButtonText: {
+    color: colors.danger,
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   footer: {
     paddingHorizontal: 40,

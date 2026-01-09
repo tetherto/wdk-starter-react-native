@@ -8,16 +8,26 @@ import { Share as RNShare, StyleSheet, Text, TouchableOpacity, View } from 'reac
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
 import { colors } from '@/constants/colors';
+import { networkConfigs, NetworkType } from '@/config/networks';
 
 export default function ReceiveQRCodeScreen() {
   const insets = useSafeAreaInsets();
   const router = useDebouncedNavigation();
   const params = useLocalSearchParams();
 
-  const { tokenName, networkName, address } = params as {
+  const { tokenName, networkName, networkId, address } = params as {
     tokenName: string;
     networkName: string;
+    networkId: string;
     address: string;
+  };
+
+  const getAddressTypeLabel = (): string | null => {
+    const config = networkConfigs[networkId as NetworkType];
+    if (config?.accountType === 'Safe') {
+      return 'Safe Account Address';
+    }
+    return null; // No special label for native addresses
   };
 
   const handleBack = useCallback(() => {
@@ -79,6 +89,9 @@ export default function ReceiveQRCodeScreen() {
         />
 
         <View style={styles.addressSection}>
+          {getAddressTypeLabel() && (
+            <Text style={styles.smartWalletNote}>{getAddressTypeLabel()}</Text>
+          )}
           <View style={styles.addressContainer}>
             <Text style={styles.addressText} numberOfLines={1} ellipsizeMode="middle">
               {address}
@@ -158,6 +171,11 @@ const styles = StyleSheet.create({
   },
   addressSection: {
     alignItems: 'center',
+  },
+  smartWalletNote: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: 12,
   },
   addressLabel: {
     fontSize: 16,

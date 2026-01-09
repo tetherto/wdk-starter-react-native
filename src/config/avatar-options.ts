@@ -16,6 +16,20 @@ const avatarOptions = [
 ];
 
 const STORAGE_KEY_AVATAR = 'wallet_avatar';
+const STORAGE_KEY_WALLET_NAME = 'wallet_name';
+
+export const getWalletName = async (): Promise<string> => {
+  const stored = await AsyncStorage.getItem(STORAGE_KEY_WALLET_NAME);
+  return stored || 'My Wallet';
+};
+
+export const setWalletName = async (name: string) => {
+  await AsyncStorage.setItem(STORAGE_KEY_WALLET_NAME, name);
+};
+
+export const clearWalletName = async () => {
+  await AsyncStorage.removeItem(STORAGE_KEY_WALLET_NAME);
+};
 
 export const getAvatar = async () => {
   const stored = await AsyncStorage.getItem(STORAGE_KEY_AVATAR);

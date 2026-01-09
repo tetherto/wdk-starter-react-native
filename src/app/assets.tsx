@@ -1,33 +1,83 @@
 import { FiatCurrency, pricingService } from '@/services/pricing-service';
-import { AssetTicker, useWallet } from '@tetherto/wdk-react-native-provider';
+import { useWallet, useWalletManager, useBalancesForWallet } from '@tetherto/wdk-react-native-core';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Asset, assetConfig } from '../config/assets';
+import { Asset, AssetTicker, assetConfig } from '../config/assets';
+import getTokenConfigs from '../config/get-token-configs';
 import formatAmount from '@/utils/format-amount';
 import getDisplaySymbol from '@/utils/get-display-symbol';
 import formatTokenAmount from '@/utils/format-token-amount';
 import Header from '@/components/header';
 import { colors } from '@/constants/colors';
+import { getNetworkMode, filterNetworksByMode, NetworkMode } from '@/services/network-mode-service';
 
 export default function AssetsScreen() {
   const insets = useSafeAreaInsets();
   const router = useDebouncedNavigation();
-  const { wallet, balances } = useWallet();
+  const { wallets, activeWalletId } = useWalletManager();
+  const currentWalletId = activeWalletId || wallets[0]?.identifier;
+  const { isInitialized } = useWallet({ walletId: currentWalletId });
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [networkMode, setNetworkMode] = useState<NetworkMode>('mainnet');
+  const [networkModeLoaded, setNetworkModeLoaded] = useState(false);
 
-  // Calculate aggregated balances by denomination from real wallet data
+  // Load network mode on focus to pick up changes from settings
+  useFocusEffect(
+    useCallback(() => {
+      getNetworkMode().then((mode) => {
+        setNetworkMode(mode);
+        setNetworkModeLoaded(true);
+      });
+    }, [])
+  );
+
+  const tokenConfigs = useMemo(() => {
+    if (!networkModeLoaded) return {};
+    return getTokenConfigs(networkMode);
+  }, [networkMode, networkModeLoaded]);
+
+  const { data: balanceResults, isLoading } = useBalancesForWallet(0, tokenConfigs, {
+    enabled: isInitialized && networkModeLoaded && Object.keys(tokenConfigs).length > 0,
+  });
+
   const getAssetsWithFiatValue = async () => {
-    if (!balances.list) return [];
+    if (!balanceResults) return [];
 
     const balanceMap = new Map<string, { totalBalance: number }>();
 
-    // Sum up balances by denomination across all networks
-    balances.list.forEach(balance => {
-      const current = balanceMap.get(balance.denomination) || { totalBalance: 0 };
-      balanceMap.set(balance.denomination, {
-        totalBalance: current.totalBalance + parseFloat(balance.value),
+    balanceResults.forEach((result) => {
+      if (!result.success || !result.balance) return;
+
+      const tokenAddress = result.tokenAddress;
+      let denomination = 'unknown';
+
+      const networkTokens = tokenConfigs[result.network];
+      if (networkTokens) {
+        if (tokenAddress === null) {
+          denomination = networkTokens.native.symbol.toLowerCase();
+        } else {
+          const token = networkTokens.tokens.find((t) => t.address?.toLowerCase() === tokenAddress?.toLowerCase());
+          if (token) {
+            denomination = token.symbol.toLowerCase();
+          }
+        }
+      }
+
+      const balanceNum =
+        parseFloat(result.balance) /
+        Math.pow(
+          10,
+          tokenAddress === null
+            ? networkTokens?.native.decimals || 18
+            : networkTokens?.tokens.find((t) => t.address?.toLowerCase() === tokenAddress?.toLowerCase())?.decimals || 6
+        );
+
+      const current = balanceMap.get(denomination) || { totalBalance: 0 };
+      balanceMap.set(denomination, {
+        totalBalance: current.totalBalance + balanceNum,
       });
     });
 
@@ -36,9 +86,11 @@ export default function AssetsScreen() {
         const config = assetConfig[denomination];
         if (!config) return null;
 
+        const availableNetworks = filterNetworksByMode(config.supportedNetworks, networkMode);
+        if (availableNetworks.length === 0) return null;
+
         const symbol = getDisplaySymbol(denomination);
 
-        // Calculate fiat value using pricing service
         const fiatValue = await pricingService.getFiatValue(
           totalBalance,
           denomination as AssetTicker,
@@ -58,22 +110,18 @@ export default function AssetsScreen() {
       }
     );
 
-    // Convert to Asset array with real data and calculate fiat values
     const assetList = (await Promise.all(promises)).filter(Boolean) as Asset[];
 
-    // Sort by USD value descending
     return assetList.sort((a, b) => {
       return b.fiatValue - a.fiatValue;
     });
   };
 
   const handleAssetPress = (asset: Asset) => {
-    if (!wallet?.id) return;
-
     router.push({
       pathname: '/token-details',
       params: {
-        walletId: wallet.id,
+        walletId: 'default',
         token: asset.id,
       },
     });
@@ -82,20 +130,19 @@ export default function AssetsScreen() {
   useEffect(() => {
     getAssetsWithFiatValue().then(setAssets);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [balances.list]);
+  }, [balanceResults, networkMode]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <Header isLoading={balances.isLoading} title="Your Assets" />
+      <Header isLoading={isLoading} title="Your Assets" />
 
-      {/* Assets List */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {assets.length > 0 ? (
-          assets.map(asset => (
+          assets.map((asset) => (
             <TouchableOpacity
               key={asset.id}
               style={styles.assetRow}
@@ -184,9 +231,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text,
     marginBottom: 4,
-  },
-  assetChange: {
-    fontSize: 14,
   },
   assetBalance: {
     alignItems: 'flex-end',

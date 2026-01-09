@@ -1,14 +1,14 @@
-import {
-  AssetTicker,
-  useWallet,
-  WDKService,
-  NetworkType,
-} from '@tetherto/wdk-react-native-provider';
+import { AssetTicker } from '@/config/assets';
+import { NetworkType, networkConfigs } from '@/config/networks';
+import { useRefreshBalance, useWallet, useWalletManager } from '@tetherto/wdk-react-native-core';
+import getTokenConfigs from '@/config/get-token-configs';
 import { CryptoAddressInput } from '@tetherto/wdk-uikit-react-native';
 import { useLocalSearchParams } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { RefreshCw } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { getNetworkMode, NetworkMode } from '@/services/network-mode-service';
 import { FiatCurrency, pricingService } from '@/services/pricing-service';
 import { useKeyboard } from '@/hooks/use-keyboard';
 import { colors } from '@/constants/colors';
@@ -19,9 +19,11 @@ import {
   type GasFeeEstimate,
 } from '@/utils/gas-fee-calculator';
 import {
+  ActivityIndicator,
   Alert,
   Keyboard,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   ScrollView,
@@ -45,8 +47,28 @@ import { useDebouncedCallback } from '@/hooks/use-debounced-callback';
 export default function SendDetailsScreen() {
   const insets = useSafeAreaInsets();
   const router = useDebouncedNavigation();
-  const { refreshWalletBalance } = useWallet();
+  const { mutate: refreshBalance } = useRefreshBalance();
+  const { wallets, activeWalletId } = useWalletManager();
+  const currentWalletId = activeWalletId || wallets[0]?.identifier || 'default';
+  const { callAccountMethod, isInitialized, addresses } = useWallet({ walletId: currentWalletId });
   const params = useLocalSearchParams();
+
+  const [networkMode, setNetworkMode] = useState<NetworkMode>('mainnet');
+  const [networkModeLoaded, setNetworkModeLoaded] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      getNetworkMode().then((mode) => {
+        setNetworkMode(mode);
+        setNetworkModeLoaded(true);
+      });
+    }, [])
+  );
+
+  const tokenConfigs = useMemo(() => {
+    if (!networkModeLoaded) return {};
+    return getTokenConfigs(networkMode);
+  }, [networkMode, networkModeLoaded]);
   const scrollViewRef = useRef<ScrollView>(null);
   const amountSectionYPosition = useRef<number>(0);
   const {
@@ -214,7 +236,7 @@ export default function SendDetailsScreen() {
       if (!isBtc || (isBtc && amount && parseFloat(amount) > 0)) {
         handleCalculateGasFee(false, amount);
       }
-    }, 30000); // 30 seconds
+    }, 60000);
 
     return () => clearInterval(interval);
   }, [tokenId, handleCalculateGasFee, amount]);
@@ -377,25 +399,104 @@ export default function SendDetailsScreen() {
     setTransactionResult(null);
 
     try {
-      const networkType = getNetworkType(networkId);
-      const assetTicker = getAssetTicker(tokenId);
-
-      // Convert fiat to token amount if in fiat mode
       let numericAmount = parseFloat(amount);
       if (inputMode === 'fiat' && tokenPrice > 0) {
         numericAmount = numericAmount / tokenPrice;
       }
 
-      const sendResult = await WDKService.sendByNetwork(
-        networkType,
-        0, // account index
-        numericAmount,
-        recipientAddress,
-        assetTicker
+      // Get token configuration for this network
+      const networkTokenConfig = tokenConfigs[networkId];
+      let tokenAddress: string | null = null;
+      let decimals = 18;
+
+      if (!isInitialized) {
+        Alert.alert('Error', 'Wallet not ready. Please wait and try again.');
+        setSendingTransaction(false);
+        return;
+      }
+
+      if (!addresses?.[networkId]?.[0]) {
+        Alert.alert('Error', `No address found for network ${networkId}. Please wait for wallet to initialize.`);
+        setSendingTransaction(false);
+        return;
+      }
+
+      // Check if it's a native token or ERC20 token
+      if (networkTokenConfig) {
+        const isNativeToken = networkTokenConfig.native.symbol.toLowerCase() === tokenId.toLowerCase();
+        if (isNativeToken) {
+          tokenAddress = null;
+          decimals = networkTokenConfig.native.decimals;
+        } else {
+          const tokenConfig = networkTokenConfig.tokens.find(
+            (t) => t.symbol.toLowerCase() === tokenId.toLowerCase()
+          );
+          if (tokenConfig) {
+            tokenAddress = tokenConfig.address;
+            decimals = tokenConfig.decimals;
+          }
+        }
+      }
+
+      const amountStr = numericAmount.toFixed(decimals);
+      const [intPart, decPart = ''] = amountStr.split('.');
+      const paddedDecimal = decPart.padEnd(decimals, '0').slice(0, decimals);
+      const amountInSmallestUnit = BigInt(intPart + paddedDecimal);
+
+      if (amountInSmallestUnit <= 0n) {
+        Alert.alert('Error', 'Amount must be greater than 0');
+        setSendingTransaction(false);
+        return;
+      }
+
+      const tokenContractAddress = tokenAddress || '0x0000000000000000000000000000000000000000';
+
+      let transferParams: Record<string, unknown>;
+
+      if (networkId === 'spark') {
+        // Spark WDK: sendTransaction({ to, value }) for native BTC
+        transferParams = {
+          to: recipientAddress,
+          value: Number(amountInSmallestUnit),
+        };
+
+        const result = await callAccountMethod<{ fee: string; hash: string }>(
+          networkId,
+          0,
+          'sendTransaction',
+          transferParams
+        );
+        setTransactionResult({ txId: result });
+        setShowConfirmation(true);
+        toast.success('Transaction sent successfully!');
+        return;
+      } else {
+        const maxFeeByNetwork: Record<string, number> = {
+          ethereum: 2000000,  // 2 USDT for Ethereum mainnet (higher gas)
+          arbitrum: 500000,   // 0.5 USDT for Arbitrum
+          polygon: 500000,    // 0.5 USDT for Polygon
+          sepolia: 500000,    // 0.5 USDT for Sepolia testnet
+          plasma: 500000,     // 0.5 USDT for Plasma
+        };
+
+        transferParams = {
+          token: tokenContractAddress,
+          recipient: recipientAddress,
+          amount: Number(amountInSmallestUnit),
+          transferMaxFee: maxFeeByNetwork[networkId] || 500000,
+        };
+      }
+
+      const result = await callAccountMethod<{ fee: string; hash: string }>(
+        networkId,
+        0,
+        'transfer',
+        transferParams
       );
 
-      setTransactionResult({ txId: sendResult });
+      setTransactionResult({ txId: result });
       setShowConfirmation(true);
+      toast.success('Transaction sent successfully!');
     } catch (error) {
       console.error('Transaction failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Transaction failed';
@@ -405,17 +506,23 @@ export default function SendDetailsScreen() {
       setTransactionResult({ error: errorMessage });
     } finally {
       setSendingTransaction(false);
-      refreshWalletBalance();
+      refreshBalance({ accountIndex: 0, type: 'wallet' });
     }
   }, [
     validateTransaction,
     amount,
     recipientAddress,
-    networkId,
-    tokenId,
-    refreshWalletBalance,
+    tokenSymbol,
+    refreshBalance,
     inputMode,
     tokenPrice,
+    networkId,
+    tokenId,
+    tokenConfigs,
+    callAccountMethod,
+    isInitialized,
+    addresses,
+    currentWalletId,
   ]);
 
   const handleConfirmSend = useCallback(async () => {
@@ -437,9 +544,44 @@ export default function SendDetailsScreen() {
     const fee = transactionResult.txId?.fee;
     if (!fee) return formatTokenAmount(0, token);
 
-    const value = Number(fee) / WDKService.getDenominationValue(token);
+    const denominationValues: Record<string, number> = {
+      btc: 1e8,
+      usdt: 1e6,
+      xaut: 1e6,
+    };
+    const denomValue = denominationValues[token.toLowerCase()] || 1e18;
+    const value = Number(fee) / denomValue;
     return formatTokenAmount(value, token);
   };
+
+  const getExplorerUrl = (hash: string, network: string): string | null => {
+    const networkConfig = networkConfigs[network as NetworkType];
+    if (!networkConfig) return null;
+
+    if (networkConfig.userOpExplorerUrl) {
+      return `${networkConfig.userOpExplorerUrl}${hash}`;
+    }
+
+    if (networkConfig.explorerUrl) {
+      if (network === 'spark') {
+        const sparkNetwork = networkMode === 'testnet' ? 'regtest' : 'mainnet';
+        return `${networkConfig.explorerUrl}${hash}?network=${sparkNetwork}`;
+      }
+      return `${networkConfig.explorerUrl}${hash}`;
+    }
+
+    return null;
+  };
+
+  const handleOpenExplorer = useCallback(() => {
+    const hash = transactionResult?.txId?.hash;
+    if (!hash) return;
+
+    const url = getExplorerUrl(hash, networkId);
+    if (url) {
+      Linking.openURL(url);
+    }
+  }, [transactionResult, networkId]);
 
   const getTransactionAmout = useCallback(() => {
     const numericAmount = parseFloat(amount.replace(/,/g, ''));
@@ -486,7 +628,12 @@ export default function SendDetailsScreen() {
                 <View style={styles.recapDivider} />
                 <View style={styles.recapRow}>
                   <Text style={styles.recapLabel}>Network:</Text>
-                  <Text style={styles.recapValue}>{networkName}</Text>
+                  <Text style={styles.recapValue}>
+                    {networkName}
+                    {networkConfigs[networkId as NetworkType]?.accountType === 'Safe' && (
+                      <Text style={styles.recapValueSecondary}> (Safe)</Text>
+                    )}
+                  </Text>
                 </View>
               </View>
 
@@ -589,11 +736,15 @@ export default function SendDetailsScreen() {
                 onPress={handleSend}
                 disabled={isSendDisabled}
               >
-                <Text
-                  style={[styles.sendButtonText, isSendDisabled && styles.sendButtonTextDisabled]}
-                >
-                  {sendingTransaction ? 'Sending...' : 'Send'}
-                </Text>
+                {sendingTransaction ? (
+                  <ActivityIndicator size="small" color={colors.text} />
+                ) : (
+                  <Text
+                    style={[styles.sendButtonText, isSendDisabled && styles.sendButtonTextDisabled]}
+                  >
+                    Send
+                  </Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -613,6 +764,20 @@ export default function SendDetailsScreen() {
             <Text style={styles.modalDescription}>
               Your transaction has been submitted and is now processing.
             </Text>
+
+            {transactionResult?.txId?.hash && (
+              <TouchableOpacity onPress={handleOpenExplorer} style={styles.txHashContainer}>
+                <Text style={styles.txHashLabel}>
+                  {networkConfigs[networkId as NetworkType]?.userOpExplorerUrl
+                    ? 'UserOperation Hash:'
+                    : 'Transaction Hash:'}
+                </Text>
+                <Text style={styles.txHashValue} numberOfLines={1} ellipsizeMode="middle">
+                  {transactionResult.txId.hash}
+                </Text>
+                <Text style={styles.txHashLink}>View on Explorer</Text>
+              </TouchableOpacity>
+            )}
 
             {transactionResult?.txId && (
               <View style={styles.transactionSummary}>
@@ -637,7 +802,9 @@ export default function SendDetailsScreen() {
 
             <View style={styles.transactionSummary}>
               <Text style={styles.summaryLabel}>Network:</Text>
-              <Text style={styles.summaryValue}>{networkName}</Text>
+              <Text style={styles.summaryValue}>
+                {networkName}{networkConfigs[networkId as NetworkType]?.accountType === 'Safe' ? ' (Safe)' : ''}
+              </Text>
             </View>
 
             <TouchableOpacity style={styles.modalButton} onPress={handleConfirmSend}>
@@ -855,6 +1022,28 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'right',
     marginLeft: 12,
+  },
+  txHashContainer: {
+    backgroundColor: colors.cardDark,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+  },
+  txHashLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
+  txHashValue: {
+    fontSize: 13,
+    color: colors.text,
+    fontFamily: 'monospace',
+    marginBottom: 8,
+  },
+  txHashLink: {
+    fontSize: 14,
+    color: colors.primary,
+    fontWeight: '500',
   },
   transactionRecap: {
     backgroundColor: colors.card,

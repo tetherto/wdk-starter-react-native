@@ -8,7 +8,7 @@ import { useCallback, useEffect, useRef } from 'react';
 export function useDebouncedNavigation(delay = 300) {
   const router = useRouter();
   const isNavigatingRef = useRef(false);
-  const timeoutIdsRef = useRef<Set<number>>(new Set());
+  const timeoutIdsRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 
   useEffect(() => {
     const refs = timeoutIdsRef.current;

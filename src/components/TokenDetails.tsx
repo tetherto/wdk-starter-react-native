@@ -1,8 +1,8 @@
-import { networkConfigs } from '@/config/networks';
+import { networkConfigs, NetworkType } from '@/config/networks';
+import { AssetTicker } from '@/config/assets';
 import formatAmount from '@/utils/format-amount';
 import formatTokenAmount from '@/utils/format-token-amount';
 import formatUSDValue from '@/utils/format-usd-value';
-import { AssetTicker, NetworkType } from '@tetherto/wdk-react-native-provider';
 import { Send } from 'lucide-react-native';
 import React from 'react';
 import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -36,7 +36,7 @@ export function TokenDetails({ tokenData, onSendPress }: TokenDetailsProps) {
     if (onSendPress) {
       onSendPress(network);
     } else {
-      const networkName = network ? networkConfigs[network].name || network : 'any network';
+      const networkName = network ? networkConfigs[network]?.name || network : 'any network';
       Alert.alert('Send Token', `Send ${tokenData.symbol} on ${networkName}`);
     }
   };
@@ -83,7 +83,12 @@ export function TokenDetails({ tokenData, onSendPress }: TokenDetailsProps) {
                       />
                     </View>
                     <View style={styles.networkDetails}>
-                      <Text style={styles.networkName}>{networkName}</Text>
+                      <View style={styles.networkNameRow}>
+                        <Text style={styles.networkName}>{networkName}</Text>
+                        {networkConfigs[item.network as NetworkType]?.accountType === 'Safe' && (
+                          <Text style={styles.accountTypeTag}>Safe</Text>
+                        )}
+                      </View>
                       <Text style={styles.networkAddress}>
                         {item.address
                           ? `${item.address.slice(0, 6)}...${item.address.slice(-4)}`
@@ -210,11 +215,25 @@ const styles = StyleSheet.create({
   networkDetails: {
     flex: 1,
   },
+  networkNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
   networkName: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.text,
-    marginBottom: 2,
+  },
+  accountTypeTag: {
+    fontSize: 10,
+    color: colors.textSecondary,
+    marginLeft: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    backgroundColor: colors.border,
+    borderRadius: 4,
+    overflow: 'hidden',
   },
   networkAddress: {
     fontSize: 12,

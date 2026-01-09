@@ -1,6 +1,6 @@
 import { BitfinexPricingClient } from '@tetherto/wdk-pricing-bitfinex-http';
 import { PricingProvider } from '@tetherto/wdk-pricing-provider';
-import { AssetTicker } from '@tetherto/wdk-react-native-provider';
+import { AssetTicker } from '@/config/assets';
 import DecimalJS from 'decimal.js';
 
 export enum FiatCurrency {
@@ -10,7 +10,7 @@ export enum FiatCurrency {
 class PricingService {
   private static instance: PricingService;
   private provider: PricingProvider | null = null;
-  private fiatExchangeRateCache: Record<FiatCurrency, Record<AssetTicker, number>> | undefined;
+  private fiatExchangeRateCache: Record<FiatCurrency, Record<string, number>> | undefined;
   private isInitialized: boolean = false;
 
   private constructor() {}
@@ -33,12 +33,11 @@ class PricingService {
         priceCacheDurationMs: 1000 * 60 * 60, // 1 hour
       });
 
-      // Fetch and update exchange rate cache
       this.fiatExchangeRateCache = {
         [FiatCurrency.USD]: {
-          [AssetTicker.BTC]: await this.provider.getLastPrice(AssetTicker.BTC, FiatCurrency.USD),
-          [AssetTicker.USDT]: 1,
-          [AssetTicker.XAUT]: await this.provider.getLastPrice(AssetTicker.XAUT, FiatCurrency.USD),
+          btc: await this.provider.getLastPrice('btc', FiatCurrency.USD),
+          usdt: 1,
+          xaut: await this.provider.getLastPrice('xaut', FiatCurrency.USD),
         },
       };
 
@@ -54,7 +53,12 @@ class PricingService {
       throw new Error('Pricing service not initialized. Call initialize() first.');
     }
 
-    return new DecimalJS(value).mul(this.fiatExchangeRateCache[currency][asset]).toNumber();
+    const rate = this.fiatExchangeRateCache[currency][asset];
+    if (rate === undefined) {
+      return 0;
+    }
+
+    return new DecimalJS(value).mul(rate).toNumber();
   }
 
   async refreshExchangeRates(): Promise<void> {
@@ -65,9 +69,9 @@ class PricingService {
     try {
       this.fiatExchangeRateCache = {
         [FiatCurrency.USD]: {
-          [AssetTicker.BTC]: await this.provider.getLastPrice(AssetTicker.BTC, FiatCurrency.USD),
-          [AssetTicker.USDT]: 1,
-          [AssetTicker.XAUT]: await this.provider.getLastPrice(AssetTicker.XAUT, FiatCurrency.USD),
+          btc: await this.provider.getLastPrice('btc', FiatCurrency.USD),
+          usdt: 1,
+          xaut: await this.provider.getLastPrice('xaut', FiatCurrency.USD),
         },
       };
 
