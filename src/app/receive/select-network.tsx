@@ -1,13 +1,16 @@
 import Header from '@/components/header';
 import { assetConfig } from '@/config/assets';
 import { Network, networkConfigs } from '@/config/networks';
-import { NetworkType, useWallet } from '@tetherto/wdk-react-native-provider';
+import { NetworkType } from '@/config/networks';
+import { useWallet, useWalletManager } from '@tetherto/wdk-react-native-core';
 import { useLocalSearchParams } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
-import React, { useCallback, useMemo } from 'react';
-import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
+import { getNetworkMode, filterNetworksByMode, NetworkMode } from '@/services/network-mode-service';
 
 interface NetworkOption extends Network {
   address?: string;
@@ -15,22 +18,21 @@ interface NetworkOption extends Network {
   description?: string;
 }
 
-// Network descriptions for receive flow
-const NETWORK_DESCRIPTIONS = {
-  [NetworkType.ETHEREUM]: 'ERC20',
-  [NetworkType.POLYGON]: 'Polygon Network',
-  [NetworkType.ARBITRUM]: 'Arbitrum One',
-  [NetworkType.TON]: 'TON Network',
-  [NetworkType.TRON]: 'Tron Network',
-  [NetworkType.SOLANA]: 'Solana Network',
-  [NetworkType.BITCOIN]: 'Native Bitcoin Network',
-  [NetworkType.LIGHTNING]: 'Lightning Network',
+const NETWORK_DESCRIPTIONS: Record<string, string> = {
+  ethereum: 'ERC20',
+  polygon: 'Polygon Network',
+  arbitrum: 'Arbitrum One',
+  spark: 'Spark Network',
+  plasma: 'Plasma Network',
+  sepolia: 'Sepolia Testnet',
 };
 
 export default function ReceiveSelectNetworkScreen() {
   const insets = useSafeAreaInsets();
   const router = useDebouncedNavigation();
-  const { addresses } = useWallet();
+  const { wallets, activeWalletId } = useWalletManager();
+  const currentWalletId = activeWalletId || wallets[0]?.identifier || 'default';
+  const { addresses, getAddress } = useWallet({ walletId: currentWalletId });
   const params = useLocalSearchParams();
 
   const { tokenId, tokenSymbol, tokenName } = params as {
@@ -39,29 +41,74 @@ export default function ReceiveSelectNetworkScreen() {
     tokenName: string;
   };
 
-  // Get available networks for the selected token
-  const networks: NetworkOption[] = useMemo(() => {
-    const tokenConfig = assetConfig[tokenId];
-    if (!tokenConfig) {
-      return [];
-    }
+  const [networks, setNetworks] = useState<NetworkOption[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [networkMode, setNetworkMode] = useState<NetworkMode>('mainnet');
 
-    return tokenConfig.supportedNetworks.map(networkType => {
-      const network = networkConfigs[networkType];
-      const address = addresses?.[network.id as NetworkType];
-      return {
-        ...network,
-        address,
-        hasAddress: Boolean(address),
-        description: NETWORK_DESCRIPTIONS[network.id as NetworkType],
-      };
-    });
-  }, [tokenId, addresses]);
+  // Load network mode on focus to pick up changes from settings
+  useFocusEffect(
+    useCallback(() => {
+      getNetworkMode().then(setNetworkMode);
+    }, [])
+  );
+
+  useEffect(() => {
+    const fetchNetworks = async () => {
+      const tokenConfig = assetConfig[tokenId as keyof typeof assetConfig];
+      if (!tokenConfig) {
+        setNetworks([]);
+        setIsLoading(false);
+        return;
+      }
+
+      const filteredNetworks = filterNetworksByMode(tokenConfig.supportedNetworks, networkMode);
+
+      const networksWithAddresses = await Promise.all(
+        filteredNetworks.map(async (networkType: NetworkType) => {
+          const network = networkConfigs[networkType];
+          let address: string | undefined;
+
+          const addressData = addresses?.[networkType];
+          if (Array.isArray(addressData) && addressData[0]) {
+            address = addressData[0];
+          } else if (typeof addressData === 'string') {
+            address = addressData;
+          } else {
+            try {
+              const fetchedAddress = await getAddress(networkType, 0);
+              if (fetchedAddress) {
+                address = fetchedAddress;
+              }
+            } catch (err) {
+              console.log(`Failed to get address for ${networkType}:`, err);
+            }
+          }
+
+          const displayName = network.id === 'spark' && networkMode === 'testnet'
+            ? 'Spark Regtest'
+            : network.name;
+
+          return {
+            ...network,
+            name: displayName,
+            address,
+            hasAddress: Boolean(address),
+            description: NETWORK_DESCRIPTIONS[network.id],
+          };
+        })
+      );
+
+      setNetworks(networksWithAddresses);
+      setIsLoading(false);
+    };
+
+    fetchNetworks();
+  }, [tokenId, addresses, getAddress, networkMode]);
 
   const handleSelectNetwork = useCallback(
     (network: NetworkOption) => {
       if (!network.hasAddress) {
-        return; // Don't allow selection if no address available
+        return;
       }
 
       router.push({
@@ -109,9 +156,14 @@ export default function ReceiveSelectNetworkScreen() {
             )}
           </View>
           <View style={styles.networkDetails}>
-            <Text style={[styles.networkName, isDisabled && styles.networkNameDisabled]}>
-              {item.name}
-            </Text>
+            <View style={styles.networkNameRow}>
+              <Text style={[styles.networkName, isDisabled && styles.networkNameDisabled]}>
+                {item.name}
+              </Text>
+              {item.accountType === 'Safe' && (
+                <Text style={styles.accountTypeTag}>Safe</Text>
+              )}
+            </View>
             {item.description && (
               <Text
                 style={[styles.networkDescription, isDisabled && styles.networkDescriptionDisabled]}
@@ -125,6 +177,18 @@ export default function ReceiveSelectNetworkScreen() {
       </TouchableOpacity>
     );
   };
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <Header title="Select network" style={styles.header} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Loading networks...</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -155,6 +219,16 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    color: colors.textSecondary,
+    fontSize: 14,
   },
   description: {
     paddingHorizontal: 20,
@@ -210,14 +284,28 @@ const styles = StyleSheet.create({
   networkDetails: {
     flex: 1,
   },
+  networkNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   networkName: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.text,
-    marginBottom: 4,
   },
   networkNameDisabled: {
     color: colors.textTertiary,
+  },
+  accountTypeTag: {
+    fontSize: 10,
+    color: colors.textSecondary,
+    marginLeft: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    backgroundColor: colors.border,
+    borderRadius: 4,
+    overflow: 'hidden',
   },
   networkDescription: {
     fontSize: 14,

@@ -19,6 +19,7 @@ export interface Network {
   balanceFiat: string;
   fiatCurrency: string;
   token: string;
+  accountType?: 'Safe' | 'Native'; // Safe for ERC-4337, Native for Spark
 }
 
 export function NetworkSelector({ networks, onSelectNetwork }: NetworkSelectorProps) {
@@ -90,11 +91,25 @@ export function NetworkSelector({ networks, onSelectNetwork }: NetworkSelectorPr
         networkTextContainer: {
           flex: 1,
         },
+        networkNameRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          marginBottom: 2,
+        },
         networkName: {
           fontSize: theme.typography.fontSize.md,
           fontWeight: theme.typography.fontWeight.medium,
           color: theme.colors.text,
-          marginBottom: 2,
+        },
+        accountTypeTag: {
+          fontSize: 9,
+          color: theme.colors.textSecondary,
+          marginLeft: 6,
+          paddingHorizontal: 4,
+          paddingVertical: 1,
+          backgroundColor: theme.colors.surfaceElevated,
+          borderRadius: 3,
+          overflow: 'hidden',
         },
         gasLevel: {
           fontSize: theme.typography.fontSize.sm,
@@ -153,7 +168,12 @@ export function NetworkSelector({ networks, onSelectNetwork }: NetworkSelectorPr
             )}
           </View>
           <View style={styles.networkTextContainer}>
-            <Text style={styles.networkName}>{item.name}</Text>
+            <View style={styles.networkNameRow}>
+              <Text style={styles.networkName}>{item.name}</Text>
+              {item.accountType === 'Safe' && (
+                <Text style={styles.accountTypeTag}>Safe</Text>
+              )}
+            </View>
             <Text style={[styles.gasLevel, { color: item.gasColor }]}>
               {item.gasLevel} Gas fees
             </Text>

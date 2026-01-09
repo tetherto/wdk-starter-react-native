@@ -1,6 +1,6 @@
-import avatarOptions, { setAvatar } from '@/config/avatar-options';
+import avatarOptions, { setAvatar, setWalletName as saveWalletName } from '@/config/avatar-options';
 import { CommonActions, useNavigation } from '@react-navigation/native';
-import { useWallet } from '@tetherto/wdk-react-native-provider';
+import { useWalletManager } from '@tetherto/wdk-react-native-core';
 import { useLocalSearchParams } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { ChevronLeft } from 'lucide-react-native';
@@ -26,12 +26,11 @@ export default function ImportNameWalletScreen() {
   const navigation = useNavigation();
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
-  const { createWallet } = useWallet();
+  const { initializeFromMnemonic } = useWalletManager();
   const [walletName, setWalletName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState(avatarOptions[0]);
   const [isImporting, setIsImporting] = useState(false);
 
-  // Get the seed phrase from navigation params
   const seedPhrase = params.seedPhrase ? decodeURIComponent(params.seedPhrase as string) : '';
 
   const handleNext = async () => {
@@ -43,9 +42,9 @@ export default function ImportNameWalletScreen() {
     setIsImporting(true);
 
     try {
-      // Use the context's createWallet method which handles everything including unlocking
-      await createWallet({ name: walletName, mnemonic: seedPhrase });
+      await initializeFromMnemonic(seedPhrase, 'default');
       await setAvatar(selectedAvatar.id);
+      await saveWalletName(walletName || 'My Wallet');
 
       toast.success('Your wallet has been imported successfully.');
 

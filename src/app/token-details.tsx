@@ -1,23 +1,50 @@
-import { assetConfig } from '@/config/assets';
+import { assetConfig, AssetTicker } from '@/config/assets';
+import { NetworkType, networkConfigs } from '@/config/networks';
 import formatAmount from '@/utils/format-amount';
-import { AssetTicker, NetworkType, useWallet } from '@tetherto/wdk-react-native-provider';
+import { useWallet, useWalletManager, useBalancesForWallet } from '@tetherto/wdk-react-native-core';
 import { useLocalSearchParams } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TokenDetails } from '../components/TokenDetails';
 import { FiatCurrency, pricingService } from '../services/pricing-service';
-import { networkConfigs } from '@/config/networks';
+import getTokenConfigs from '../config/get-token-configs';
 import getDisplaySymbol from '@/utils/get-display-symbol';
 import Header from '@/components/header';
 import { colors } from '@/constants/colors';
+import { getNetworkMode, NetworkMode } from '@/services/network-mode-service';
 
 export default function TokenDetailsScreen() {
   const router = useDebouncedNavigation();
   const insets = useSafeAreaInsets();
-  const { wallet, balances, addresses } = useWallet();
+  const { wallets, activeWalletId } = useWalletManager();
+  const currentWalletId = activeWalletId || wallets[0]?.identifier;
+  const { isInitialized, addresses } = useWallet({ walletId: currentWalletId });
   const params = useLocalSearchParams<{ walletId?: string; token?: string }>();
+
+  const [networkMode, setNetworkMode] = useState<NetworkMode>('mainnet');
+  const [networkModeLoaded, setNetworkModeLoaded] = useState(false);
+
+  // Load network mode on focus to pick up changes from settings
+  useFocusEffect(
+    useCallback(() => {
+      getNetworkMode().then((mode) => {
+        setNetworkMode(mode);
+        setNetworkModeLoaded(true);
+      });
+    }, [])
+  );
+
+  const tokenConfigs = useMemo(() => {
+    if (!networkModeLoaded) return {};
+    return getTokenConfigs(networkMode);
+  }, [networkMode, networkModeLoaded]);
+
+  const { data: balanceResults, isLoading } = useBalancesForWallet(0, tokenConfigs, {
+    enabled: isInitialized && networkModeLoaded && Object.keys(tokenConfigs).length > 0,
+  });
 
   const tokenSymbol = params.token?.toLowerCase() as keyof typeof assetConfig;
   const tokenConfig = tokenSymbol ? assetConfig[tokenSymbol] : null;
@@ -38,48 +65,72 @@ export default function TokenDetailsScreen() {
     priceUSD: number;
   } | null>(null);
 
-  // Calculate token balances from wallet data with async pricing
   useEffect(() => {
     const calculateTokenData = async () => {
-      if (!balances.list || !tokenSymbol || !tokenConfig) {
+      if (!balanceResults || !tokenSymbol || !tokenConfig) {
         setTokenData(null);
         return;
       }
 
-      // Filter balances for this specific token
-      const tokenBalances = balances.list.filter(balance => balance.denomination === tokenSymbol);
+      const networkBalancesMap = new Map<string, { balance: number; address: string }>();
 
-      // Calculate total balance and network breakdown with fiat values
-      let totalBalance = 0;
-      const networkBalancesPromises = tokenBalances.map(async balance => {
-        const amount = parseFloat(balance.value);
-        totalBalance += amount;
+      balanceResults.forEach((result) => {
+        if (!result.success || !result.balance) return;
 
-        // Calculate fiat value using pricing service
-        const usdValue = await pricingService.getFiatValue(
-          amount,
-          tokenSymbol as AssetTicker,
-          FiatCurrency.USD
-        );
+        const networkTokens = tokenConfigs[result.network];
+        if (!networkTokens) return;
 
-        return {
-          network: balance.networkType,
-          balance: amount,
-          usdValue,
-          address: addresses?.[balance.networkType] || '',
-        };
+        let matchedSymbol = '';
+        let decimals = 18;
+
+        if (result.tokenAddress === null) {
+          matchedSymbol = networkTokens.native.symbol.toLowerCase();
+          decimals = networkTokens.native.decimals;
+        } else {
+          const token = networkTokens.tokens.find((t) => t.address?.toLowerCase() === result.tokenAddress?.toLowerCase());
+          if (token) {
+            matchedSymbol = token.symbol.toLowerCase();
+            decimals = token.decimals;
+          }
+        }
+
+        if (matchedSymbol !== tokenSymbol) return;
+
+        const balanceNum = parseFloat(result.balance) / Math.pow(10, decimals);
+
+        const addressData = addresses?.[result.network];
+        const addressStr =
+          addressData && typeof addressData === 'object' && 'address' in addressData
+            ? (addressData as { address: string }).address
+            : typeof addressData === 'string'
+              ? addressData
+              : '';
+
+        const current = networkBalancesMap.get(result.network) || { balance: 0, address: addressStr };
+        networkBalancesMap.set(result.network, {
+          balance: current.balance + balanceNum,
+          address: addressStr,
+        });
       });
 
+      let totalBalance = 0;
+      const networkBalancesPromises = Array.from(networkBalancesMap.entries()).map(
+        async ([network, { balance, address }]) => {
+          totalBalance += balance;
+          const usdValue = await pricingService.getFiatValue(
+            balance,
+            tokenSymbol as AssetTicker,
+            FiatCurrency.USD
+          );
+          return { network, balance, usdValue, address };
+        }
+      );
+
       const networkBalances = (await Promise.all(networkBalancesPromises)).filter(
-        item => item.balance > 0
+        (item) => item.balance > 0
       );
 
-      const tokenPrice = await pricingService.getFiatValue(
-        1,
-        tokenSymbol as AssetTicker,
-        FiatCurrency.USD
-      );
-
+      const tokenPrice = await pricingService.getFiatValue(1, tokenSymbol as AssetTicker, FiatCurrency.USD);
       const totalUSDValue = await pricingService.getFiatValue(
         totalBalance,
         tokenSymbol as AssetTicker,
@@ -87,7 +138,7 @@ export default function TokenDetailsScreen() {
       );
 
       setTokenData({
-        symbol: getDisplaySymbol(tokenSymbol) as AssetTicker,
+        symbol: getDisplaySymbol(tokenSymbol),
         name: tokenConfig.name,
         icon: tokenConfig.icon,
         color: tokenConfig.color,
@@ -99,19 +150,16 @@ export default function TokenDetailsScreen() {
     };
 
     calculateTokenData();
-  }, [balances, tokenSymbol, tokenConfig, addresses]);
+  }, [balanceResults, tokenSymbol, tokenConfig, addresses, tokenConfigs]);
 
   const handleSendToken = (network?: NetworkType) => {
     if (!tokenData || !network) return;
 
-    // Find the specific network balance
-    const networkBalance = tokenData.networkBalances.find(nb => nb.network === network);
+    const networkBalance = tokenData.networkBalances.find((nb) => nb.network === network);
     if (!networkBalance) return;
 
-    // Capitalize network name (e.g., "polygon" -> "Polygon")
-    const networkName = networkConfigs[network].name;
+    const networkName = networkConfigs[network]?.name || network;
 
-    // Navigate to send details screen with all required params
     router.push({
       pathname: '/send/details',
       params: {
@@ -126,21 +174,10 @@ export default function TokenDetailsScreen() {
     });
   };
 
-  if (!params.walletId || !wallet) {
-    return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <Header isLoading={balances.isLoading} title="Token Details" />
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Wallet not found</Text>
-        </View>
-      </View>
-    );
-  }
-
   if (!tokenData || !tokenConfig) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
-        <Header isLoading={balances.isLoading} title="Token Details" />
+        <Header isLoading={isLoading} title="Token Details" />
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Token not found or not supported</Text>
         </View>
@@ -150,7 +187,7 @@ export default function TokenDetailsScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <Header isLoading={balances.isLoading} title={`${tokenData.name} Details`} />
+      <Header isLoading={isLoading} title={`${tokenData.name} Details`} />
       <TokenDetails tokenData={tokenData} onSendPress={handleSendToken} />
     </View>
   );

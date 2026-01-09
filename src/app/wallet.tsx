@@ -1,7 +1,8 @@
 import { BalanceLoader } from '@/components/BalanceLoader';
-import { AssetTicker, useWallet } from '@tetherto/wdk-react-native-provider';
+import { useWallet, useWalletManager, useBalancesForWallet, useRefreshBalance } from '@tetherto/wdk-react-native-core';
 import { Balance } from '@tetherto/wdk-uikit-react-native';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
+import { useFocusEffect } from 'expo-router';
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -11,7 +12,7 @@ import {
   Shield,
   Star,
 } from 'lucide-react-native';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -25,13 +26,15 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AssetConfig, assetConfig } from '../config/assets';
+import { AssetConfig, assetConfig, AssetTicker } from '../config/assets';
+import getTokenConfigs from '../config/get-token-configs';
 import { FiatCurrency, pricingService } from '../services/pricing-service';
+import { getNetworkMode, NetworkMode } from '../services/network-mode-service';
 import formatAmount from '@/utils/format-amount';
 import formatTokenAmount from '@/utils/format-token-amount';
-import formatUSDValue from '@/utils/format-usd-value';
 import useWalletAvatar from '@/hooks/use-wallet-avatar';
 import { colors } from '@/constants/colors';
+import { getWalletName } from '@/config/avatar-options';
 
 type AggregatedBalance = ({
   denomination: string;
@@ -40,59 +43,89 @@ type AggregatedBalance = ({
   config: AssetConfig;
 } | null)[];
 
-type Transaction = {
-  id: number;
-  type: string;
-  asset: string;
-  token: string;
-  amount: string;
-  icon: any;
-  iconColor: string;
-  blockchain: string;
-  hash: string;
-  fiatAmount: number;
-  currency: FiatCurrency;
-};
-
 export default function WalletScreen() {
   const insets = useSafeAreaInsets();
   const router = useDebouncedNavigation();
-  const {
-    wallet,
-    isLoading,
-    isUnlocked,
-    refreshWalletBalance,
-    balances,
-    addresses,
-    transactions: walletTransactions,
-  } = useWallet();
+  const { wallets, activeWalletId } = useWalletManager();
+  const currentWalletId = activeWalletId || wallets[0]?.identifier || 'default';
+  const { isInitialized, addresses } = useWallet({ walletId: currentWalletId });
+  const { mutate: refreshBalance } = useRefreshBalance();
+
+  const [networkMode, setNetworkMode] = useState<NetworkMode | null>(null);
+  const [networkModeLoaded, setNetworkModeLoaded] = useState(false);
+
+  // Load network mode on mount and when screen gains focus (after settings change)
+  useFocusEffect(
+    useCallback(() => {
+      getNetworkMode().then((mode) => {
+        setNetworkMode(mode);
+        setNetworkModeLoaded(true);
+      });
+    }, [])
+  );
+
+  const tokenConfigs = useMemo(() => {
+    if (!networkModeLoaded) {
+      return {} as ReturnType<typeof getTokenConfigs>;
+    }
+    return getTokenConfigs(networkMode!);
+  }, [networkMode, networkModeLoaded]);
+
+  const { data: balanceResults, isLoading: isLoadingBalances, refetch } = useBalancesForWallet(
+    0,
+    tokenConfigs,
+    { enabled: isInitialized && networkModeLoaded && Object.keys(tokenConfigs).length > 0 }
+  );
+
   const [refreshing, setRefreshing] = useState(false);
   const [aggregatedBalances, setAggregatedBalances] = useState<AggregatedBalance>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [mounted, setMounted] = useState(false);
+  const [walletDisplayName, setWalletDisplayName] = useState('My Wallet');
+  const walletExists = isInitialized || Object.keys(addresses).length > 0;
   const avatar = useWalletAvatar();
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  const hasWallet = !!wallet;
-
-  // Redirect to authorization if wallet is not unlocked
   useEffect(() => {
-    if (hasWallet && !isUnlocked) {
+    getWalletName().then(setWalletDisplayName);
+  }, []);
+
+  useEffect(() => {
+    if (!isInitialized) {
       router.replace('/authorize');
     }
-  }, [hasWallet, isUnlocked, router]);
+  }, [isInitialized, router]);
 
-  // Calculate aggregated balances by denomination
   const getAggregatedBalances = async () => {
-    if (!balances) return [];
+    if (!balanceResults) return [];
 
     const map = new Map<string, { totalBalance: number }>();
 
-    // Sum up balances by denomination across all networks
-    balances.list.forEach((balance) => {
-      const current = map.get(balance.denomination) || { totalBalance: 0 };
-      map.set(balance.denomination, {
-        totalBalance: current.totalBalance + parseFloat(balance.value),
+    balanceResults.forEach((result) => {
+      if (!result.success || !result.balance) return;
+
+      const tokenAddress = result.tokenAddress;
+      let denomination = 'unknown';
+
+      const networkTokens = tokenConfigs[result.network];
+      if (networkTokens) {
+        if (tokenAddress === null) {
+          denomination = networkTokens.native.symbol.toLowerCase();
+        } else {
+          const token = networkTokens.tokens.find(t => t.address?.toLowerCase() === tokenAddress?.toLowerCase());
+          if (token) {
+            denomination = token.symbol.toLowerCase();
+          }
+        }
+      }
+
+      const balanceNum = parseFloat(result.balance) / Math.pow(10,
+        tokenAddress === null ? networkTokens?.native.decimals || 18 :
+        networkTokens?.tokens.find(t => t.address?.toLowerCase() === tokenAddress?.toLowerCase())?.decimals || 6
+      );
+
+      const current = map.get(denomination) || { totalBalance: 0 };
+      map.set(denomination, {
+        totalBalance: current.totalBalance + balanceNum,
       });
     });
 
@@ -100,7 +133,6 @@ export default function WalletScreen() {
       const config = assetConfig[denomination];
       if (!config) return null;
 
-      // Calculate fiat value using pricing service
       const fiatValue = await pricingService.getFiatValue(
         totalBalance,
         denomination as AssetTicker,
@@ -117,16 +149,14 @@ export default function WalletScreen() {
 
     return (await Promise.all(promises))
       .filter(Boolean)
-      .filter((asset) => asset && asset.balance > 0) // Only show tokens with positive balance
-      .sort((a, b) => (b?.usdValue || 0) - (a?.usdValue || 0)); // Sort by USD value descending
+      .filter((asset) => asset && asset.balance > 0)
+      .sort((a, b) => (b?.usdValue || 0) - (a?.usdValue || 0));
   };
 
-  // Calculate total portfolio value
   const totalPortfolioValue = useMemo(() => {
     return aggregatedBalances.reduce((sum, asset) => sum + (asset?.usdValue || 0), 0);
   }, [aggregatedBalances]);
 
-  // Animated border opacity based on scroll position
   const borderOpacity = scrollY.interpolate({
     inputRange: [0, 50],
     outputRange: [0, 1],
@@ -157,51 +187,6 @@ export default function WalletScreen() {
     },
   ];
 
-  // Get real transactions from wallet data
-  const getTransactions = async () => {
-    if (!walletTransactions) return [];
-
-    // Get the wallet's own addresses for comparison
-    const walletAddresses = addresses
-      ? Object.values(addresses).map((addr) => addr?.toLowerCase())
-      : [];
-
-    const result = await Promise.all(
-      walletTransactions.list
-        .sort((a, b) => b.timestamp - a.timestamp)
-        .slice(0, 3)
-        .map(async (tx, index) => {
-          const fromAddress = tx.from?.toLowerCase();
-          const isSent = walletAddresses.includes(fromAddress);
-          const amount = parseFloat(tx.amount);
-          const config = assetConfig[tx.token];
-
-          // Calculate fiat amount using pricing service
-          const fiatAmount = await pricingService.getFiatValue(
-            amount,
-            tx.token as AssetTicker,
-            FiatCurrency.USD
-          );
-
-          return {
-            id: index + 1,
-            type: isSent ? 'sent' : 'received',
-            asset: config?.name || tx.token.toUpperCase(),
-            token: tx.token,
-            amount: `${formatTokenAmount(amount, tx.token as AssetTicker)}`,
-            icon: isSent ? ArrowUpRight : ArrowDownLeft,
-            iconColor: isSent ? colors.danger : colors.success,
-            blockchain: tx.blockchain,
-            hash: tx.transactionHash,
-            fiatAmount: fiatAmount,
-            currency: FiatCurrency.USD,
-          };
-        })
-    );
-
-    return result;
-  };
-
   const handleSendPress = () => {
     router.push('/send/select-token');
   };
@@ -218,10 +203,6 @@ export default function WalletScreen() {
     router.push('/assets');
   };
 
-  const handleSeeAllActivity = () => {
-    router.push('/activity');
-  };
-
   const handleCreateWallet = () => {
     router.push('/wallet-setup/name-wallet');
   };
@@ -231,11 +212,12 @@ export default function WalletScreen() {
   };
 
   const handleRefresh = async () => {
-    if (!wallet) return;
+    if (!walletExists) return;
 
     setRefreshing(true);
     try {
-      await refreshWalletBalance();
+      refreshBalance({ accountIndex: 0, type: 'wallet' });
+      await refetch();
     } catch (error) {
       console.error('Failed to refresh wallet data:', error);
     } finally {
@@ -246,23 +228,38 @@ export default function WalletScreen() {
   useEffect(() => {
     getAggregatedBalances().then(setAggregatedBalances);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [balances]);
+  }, [balanceResults]);
 
-  useEffect(() => {
-    getTransactions().then(setTransactions);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [walletTransactions?.list, addresses]);
-
-  // Force component to fully mount before enabling RefreshControl on iOS
   useEffect(() => {
     requestAnimationFrame(() => {
       setMounted(true);
     });
   }, []);
 
+  // Refresh balances when screen comes into focus (e.g., after sending)
+  useFocusEffect(
+    useCallback(() => {
+      if (isInitialized && networkModeLoaded) {
+        refreshBalance({ accountIndex: 0, type: 'wallet' });
+        refetch();
+      }
+    }, [isInitialized, networkModeLoaded, refreshBalance, refetch])
+  );
+
+  // Auto-refresh balances every 60 seconds
+  useEffect(() => {
+    if (!isInitialized || !networkModeLoaded) return;
+
+    const intervalId = setInterval(() => {
+      refreshBalance({ accountIndex: 0, type: 'wallet' });
+      refetch();
+    }, 60000); // 60 seconds to avoid API rate limits
+
+    return () => clearInterval(intervalId);
+  }, [isInitialized, networkModeLoaded, refreshBalance, refetch]);
+
   return (
     <View style={styles.container}>
-      {/* Header */}
       <Animated.View
         style={[
           styles.header,
@@ -279,7 +276,7 @@ export default function WalletScreen() {
           <View style={styles.walletIcon}>
             <Text style={styles.walletIconText}>{avatar}</Text>
           </View>
-          <Text style={styles.walletName}>{wallet?.name || 'No Wallet'}</Text>
+          <Text style={styles.walletName}>{walletExists ? walletDisplayName : 'No Wallet'}</Text>
         </View>
 
         <View style={styles.headerActions}>
@@ -320,8 +317,7 @@ export default function WalletScreen() {
           )
         }
       >
-        {/* Balance */}
-        {!hasWallet && !isLoading ? (
+        {!walletExists && !isLoadingBalances ? (
           <TouchableOpacity onPress={handleCreateWallet}>
             <Text>Create Your First Wallet</Text>
           </TouchableOpacity>
@@ -337,10 +333,10 @@ export default function WalletScreen() {
             <Balance
               value={totalPortfolioValue}
               currency="USD"
-              isLoading={isLoading}
+              isLoading={isLoadingBalances}
               Loader={BalanceLoader}
             />
-            {balances.isLoading ? (
+            {isLoadingBalances ? (
               <View style={{ top: 16, marginRight: 8 }}>
                 <ActivityIndicator size="small" color={colors.primary} />
               </View>
@@ -348,9 +344,12 @@ export default function WalletScreen() {
           </View>
         )}
 
-        {/* Portfolio */}
         <View style={styles.portfolioSection}>
-          {aggregatedBalances.length > 0 ? (
+          {!networkModeLoaded || isLoadingBalances ? (
+            <View style={styles.noAssetsContainer}>
+              <ActivityIndicator size="small" color={colors.primary} />
+            </View>
+          ) : aggregatedBalances.length > 0 ? (
             aggregatedBalances.map((asset) => {
               if (!asset) return null;
 
@@ -359,11 +358,10 @@ export default function WalletScreen() {
                   key={asset.denomination}
                   style={styles.assetRow}
                   onPress={() => {
-                    if (wallet) {
+                    if (walletExists) {
                       router.push({
                         pathname: '/token-details',
                         params: {
-                          walletId: wallet.id,
                           token: asset.denomination.toUpperCase(),
                         },
                       });
@@ -398,7 +396,6 @@ export default function WalletScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Suggestions */}
         <View style={styles.suggestionsSection}>
           <View style={styles.suggestionsHeader}>
             <Text style={styles.sectionTitle}>Suggestions</Text>
@@ -420,50 +417,19 @@ export default function WalletScreen() {
           </View>
         </View>
 
-        {/* Activity */}
         <View style={styles.activitySection}>
           <View
             style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
           >
             <Text style={styles.sectionTitle}>Activity</Text>
-            {walletTransactions.isLoading ? (
-              <View style={{ marginRight: 8 }}>
-                <ActivityIndicator size="small" color={colors.primary} />
-              </View>
-            ) : null}
           </View>
 
-          {transactions.length > 0 ? (
-            transactions.map((tx) => (
-              <View key={tx.id} style={styles.transactionRow}>
-                <View style={styles.transactionIcon}>
-                  <tx.icon size={16} color={tx.iconColor} />
-                </View>
-                <View style={styles.transactionInfo}>
-                  <Text style={styles.transactionType}>{tx.asset}</Text>
-                  <Text style={styles.transactionSubtitle}>
-                    {tx.type === 'sent' ? 'Sent' : 'Received'} • {tx.blockchain}
-                  </Text>
-                </View>
-                <View style={styles.transactionAmount}>
-                  <Text style={styles.transactionAssetAmount}>{tx.amount}</Text>
-                  <Text style={styles.transactionUsdAmount}>{formatUSDValue(tx.fiatAmount)}</Text>
-                </View>
-              </View>
-            ))
-          ) : (
-            <View style={styles.noAssetsContainer}>
-              <Text style={styles.noAssetsText}>No transactions yet</Text>
-            </View>
-          )}
-
-          <TouchableOpacity onPress={handleSeeAllActivity}>
-            <Text style={styles.seeAllText}>See All</Text>
-          </TouchableOpacity>
+          <View style={styles.noAssetsContainer}>
+            <Text style={styles.noAssetsText}>No transactions yet</Text>
+          </View>
         </View>
       </ScrollView>
 
-      {/* Bottom Actions */}
       <View style={[styles.bottomActions, { marginBottom: insets.bottom }]}>
         <TouchableOpacity style={styles.actionButton} onPress={handleSendPress}>
           <ArrowUpRight size={20} color={colors.white} />
@@ -635,47 +601,6 @@ const styles = StyleSheet.create({
   activitySection: {
     paddingHorizontal: 20,
     marginBottom: 32,
-  },
-  transactionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    marginBottom: 12,
-  },
-  transactionIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  transactionInfo: {
-    flex: 1,
-  },
-  transactionType: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: colors.text,
-    marginBottom: 2,
-  },
-  transactionSubtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  transactionAmount: {
-    alignItems: 'flex-end',
-  },
-  transactionAssetAmount: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 2,
-  },
-  transactionUsdAmount: {
-    fontSize: 14,
-    color: colors.textSecondary,
   },
   bottomActions: {
     position: 'absolute',

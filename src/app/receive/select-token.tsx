@@ -1,10 +1,10 @@
 import { assetConfig } from '@/config/assets';
 import getDisplaySymbol from '@/utils/get-display-symbol';
 import { getRecentTokens, addToRecentTokens } from '@/utils/recent-tokens';
-import { useWallet } from '@tetherto/wdk-react-native-provider';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
+import { useFocusEffect } from 'expo-router';
 import { ArrowLeft, Search, X } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { colors } from '@/constants/colors';
 import {
   FlatList,
@@ -18,6 +18,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getNetworkMode, filterNetworksByMode, NetworkMode } from '@/services/network-mode-service';
 
 interface Token {
   id: string;
@@ -30,29 +31,32 @@ interface Token {
 export default function ReceiveSelectTokenScreen() {
   const insets = useSafeAreaInsets();
   const router = useDebouncedNavigation();
-  const { wallet } = useWallet();
   const [searchQuery, setSearchQuery] = useState('');
   const [recentTokens, setRecentTokens] = useState<string[]>([]);
+  const [networkMode, setNetworkMode] = useState<NetworkMode>('mainnet');
 
-  useEffect(() => {
-    const loadRecentTokens = async () => {
-      const recent = await getRecentTokens('receive');
-      setRecentTokens(recent);
-    };
-    loadRecentTokens();
-  }, []);
+  // Load network mode on focus to pick up changes from settings
+  useFocusEffect(
+    useCallback(() => {
+      const loadData = async () => {
+        const [recent, mode] = await Promise.all([
+          getRecentTokens('receive'),
+          getNetworkMode(),
+        ]);
+        setRecentTokens(recent);
+        setNetworkMode(mode);
+      };
+      loadData();
+    }, [])
+  );
 
-  // Create token list from enabled assets
   const tokens: Token[] = useMemo(() => {
-    if (!wallet?.enabledAssets) {
-      return [];
-    }
-
-    return wallet.enabledAssets
-      .map(assetSymbol => {
-        const config = assetConfig[assetSymbol as keyof typeof assetConfig];
-        if (!config) return null;
-
+    return Object.entries(assetConfig)
+      .filter(([_, config]) => {
+        const availableNetworks = filterNetworksByMode(config.supportedNetworks, networkMode);
+        return availableNetworks.length > 0;
+      })
+      .map(([assetSymbol, config]) => {
         return {
           id: assetSymbol,
           symbol: getDisplaySymbol(assetSymbol),
@@ -60,9 +64,8 @@ export default function ReceiveSelectTokenScreen() {
           icon: config.icon,
           color: config.color,
         };
-      })
-      .filter(Boolean) as Token[];
-  }, [wallet?.enabledAssets]);
+      });
+  }, [networkMode]);
 
   const filteredTokens = useMemo(() => {
     if (!searchQuery) return tokens;

@@ -1,23 +1,107 @@
 import Header from '@/components/header';
-import { clearAvatar } from '@/config/avatar-options';
-import { networkConfigs } from '@/config/networks';
+import { clearAvatar, clearWalletName } from '@/config/avatar-options';
+import { networkConfigs, NetworkType } from '@/config/networks';
 import useWalletAvatar from '@/hooks/use-wallet-avatar';
-import getDisplaySymbol from '@/utils/get-display-symbol';
-import { NetworkType, useWallet } from '@tetherto/wdk-react-native-provider';
+import { useWallet, useWalletManager } from '@tetherto/wdk-react-native-core';
 import * as Clipboard from 'expo-clipboard';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
-import { Copy, Info, Shield, Trash2, Wallet } from 'lucide-react-native';
-import React from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Copy, Info, Shield, Trash2, Wallet, Globe } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
 import { colors } from '@/constants/colors';
+import getChainsConfig, { SparkNetworkMode } from '@/config/get-chains-config';
+import { getNetworkMode, setNetworkMode, NetworkMode, getNetworksForMode } from '@/services/network-mode-service';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useDebouncedNavigation();
-  const { wallet, clearWallet, addresses } = useWallet();
+  const { wallets, activeWalletId, deleteWallet } = useWalletManager();
+  const currentWalletId = activeWalletId || wallets[0]?.identifier || 'default';
+  const { addresses, getAddress, isInitialized } = useWallet({ walletId: currentWalletId });
   const avatar = useWalletAvatar();
+  const [walletAddresses, setWalletAddresses] = useState<Record<string, string>>({});
+  const [networkMode, setNetworkModeState] = useState<NetworkMode>('mainnet');
+  const [networkModeLoaded, setNetworkModeLoaded] = useState(false);
+
+  useEffect(() => {
+    getNetworkMode().then((mode) => {
+      setNetworkModeState(mode);
+      setNetworkModeLoaded(true);
+    });
+  }, []);
+
+  useEffect(() => {
+    // Wait for network mode to be loaded from storage before fetching addresses
+    if (!networkModeLoaded) return;
+
+    const fetchAddresses = async () => {
+      const sparkNetwork: SparkNetworkMode = networkMode === 'testnet' ? 'REGTEST' : 'MAINNET';
+      const allowedNetworks = getNetworksForMode(networkMode);
+
+      console.log('[Settings] === Starting fetchAddresses ===');
+      console.log('[Settings] isInitialized:', isInitialized, 'networkMode:', networkMode);
+      console.log('[Settings] allowedNetworks:', allowedNetworks);
+      console.log('[Settings] addresses from hook:', JSON.stringify(addresses, null, 2));
+
+      const addressMap: Record<string, string> = {};
+
+      // Only process networks allowed for current mode
+      for (const network of allowedNetworks) {
+        console.log(`[Settings] Processing network: ${network}`);
+        try {
+          const addressData = addresses?.[network];
+          console.log(`[Settings] ${network} - addressData from hook:`, JSON.stringify(addressData));
+          let address: string | undefined;
+
+          // Handle different address formats: {0: "0x..."} or ["0x..."] or "0x..."
+          if (addressData) {
+            if (typeof addressData === 'string') {
+              address = addressData;
+            } else if (Array.isArray(addressData) && addressData[0]) {
+              address = addressData[0];
+            } else if (typeof addressData === 'object' && addressData['0']) {
+              address = addressData['0'];
+            }
+          }
+
+          // If no address found and WDK is initialized, try to derive it with timeout
+          if (!address && isInitialized) {
+            console.log(`[Settings] ${network} - No cached address, calling getAddress with 10s timeout...`);
+            const startTime = Date.now();
+            try {
+              const timeoutPromise = new Promise<undefined>((_, reject) =>
+                setTimeout(() => reject(new Error(`Timeout deriving ${network} address`)), 10000)
+              );
+              address = await Promise.race([
+                getAddress(network, 0),
+                timeoutPromise
+              ]);
+              console.log(`[Settings] ${network} - getAddress returned in ${Date.now() - startTime}ms:`, address);
+            } catch (deriveError) {
+              console.error(`[Settings] ${network} - getAddress ERROR after ${Date.now() - startTime}ms:`, deriveError);
+            }
+          } else if (!address && !isInitialized) {
+            console.log(`[Settings] ${network} - Skipping derivation, WDK not initialized yet`);
+          }
+
+          if (address) {
+            addressMap[network] = address;
+            console.log(`[Settings] ${network} - Added to addressMap`);
+          } else {
+            console.log(`[Settings] ${network} - No address available`);
+          }
+        } catch (err) {
+          console.error(`[Settings] ${network} - Outer catch error:`, err);
+        }
+      }
+
+      console.log('[Settings] === Final addressMap ===', JSON.stringify(addressMap, null, 2));
+      setWalletAddresses(addressMap);
+    };
+    fetchAddresses();
+  }, [addresses, getAddress, networkMode, isInitialized, networkModeLoaded]);
 
   const handleDeleteWallet = () => {
     Alert.alert(
@@ -33,8 +117,18 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await clearWallet();
               await clearAvatar();
+              await clearWalletName();
+
+              try {
+                await deleteWallet(currentWalletId);
+              } catch (deleteError) {
+                const errorMessage = String(deleteError);
+                if (!errorMessage.includes('does not exist')) {
+                  throw deleteError;
+                }
+              }
+
               toast.success('Wallet deleted successfully');
               router.dismissAll('/');
             } catch (error) {
@@ -59,7 +153,43 @@ export default function SettingsScreen() {
   };
 
   const getNetworkName = (network: string) => {
-    return networkConfigs[network as NetworkType].name || network;
+    if (network === 'spark' && networkMode === 'testnet') {
+      return 'Spark Regtest';
+    }
+    return networkConfigs[network as NetworkType]?.name || network;
+  };
+
+  const getAddressType = (network: string): string | null => {
+    const config = networkConfigs[network as NetworkType];
+    if (config?.accountType === 'Safe') {
+      return 'Safe';
+    }
+    return null; // No tag for native addresses
+  };
+
+  const filteredAddresses = Object.entries(walletAddresses).filter(([network]) => {
+    const allowedNetworks = getNetworksForMode(networkMode);
+    return allowedNetworks.includes(network as NetworkType);
+  });
+
+  const handleNetworkModeToggle = async (value: boolean) => {
+    const newMode: NetworkMode = value ? 'testnet' : 'mainnet';
+
+    Alert.alert(
+      'Switch Network Mode',
+      `Switch to ${newMode === 'testnet' ? 'Testnet' : 'Mainnet'}? Please restart the app for changes to take full effect.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Switch',
+          onPress: async () => {
+            await setNetworkMode(newMode);
+            setNetworkModeState(newMode);
+            toast.success(`Switched to ${newMode === 'testnet' ? 'Testnet' : 'Mainnet'}. Please restart the app.`);
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -71,7 +201,6 @@ export default function SettingsScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Wallet Info Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Wallet size={20} color={colors.primary} />
@@ -81,53 +210,71 @@ export default function SettingsScreen() {
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Name</Text>
-              <Text style={styles.infoValue}>{wallet?.name || 'Unknown'}</Text>
-            </View>
-
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Icon</Text>
-              <Text style={styles.infoValue}>{avatar}</Text>
+              <Text style={styles.infoValue}>My Wallet</Text>
             </View>
 
             <View style={[styles.infoRow, styles.infoRowLast]}>
-              <Text style={styles.infoLabel}>Enabled Assets</Text>
-              <Text style={styles.infoValue}>
-                {wallet?.enabledAssets?.map(asset => getDisplaySymbol(asset)).join(', ') || 'None'}
-              </Text>
+              <Text style={styles.infoLabel}>Icon</Text>
+              <Text style={styles.infoValue}>{avatar}</Text>
             </View>
           </View>
         </View>
 
-        {/* Network Addresses Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Globe size={20} color={colors.primary} />
+            <Text style={styles.sectionTitle}>Network Mode</Text>
+          </View>
+
+          <View style={styles.infoCard}>
+            <View style={[styles.infoRow, styles.infoRowLast]}>
+              <Text style={styles.infoLabel}>Testnet Mode</Text>
+              <Switch
+                value={networkMode === 'testnet'}
+                onValueChange={handleNetworkModeToggle}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={colors.white}
+              />
+            </View>
+          </View>
+        </View>
+
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Shield size={20} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Network Addresses</Text>
+            <Text style={styles.sectionTitle}>Wallet Addresses</Text>
           </View>
 
           <View style={styles.addressCard}>
-            {addresses &&
-              Object.entries(addresses).map(([network, address], index, array) => (
+            {filteredAddresses.length > 0 ? (
+              filteredAddresses.map(([network, address], index, array) => (
                 <TouchableOpacity
                   key={network}
                   style={[
                     styles.addressRow,
                     index === array.length - 1 ? styles.addressRowLast : null,
                   ]}
-                  onPress={() => handleCopyAddress(address as string, getNetworkName(network))}
+                  onPress={() => handleCopyAddress(address, getNetworkName(network))}
                   activeOpacity={0.7}
                 >
                   <View style={styles.addressContent}>
-                    <Text style={styles.networkLabel}>{getNetworkName(network)}</Text>
-                    <Text style={styles.addressValue}>{formatAddress(address as string)}</Text>
+                    <View style={styles.networkLabelRow}>
+                      <Text style={styles.networkLabel}>{getNetworkName(network)}</Text>
+                      {getAddressType(network) && (
+                        <Text style={styles.addressTypeTag}>{getAddressType(network)}</Text>
+                      )}
+                    </View>
+                    <Text style={styles.addressValue}>{formatAddress(address)}</Text>
                   </View>
                   <Copy size={18} color={colors.primary} />
                 </TouchableOpacity>
-              ))}
+              ))
+            ) : (
+              <Text style={styles.noAddressText}>No addresses available</Text>
+            )}
           </View>
         </View>
 
-        {/* About Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Info size={20} color={colors.primary} />
@@ -142,12 +289,11 @@ export default function SettingsScreen() {
 
             <View style={[styles.infoRow, styles.infoRowLast]}>
               <Text style={styles.infoLabel}>WDK Version</Text>
-              <Text style={styles.infoValue}>Latest</Text>
+              <Text style={styles.infoValue}>Core</Text>
             </View>
           </View>
         </View>
 
-        {/* Danger Zone */}
         <View style={styles.dangerSection}>
           <View style={styles.sectionHeader}>
             <Trash2 size={20} color={colors.danger} />
@@ -221,11 +367,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontWeight: '500',
   },
-  infoValueSmall: {
-    fontSize: 12,
-    color: colors.text,
-    fontWeight: '500',
-  },
   addressCard: {
     backgroundColor: colors.card,
     borderRadius: 12,
@@ -246,15 +387,35 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 12,
   },
+  networkLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   networkLabel: {
     fontSize: 14,
     color: colors.textSecondary,
-    marginBottom: 4,
+  },
+  addressTypeTag: {
+    fontSize: 10,
+    color: colors.textTertiary,
+    marginLeft: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    backgroundColor: colors.border,
+    borderRadius: 4,
+    overflow: 'hidden',
   },
   addressValue: {
     fontSize: 13,
     color: colors.text,
     fontFamily: 'monospace',
+  },
+  noAddressText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    paddingVertical: 16,
   },
   dangerSection: {
     paddingHorizontal: 20,
