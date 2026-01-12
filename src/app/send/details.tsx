@@ -11,7 +11,8 @@ import { getNetworkMode, NetworkMode } from '@/services/network-mode-service';
 import { FiatCurrency, pricingService } from '@/services/pricing-service';
 import { useKeyboard } from '@/hooks/use-keyboard';
 import { colors } from '@/constants/colors';
-import { getAssetTicker, calculateGasFee, type GasFeeEstimate } from '@/utils/gas-fee-calculator';
+import { calculateGasFee, type GasFeeEstimate } from '@/utils/gas-fee-calculator';
+import { getAssetTicker } from '@/config/token';
 import {
   ActivityIndicator,
   Alert,

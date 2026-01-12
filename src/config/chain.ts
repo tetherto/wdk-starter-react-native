@@ -3,6 +3,7 @@ import {
   validateSparkAddress,
   AddressValidator,
 } from '@/utils/address-validators';
+import { NetworkConfig } from '@tetherto/wdk-react-native-core';
 
 export enum NetworkId {
   ETHEREUM = 'ethereum',
@@ -205,3 +206,23 @@ export const getMainnets = (): ChainConfig[] => Object.values(CHAINS).filter((c)
 export const getTestnets = (): ChainConfig[] => Object.values(CHAINS).filter((c) => c.isTestnet);
 export const getChainsByFamily = (family: ProtocolFamily): ChainConfig[] =>
   Object.values(CHAINS).filter((c) => c.family === family);
+
+export const toNetworkConfig = (chain: ChainConfig): NetworkConfig => {
+  if (chain.family === 'spark') {
+    return {
+      chainId: 999,
+      blockchain: chain.id === NetworkId.SPARK ? 'MAINNET' : 'REGTEST',
+    };
+  }
+
+  return {
+    chainId: chain.chainId,
+    blockchain: chain.id,
+    provider: chain.provider,
+    bundlerUrl: chain.bundlerUrl,
+    paymasterUrl: chain.paymasterUrl,
+    paymasterAddress: chain.paymasterAddress,
+    entryPointAddress: chain.entryPointAddress,
+    transferMaxFee: chain.transferMaxFee,
+  };
+};

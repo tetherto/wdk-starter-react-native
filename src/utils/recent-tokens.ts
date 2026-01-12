@@ -45,7 +45,7 @@ export const addToRecentTokens = async (
 ): Promise<string[]> => {
   try {
     const current = await getRecentTokens(operation);
-    const filtered = current.filter(name => name !== tokenName);
+    const filtered = current.filter((name) => name !== tokenName);
     const updated = [tokenName, ...filtered].slice(0, MAX_RECENT_TOKENS);
     await saveRecentTokens(updated, operation);
     return updated;

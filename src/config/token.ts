@@ -11,6 +11,7 @@ export interface TokenUiConfig {
   supportedNetworks: NetworkId[];
 }
 
+// mapped by token symbols
 export const TOKEN_UI_CONFIGS: Record<string, TokenUiConfig> = {
   btc: {
     id: 'btc',
@@ -149,7 +150,7 @@ export interface Asset {
   color: string;
 }
 
-export function getAssetTicker(token: TokenConfig): string {
+export function getAssetTicker(token: TokenConfig | TokenUiConfig): string {
   // Standardize ticker lookup (e.g. handle wrapped tokens or special cases here)
 
   return token.symbol.toLowerCase();

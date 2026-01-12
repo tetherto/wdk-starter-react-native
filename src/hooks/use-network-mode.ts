@@ -4,9 +4,9 @@ import {
   setNetworkMode as saveNetworkMode,
   NetworkMode,
 } from '@/services/network-mode-service';
-import { CHAINS, ChainConfig, NetworkId } from '@/config/chain';
+import { CHAINS, NetworkId, toNetworkConfig } from '@/config/chain';
 import { TOKENS } from '@/config/token';
-import { TokenConfigs } from '@tetherto/wdk-react-native-core';
+import { TokenConfigs, NetworkConfigs } from '@tetherto/wdk-react-native-core';
 
 export const useNetworkMode = () => {
   const [mode, setModeState] = useState<NetworkMode>('mainnet');
@@ -14,6 +14,7 @@ export const useNetworkMode = () => {
 
   const refreshMode = useCallback(async () => {
     const storedMode = await getNetworkMode();
+
     setModeState(storedMode);
     setIsLoaded(true);
   }, []);
@@ -37,7 +38,7 @@ export const useNetworkMode = () => {
       return {
         [NetworkId.SEPOLIA]: CHAINS[NetworkId.SEPOLIA],
         [NetworkId.SPARK_REGTEST]: CHAINS[NetworkId.SPARK_REGTEST],
-      } as Record<string, ChainConfig>;
+      } as unknown as NetworkConfigs;
     }
 
     return {
@@ -46,7 +47,27 @@ export const useNetworkMode = () => {
       [NetworkId.ARBITRUM]: CHAINS[NetworkId.ARBITRUM],
       [NetworkId.SPARK]: CHAINS[NetworkId.SPARK],
       [NetworkId.PLASMA]: CHAINS[NetworkId.PLASMA],
-    } as Record<string, ChainConfig>;
+    } as unknown as NetworkConfigs;
+  }, [mode]);
+
+  const workletChainConfigs = useMemo(() => {
+    const chainConfigs: NetworkConfigs = {};
+    const chainList =
+      mode === 'testnet'
+        ? [CHAINS[NetworkId.SEPOLIA], CHAINS[NetworkId.SPARK_REGTEST]]
+        : [
+            CHAINS[NetworkId.ETHEREUM],
+            CHAINS[NetworkId.POLYGON],
+            CHAINS[NetworkId.ARBITRUM],
+            CHAINS[NetworkId.SPARK],
+            CHAINS[NetworkId.PLASMA],
+          ];
+
+    chainList.forEach((chain) => {
+      chainConfigs[chain.id] = toNetworkConfig(chain);
+    });
+
+    return chainConfigs;
   }, [mode]);
 
   const tokens = useMemo(() => {
@@ -73,6 +94,7 @@ export const useNetworkMode = () => {
     toggleMode,
     refreshMode,
     chains,
+    workletChainConfigs,
     tokens,
   };
 };

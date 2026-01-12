@@ -1,3 +1,4 @@
+import { NetworkId } from '@/config/chain';
 import WAValidator from 'multicoin-address-validator';
 
 export type AddressValidationResult = { valid: true } | { valid: false; error: string };
@@ -34,7 +35,7 @@ const SPARK_ADDRESS_PREFIXES = ['spark1', 'sparkt1', 'sparkrt1'];
 export function validateSparkAddress(address: string): AddressValidationResult {
   const trimmed = address.trim().toLowerCase();
 
-  const hasValidPrefix = SPARK_ADDRESS_PREFIXES.some(prefix => trimmed.startsWith(prefix));
+  const hasValidPrefix = SPARK_ADDRESS_PREFIXES.some((prefix) => trimmed.startsWith(prefix));
 
   if (!hasValidPrefix) {
     return {
@@ -62,7 +63,7 @@ export function validateSparkAddress(address: string): AddressValidationResult {
 }
 
 export function validateAddressByNetwork(
-  networkId: string,
+  networkId: NetworkId,
   address: string,
   validator?: AddressValidator
 ): AddressValidationResult {
@@ -71,7 +72,11 @@ export function validateAddressByNetwork(
     return { valid: false, error: 'Recipient address is required' };
   }
 
-  const effectiveValidator = validator || (networkId === 'spark' ? validateSparkAddress : validateEvmAddress);
+  const effectiveValidator =
+    validator ||
+    ([NetworkId.SPARK, NetworkId.SPARK_REGTEST].includes(networkId)
+      ? validateSparkAddress
+      : validateEvmAddress);
 
   return effectiveValidator(trimmed);
 }

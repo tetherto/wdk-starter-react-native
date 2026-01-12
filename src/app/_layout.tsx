@@ -4,15 +4,13 @@ import { ThemeProvider } from '@tetherto/wdk-uikit-react-native';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
-import getChainsConfig, { SparkNetworkMode } from '@/config/get-chains-config';
-import getTokenConfigs from '@/config/get-token-configs';
 import { Toaster } from 'sonner-native';
 import { colors } from '@/constants/colors';
-import { getNetworkMode, NetworkMode } from '@/services/network-mode-service';
+import { useNetworkMode } from '@/hooks/use-network-mode';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -26,23 +24,15 @@ const CustomDarkTheme = {
 };
 
 export default function RootLayout() {
-  const [sparkNetwork, setSparkNetwork] = useState<SparkNetworkMode>('MAINNET');
-  const [networkMode, setNetworkMode] = useState<NetworkMode>('mainnet');
-  const [isReady, setIsReady] = useState(false);
+  const { workletChainConfigs, tokens, isLoaded } = useNetworkMode();
 
   useEffect(() => {
-    const init = async () => {
-      const mode = await getNetworkMode();
-      setNetworkMode(mode);
-      // Use REGTEST for testnet mode, MAINNET for mainnet
-      setSparkNetwork(mode === 'testnet' ? 'REGTEST' : 'MAINNET');
-      setIsReady(true);
+    if (isLoaded) {
       SplashScreen.hideAsync();
-    };
-    init();
-  }, []);
+    }
+  }, [isLoaded]);
 
-  if (!isReady) {
+  if (!isLoaded) {
     return null;
   }
 
@@ -54,10 +44,7 @@ export default function RootLayout() {
           primaryColor: colors.primary,
         }}
       >
-        <WdkAppProvider
-          networkConfigs={getChainsConfig(sparkNetwork)}
-          tokenConfigs={getTokenConfigs(networkMode)}
-        >
+        <WdkAppProvider networkConfigs={workletChainConfigs} tokenConfigs={tokens}>
           <NavigationThemeProvider value={CustomDarkTheme}>
             <View style={{ flex: 1, backgroundColor: colors.background }}>
               <Stack

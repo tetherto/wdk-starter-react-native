@@ -19,7 +19,10 @@ type ChainConfig = {
 const MAINNET_CHAINS: string[] = ['ethereum', 'polygon', 'arbitrum', 'spark', 'plasma'];
 const TESTNET_CHAINS: string[] = ['sepolia', 'spark'];
 
-const getChainsConfig = (sparkNetwork: SparkNetworkMode = 'MAINNET', networkMode?: NetworkMode): Record<string, ChainConfig> => {
+const getChainsConfig = (
+  sparkNetwork: SparkNetworkMode = 'MAINNET',
+  networkMode?: NetworkMode
+): Record<string, ChainConfig> => {
   const allChains: Record<string, ChainConfig> = {
     sepolia: {
       chainId: 11155111,

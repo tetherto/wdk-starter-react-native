@@ -1,7 +1,7 @@
 import { BitfinexPricingClient } from '@tetherto/wdk-pricing-bitfinex-http';
 import { PricingProvider } from '@tetherto/wdk-pricing-provider';
-import { AssetTicker } from '@/config/assets';
 import DecimalJS from 'decimal.js';
+import { getAssetTicker, TOKEN_UI_CONFIGS } from '@/config/token';
 
 export enum FiatCurrency {
   USD = 'USD',
@@ -33,22 +33,14 @@ class PricingService {
         priceCacheDurationMs: 1000 * 60 * 60, // 1 hour
       });
 
-      this.fiatExchangeRateCache = {
-        [FiatCurrency.USD]: {
-          btc: await this.provider.getLastPrice('btc', FiatCurrency.USD),
-          usdt: 1,
-          xaut: await this.provider.getLastPrice('xaut', FiatCurrency.USD),
-        },
-      };
-
-      this.isInitialized = true;
+      await this.refreshExchangeRates();
     } catch (error) {
       console.error('Failed to initialize pricing service:', error);
       throw error;
     }
   }
 
-  async getFiatValue(value: number, asset: AssetTicker, currency: FiatCurrency): Promise<number> {
+  async getFiatValue(value: number, asset: string, currency: FiatCurrency): Promise<number> {
     if (!this.isInitialized || !this.fiatExchangeRateCache) {
       throw new Error('Pricing service not initialized. Call initialize() first.');
     }
@@ -67,12 +59,22 @@ class PricingService {
     }
 
     try {
+      const rates: Record<string, number> = {};
+      const tokens = Object.values(TOKEN_UI_CONFIGS);
+
+      await Promise.all(
+        tokens.map(async (tokenConfig) => {
+          if (tokenConfig.id === 'usdt') {
+            rates[tokenConfig.id] = 1;
+          } else {
+            const ticker = getAssetTicker(tokenConfig);
+            rates[tokenConfig.id] = await this.provider!.getLastPrice(ticker, FiatCurrency.USD);
+          }
+        })
+      );
+
       this.fiatExchangeRateCache = {
-        [FiatCurrency.USD]: {
-          btc: await this.provider.getLastPrice('btc', FiatCurrency.USD),
-          usdt: 1,
-          xaut: await this.provider.getLastPrice('xaut', FiatCurrency.USD),
-        },
+        [FiatCurrency.USD]: rates,
       };
 
       this.isInitialized = true;
@@ -82,7 +84,7 @@ class PricingService {
     }
   }
 
-  getExchangeRate(asset: AssetTicker, currency: FiatCurrency): number | undefined {
+  getExchangeRate(asset: string, currency: FiatCurrency): number | undefined {
     return this.fiatExchangeRateCache?.[currency]?.[asset];
   }
 
