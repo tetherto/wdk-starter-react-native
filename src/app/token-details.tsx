@@ -2,10 +2,9 @@ import { assetConfig, AssetTicker } from '@/config/assets';
 import { NetworkType, networkConfigs } from '@/config/networks';
 import formatAmount from '@/utils/format-amount';
 import { useWallet, useWalletManager, useBalancesForWallet } from '@tetherto/wdk-react-native-core';
-import { useLocalSearchParams } from 'expo-router';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TokenDetails } from '../components/TokenDetails';
@@ -87,7 +86,9 @@ export default function TokenDetailsScreen() {
           matchedSymbol = networkTokens.native.symbol.toLowerCase();
           decimals = networkTokens.native.decimals;
         } else {
-          const token = networkTokens.tokens.find((t) => t.address?.toLowerCase() === result.tokenAddress?.toLowerCase());
+          const token = networkTokens.tokens.find(
+            (t) => t.address?.toLowerCase() === result.tokenAddress?.toLowerCase()
+          );
           if (token) {
             matchedSymbol = token.symbol.toLowerCase();
             decimals = token.decimals;
@@ -106,7 +107,10 @@ export default function TokenDetailsScreen() {
               ? addressData
               : '';
 
-        const current = networkBalancesMap.get(result.network) || { balance: 0, address: addressStr };
+        const current = networkBalancesMap.get(result.network) || {
+          balance: 0,
+          address: addressStr,
+        };
         networkBalancesMap.set(result.network, {
           balance: current.balance + balanceNum,
           address: addressStr,
@@ -130,7 +134,11 @@ export default function TokenDetailsScreen() {
         (item) => item.balance > 0
       );
 
-      const tokenPrice = await pricingService.getFiatValue(1, tokenSymbol as AssetTicker, FiatCurrency.USD);
+      const tokenPrice = await pricingService.getFiatValue(
+        1,
+        tokenSymbol as AssetTicker,
+        FiatCurrency.USD
+      );
       const totalUSDValue = await pricingService.getFiatValue(
         totalBalance,
         tokenSymbol as AssetTicker,

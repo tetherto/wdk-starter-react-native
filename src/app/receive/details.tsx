@@ -3,7 +3,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import * as Clipboard from 'expo-clipboard';
 import { ArrowLeft, Copy, Share, X } from 'lucide-react-native';
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { Share as RNShare, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';

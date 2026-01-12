@@ -4,10 +4,9 @@ import { networkConfigs, NetworkType } from '@/config/networks';
 import formatAmount from '@/utils/format-amount';
 import { useWallet, useWalletManager, useBalancesForWallet } from '@tetherto/wdk-react-native-core';
 import getTokenConfigs from '@/config/get-token-configs';
-import { useLocalSearchParams } from 'expo-router';
-import { useFocusEffect } from 'expo-router';
+import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FiatCurrency, pricingService } from '@/services/pricing-service';
@@ -51,7 +50,7 @@ export default function SelectNetworkScreen() {
   }, [networkMode, networkModeLoaded]);
 
   const { data: balanceResults } = useBalancesForWallet(0, tokenConfigs, {
-    enabled: isInitialized && networkModeLoaded && Object.keys(tokenConfigs).length > 0
+    enabled: isInitialized && networkModeLoaded && Object.keys(tokenConfigs).length > 0,
   });
 
   useEffect(() => {
@@ -81,7 +80,9 @@ export default function SelectNetworkScreen() {
             matchedSymbol = networkTokens.native.symbol.toLowerCase();
             decimals = networkTokens.native.decimals;
           } else {
-            const token = networkTokens.tokens.find((t) => t.address?.toLowerCase() === result.tokenAddress?.toLowerCase());
+            const token = networkTokens.tokens.find(
+              (t) => t.address?.toLowerCase() === result.tokenAddress?.toLowerCase()
+            );
             if (token) {
               matchedSymbol = token.symbol.toLowerCase();
               decimals = token.decimals;
@@ -90,7 +91,10 @@ export default function SelectNetworkScreen() {
 
           if (matchedSymbol === tokenId.toLowerCase()) {
             const balanceNum = parseFloat(result.balance) / Math.pow(10, decimals);
-            networkBalanceMap.set(result.network, (networkBalanceMap.get(result.network) || 0) + balanceNum);
+            networkBalanceMap.set(
+              result.network,
+              (networkBalanceMap.get(result.network) || 0) + balanceNum
+            );
           }
         });
       }
@@ -106,9 +110,8 @@ export default function SelectNetworkScreen() {
             FiatCurrency.USD
           );
 
-          const displayName = network.id === 'spark' && networkMode === 'testnet'
-            ? 'Spark Regtest'
-            : network.name;
+          const displayName =
+            network.id === 'spark' && networkMode === 'testnet' ? 'Spark Regtest' : network.name;
 
           return {
             ...network,

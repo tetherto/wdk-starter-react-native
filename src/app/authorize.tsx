@@ -1,7 +1,7 @@
 import { useWalletManager } from '@tetherto/wdk-react-native-core';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { Fingerprint, Shield, Trash2 } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
@@ -10,7 +10,7 @@ import getErrorMessage from '@/utils/get-error-message';
 export default function AuthorizeScreen() {
   const insets = useSafeAreaInsets();
   const router = useDebouncedNavigation();
-  const { hasWallet, initializeWallet, deleteWallet, wallets } = useWalletManager();
+  const { initializeWallet, deleteWallet, wallets } = useWalletManager();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

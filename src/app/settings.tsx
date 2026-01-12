@@ -6,13 +6,17 @@ import { useWallet, useWalletManager } from '@tetherto/wdk-react-native-core';
 import * as Clipboard from 'expo-clipboard';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { Copy, Info, Shield, Trash2, Wallet, Globe } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
 import { colors } from '@/constants/colors';
-import getChainsConfig, { SparkNetworkMode } from '@/config/get-chains-config';
-import { getNetworkMode, setNetworkMode, NetworkMode, getNetworksForMode } from '@/services/network-mode-service';
+import {
+  getNetworkMode,
+  setNetworkMode,
+  NetworkMode,
+  getNetworksForMode,
+} from '@/services/network-mode-service';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -36,7 +40,6 @@ export default function SettingsScreen() {
     if (!networkModeLoaded) return;
 
     const fetchAddresses = async () => {
-      const sparkNetwork: SparkNetworkMode = networkMode === 'testnet' ? 'REGTEST' : 'MAINNET';
       const allowedNetworks = getNetworksForMode(networkMode);
 
       console.log('[Settings] === Starting fetchAddresses ===');
@@ -50,7 +53,10 @@ export default function SettingsScreen() {
         console.log(`[Settings] Processing network: ${network}`);
         try {
           const addressData = addresses?.[network];
-          console.log(`[Settings] ${network} - addressData from hook:`, JSON.stringify(addressData));
+          console.log(
+            `[Settings] ${network} - addressData from hook:`,
+            JSON.stringify(addressData)
+          );
           let address: string | undefined;
 
           // Handle different address formats: {0: "0x..."} or ["0x..."] or "0x..."
@@ -65,19 +71,24 @@ export default function SettingsScreen() {
           }
 
           if (!address && isInitialized) {
-            console.log(`[Settings] ${network} - No cached address, calling getAddress with 10s timeout...`);
+            console.log(
+              `[Settings] ${network} - No cached address, calling getAddress with 10s timeout...`
+            );
             const startTime = Date.now();
             try {
               const timeoutPromise = new Promise<undefined>((_, reject) =>
                 setTimeout(() => reject(new Error(`Timeout deriving ${network} address`)), 10000)
               );
-              address = await Promise.race([
-                getAddress(network, 0),
-                timeoutPromise
-              ]);
-              console.log(`[Settings] ${network} - getAddress returned in ${Date.now() - startTime}ms:`, address);
+              address = await Promise.race([getAddress(network, 0), timeoutPromise]);
+              console.log(
+                `[Settings] ${network} - getAddress returned in ${Date.now() - startTime}ms:`,
+                address
+              );
             } catch (deriveError) {
-              console.error(`[Settings] ${network} - getAddress ERROR after ${Date.now() - startTime}ms:`, deriveError);
+              console.error(
+                `[Settings] ${network} - getAddress ERROR after ${Date.now() - startTime}ms:`,
+                deriveError
+              );
             }
           } else if (!address && !isInitialized) {
             console.log(`[Settings] ${network} - Skipping derivation, WDK not initialized yet`);
@@ -182,7 +193,9 @@ export default function SettingsScreen() {
           onPress: async () => {
             await setNetworkMode(newMode);
             setNetworkModeState(newMode);
-            toast.success(`Switched to ${newMode === 'testnet' ? 'Testnet' : 'Mainnet'}. Please restart the app.`);
+            toast.success(
+              `Switched to ${newMode === 'testnet' ? 'Testnet' : 'Mainnet'}. Please restart the app.`
+            );
           },
         },
       ]

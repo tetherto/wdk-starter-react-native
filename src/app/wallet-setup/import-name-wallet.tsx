@@ -4,7 +4,7 @@ import { useWalletManager } from '@tetherto/wdk-react-native-core';
 import { useLocalSearchParams } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { ChevronLeft } from 'lucide-react-native';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { colors } from '@/constants/colors';
 import {
   ActivityIndicator,
@@ -103,7 +103,7 @@ export default function ImportNameWalletScreen() {
           <View style={styles.avatarSection}>
             <Text style={styles.sectionTitle}>Choose an avatar</Text>
             <View style={styles.avatarGrid}>
-              {avatarOptions.map(avatar => (
+              {avatarOptions.map((avatar) => (
                 <TouchableOpacity
                   key={avatar.id}
                   style={[

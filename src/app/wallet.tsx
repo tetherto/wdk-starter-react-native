@@ -1,18 +1,23 @@
 import { BalanceLoader } from '@/components/BalanceLoader';
-import { useWallet, useWalletManager, useBalancesForWallet, useRefreshBalance } from '@tetherto/wdk-react-native-core';
+import {
+  useWallet,
+  useWalletManager,
+  useBalancesForWallet,
+  useRefreshBalance,
+} from '@tetherto/wdk-react-native-core';
 import { Balance } from '@tetherto/wdk-uikit-react-native';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { useFocusEffect } from 'expo-router';
 import {
   ArrowDownLeft,
   ArrowUpRight,
-  Palette,
   QrCode,
   Settings,
   Shield,
   Star,
+  Palette,
 } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -71,11 +76,13 @@ export default function WalletScreen() {
     return getTokenConfigs(networkMode!);
   }, [networkMode, networkModeLoaded]);
 
-  const { data: balanceResults, isLoading: isLoadingBalances, refetch } = useBalancesForWallet(
-    0,
-    tokenConfigs,
-    { enabled: isInitialized && networkModeLoaded && Object.keys(tokenConfigs).length > 0 }
-  );
+  const {
+    data: balanceResults,
+    isLoading: isLoadingBalances,
+    refetch,
+  } = useBalancesForWallet(0, tokenConfigs, {
+    enabled: isInitialized && networkModeLoaded && Object.keys(tokenConfigs).length > 0,
+  });
 
   const [refreshing, setRefreshing] = useState(false);
   const [aggregatedBalances, setAggregatedBalances] = useState<AggregatedBalance>([]);
@@ -111,17 +118,25 @@ export default function WalletScreen() {
         if (tokenAddress === null) {
           denomination = networkTokens.native.symbol.toLowerCase();
         } else {
-          const token = networkTokens.tokens.find(t => t.address?.toLowerCase() === tokenAddress?.toLowerCase());
+          const token = networkTokens.tokens.find(
+            (t) => t.address?.toLowerCase() === tokenAddress?.toLowerCase()
+          );
           if (token) {
             denomination = token.symbol.toLowerCase();
           }
         }
       }
 
-      const balanceNum = parseFloat(result.balance) / Math.pow(10,
-        tokenAddress === null ? networkTokens?.native.decimals || 18 :
-        networkTokens?.tokens.find(t => t.address?.toLowerCase() === tokenAddress?.toLowerCase())?.decimals || 6
-      );
+      const balanceNum =
+        parseFloat(result.balance) /
+        Math.pow(
+          10,
+          tokenAddress === null
+            ? networkTokens?.native.decimals || 18
+            : networkTokens?.tokens.find(
+                (t) => t.address?.toLowerCase() === tokenAddress?.toLowerCase()
+              )?.decimals || 6
+        );
 
       const current = map.get(denomination) || { totalBalance: 0 };
       map.set(denomination, {

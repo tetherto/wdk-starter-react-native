@@ -3,7 +3,7 @@ import * as bip39 from 'bip39';
 import * as Clipboard from 'expo-clipboard';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { ChevronLeft, Download, FileText, ScanText } from 'lucide-react-native';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { colors } from '@/constants/colors';
 import {
   Alert,
@@ -69,7 +69,7 @@ export default function ImportWalletScreen() {
   };
 
   const isFormValid = () => {
-    return secretWords.every(word => word.trim().length > 0);
+    return secretWords.every((word) => word.trim().length > 0);
   };
 
   const validateSeedPhrase = (phrase: string): boolean => {

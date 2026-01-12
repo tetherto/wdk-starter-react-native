@@ -1,13 +1,19 @@
 import Header from '@/components/header';
 import { assetConfig } from '@/config/assets';
-import { Network, networkConfigs } from '@/config/networks';
-import { NetworkType } from '@/config/networks';
+import { Network, networkConfigs, NetworkType } from '@/config/networks';
 import { useWallet, useWalletManager } from '@tetherto/wdk-react-native-core';
-import { useLocalSearchParams } from 'expo-router';
-import { useFocusEffect } from 'expo-router';
+import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
-import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 import { getNetworkMode, filterNetworksByMode, NetworkMode } from '@/services/network-mode-service';
@@ -84,9 +90,8 @@ export default function ReceiveSelectNetworkScreen() {
             }
           }
 
-          const displayName = network.id === 'spark' && networkMode === 'testnet'
-            ? 'Spark Regtest'
-            : network.name;
+          const displayName =
+            network.id === 'spark' && networkMode === 'testnet' ? 'Spark Regtest' : network.name;
 
           return {
             ...network,
@@ -160,9 +165,7 @@ export default function ReceiveSelectNetworkScreen() {
               <Text style={[styles.networkName, isDisabled && styles.networkNameDisabled]}>
                 {item.name}
               </Text>
-              {item.accountType === 'Safe' && (
-                <Text style={styles.accountTypeTag}>Safe</Text>
-              )}
+              {item.accountType === 'Safe' && <Text style={styles.accountTypeTag}>Safe</Text>}
             </View>
             {item.description && (
               <Text
@@ -203,7 +206,7 @@ export default function ReceiveSelectNetworkScreen() {
       <FlatList
         data={networks}
         renderItem={renderNetwork}
-        keyExtractor={item => item.id}
+        keyExtractor={(item) => item.id}
         style={styles.networksList}
         contentContainerStyle={styles.networksContent}
         showsVerticalScrollIndicator={false}
