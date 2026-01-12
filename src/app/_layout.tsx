@@ -1,10 +1,3 @@
-// Crypto polyfill - MUST be first import before anything else
-import 'react-native-get-random-values';
-
-import { Buffer } from '@craftzdog/react-native-buffer';
-// @ts-ignore
-global.Buffer = Buffer as unknown as BufferConstructor;
-
 import { DarkTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { WdkAppProvider } from '@tetherto/wdk-react-native-core';
 import { ThemeProvider } from '@tetherto/wdk-uikit-react-native';
