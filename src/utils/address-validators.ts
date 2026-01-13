@@ -1,20 +1,8 @@
-import { networkConfigs } from '@/config/networks';
-import { NetworkType } from '@tetherto/wdk-react-native-provider';
-import { Address } from '@ton/core';
 import WAValidator from 'multicoin-address-validator';
 
 export type AddressValidationResult = { valid: true } | { valid: false; error: string };
 export type AddressValidator = (address: string) => AddressValidationResult;
 
-export function getAddressValidatorForNetwork(
-  networkId: NetworkType
-): AddressValidator | undefined {
-  return networkConfigs[networkId]?.addressValidator;
-}
-
-/**
- * EVM: Ethereum / Polygon / Arbitrum
- */
 export function validateEvmAddress(address: string): AddressValidationResult {
   const isValid = WAValidator.validate(address, 'eth');
 
@@ -28,9 +16,6 @@ export function validateEvmAddress(address: string): AddressValidationResult {
   return { valid: true };
 }
 
-/**
- * Bitcoin
- */
 export function validateBitcoinAddress(address: string): AddressValidationResult {
   const isValid = WAValidator.validate(address, 'btc');
 
@@ -44,47 +29,32 @@ export function validateBitcoinAddress(address: string): AddressValidationResult
   return { valid: true };
 }
 
-/**
- * TON: @ton/core Address.parse
- */
-export function validateTonAddress(address: string): AddressValidationResult {
-  try {
-    Address.parse(address);
-    return { valid: true };
-  } catch {
+const SPARK_ADDRESS_PREFIXES = ['spark1', 'sparkt1', 'sparkrt1'];
+
+export function validateSparkAddress(address: string): AddressValidationResult {
+  const trimmed = address.trim().toLowerCase();
+
+  const hasValidPrefix = SPARK_ADDRESS_PREFIXES.some(prefix => trimmed.startsWith(prefix));
+
+  if (!hasValidPrefix) {
     return {
       valid: false,
-      error: 'Invalid TON address. Please check the address and try again.',
-    };
-  }
-}
-
-/**
- * Tron
- */
-export function validateTronAddress(address: string): AddressValidationResult {
-  const isValid = WAValidator.validate(address, 'trx');
-
-  if (!isValid) {
-    return {
-      valid: false,
-      error: 'Invalid Tron address. Please check the address and try again.',
+      error: 'Invalid Spark address. Address should start with spark1, sparkt1, or sparkrt1.',
     };
   }
 
-  return { valid: true };
-}
-
-/**
- * Solana
- */
-export function validateSolanaAddress(address: string): AddressValidationResult {
-  const isValidFormat = WAValidator.validate(address, 'sol');
-
-  if (!isValidFormat) {
+  if (trimmed.length < 40 || trimmed.length > 100) {
     return {
       valid: false,
-      error: 'Invalid Solana address. Please check the address and try again.',
+      error: 'Invalid Spark address length. Please check the address format.',
+    };
+  }
+
+  const bech32Regex = /^(spark1|sparkt1|sparkrt1)[ac-hj-np-z02-9]+$/;
+  if (!bech32Regex.test(trimmed)) {
+    return {
+      valid: false,
+      error: 'Invalid Spark address format. Please check the address.',
     };
   }
 
@@ -92,22 +62,16 @@ export function validateSolanaAddress(address: string): AddressValidationResult 
 }
 
 export function validateAddressByNetwork(
-  networkId: NetworkType,
-  address: string
+  networkId: string,
+  address: string,
+  validator?: AddressValidator
 ): AddressValidationResult {
   const trimmed = address.trim();
   if (!trimmed) {
     return { valid: false, error: 'Recipient address is required' };
   }
 
-  const validator = getAddressValidatorForNetwork(networkId);
+  const effectiveValidator = validator || (networkId === 'spark' ? validateSparkAddress : validateEvmAddress);
 
-  if (!validator) {
-    return {
-      valid: false,
-      error: 'Address validation is not supported for this network.',
-    };
-  }
-
-  return validator(trimmed);
+  return effectiveValidator(trimmed);
 }
