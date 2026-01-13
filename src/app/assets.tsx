@@ -1,18 +1,17 @@
 import { FiatCurrency, pricingService } from '@/services/pricing-service';
 import { useWallet, useWalletManager, useBalancesForWallet } from '@tetherto/wdk-react-native-core';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
-import { useFocusEffect } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Asset, AssetTicker, assetConfig } from '../config/assets';
-import getTokenConfigs from '../config/get-token-configs';
+import { Asset, TOKEN_UI_CONFIGS, getTokenConfigs } from '@/config/token';
 import formatAmount from '@/utils/format-amount';
 import getDisplaySymbol from '@/utils/get-display-symbol';
 import formatTokenAmount from '@/utils/format-token-amount';
 import Header from '@/components/header';
 import { colors } from '@/constants/colors';
-import { getNetworkMode, filterNetworksByMode, NetworkMode } from '@/services/network-mode-service';
+import { filterNetworksByMode } from '@/services/network-mode-service';
+import { useNetworkMode } from '@/hooks/use-network-mode';
 
 export default function AssetsScreen() {
   const insets = useSafeAreaInsets();
@@ -21,18 +20,7 @@ export default function AssetsScreen() {
   const currentWalletId = activeWalletId || wallets[0]?.identifier;
   const { isInitialized } = useWallet({ walletId: currentWalletId });
   const [assets, setAssets] = useState<Asset[]>([]);
-  const [networkMode, setNetworkMode] = useState<NetworkMode>('mainnet');
-  const [networkModeLoaded, setNetworkModeLoaded] = useState(false);
-
-  // Load network mode on focus to pick up changes from settings
-  useFocusEffect(
-    useCallback(() => {
-      getNetworkMode().then((mode) => {
-        setNetworkMode(mode);
-        setNetworkModeLoaded(true);
-      });
-    }, [])
-  );
+  const { mode: networkMode, isLoaded: networkModeLoaded } = useNetworkMode();
 
   const tokenConfigs = useMemo(() => {
     if (!networkModeLoaded) return {};
@@ -87,7 +75,7 @@ export default function AssetsScreen() {
 
     const promises = Array.from(balanceMap.entries()).map(
       async ([denomination, { totalBalance }]) => {
-        const config = assetConfig[denomination];
+        const config = TOKEN_UI_CONFIGS[denomination];
         if (!config) return null;
 
         const availableNetworks = filterNetworksByMode(config.supportedNetworks, networkMode);
@@ -97,7 +85,7 @@ export default function AssetsScreen() {
 
         const fiatValue = await pricingService.getFiatValue(
           totalBalance,
-          denomination as AssetTicker,
+          denomination,
           FiatCurrency.USD
         );
 
@@ -105,7 +93,7 @@ export default function AssetsScreen() {
           id: denomination,
           name: config.name,
           symbol,
-          amount: formatTokenAmount(totalBalance, denomination as AssetTicker, false),
+          amount: formatTokenAmount(totalBalance, denomination, false),
           fiatValue: fiatValue,
           fiatCurrency: FiatCurrency.USD,
           icon: config.icon,

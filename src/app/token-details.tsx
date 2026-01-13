@@ -1,19 +1,18 @@
-import { assetConfig, AssetTicker } from '@/config/assets';
-import { NetworkType, networkConfigs } from '@/config/networks';
 import formatAmount from '@/utils/format-amount';
 import { useWallet, useWalletManager, useBalancesForWallet } from '@tetherto/wdk-react-native-core';
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TokenDetails } from '../components/TokenDetails';
 import { FiatCurrency, pricingService } from '../services/pricing-service';
-import getTokenConfigs from '../config/get-token-configs';
+import { getTokenConfigs, TOKEN_UI_CONFIGS } from '@/config/token';
+import { CHAINS, NetworkId } from '@/config/chain';
 import getDisplaySymbol from '@/utils/get-display-symbol';
 import Header from '@/components/header';
 import { colors } from '@/constants/colors';
-import { getNetworkMode, NetworkMode } from '@/services/network-mode-service';
+import { useNetworkMode } from '@/hooks/use-network-mode';
 
 export default function TokenDetailsScreen() {
   const router = useDebouncedNavigation();
@@ -23,18 +22,7 @@ export default function TokenDetailsScreen() {
   const { isInitialized, addresses } = useWallet({ walletId: currentWalletId });
   const params = useLocalSearchParams<{ walletId?: string; token?: string }>();
 
-  const [networkMode, setNetworkMode] = useState<NetworkMode>('mainnet');
-  const [networkModeLoaded, setNetworkModeLoaded] = useState(false);
-
-  // Load network mode on focus to pick up changes from settings
-  useFocusEffect(
-    useCallback(() => {
-      getNetworkMode().then((mode) => {
-        setNetworkMode(mode);
-        setNetworkModeLoaded(true);
-      });
-    }, [])
-  );
+  const { mode: networkMode, isLoaded: networkModeLoaded } = useNetworkMode();
 
   const tokenConfigs = useMemo(() => {
     if (!networkModeLoaded) return {};
@@ -45,8 +33,8 @@ export default function TokenDetailsScreen() {
     enabled: isInitialized && networkModeLoaded && Object.keys(tokenConfigs).length > 0,
   });
 
-  const tokenSymbol = params.token?.toLowerCase() as keyof typeof assetConfig;
-  const tokenConfig = tokenSymbol ? assetConfig[tokenSymbol] : null;
+  const tokenSymbol = params.token?.toLowerCase();
+  const tokenConfig = tokenSymbol ? TOKEN_UI_CONFIGS[tokenSymbol] : null;
 
   const [tokenData, setTokenData] = useState<{
     symbol: string;
@@ -123,7 +111,7 @@ export default function TokenDetailsScreen() {
           totalBalance += balance;
           const usdValue = await pricingService.getFiatValue(
             balance,
-            tokenSymbol as AssetTicker,
+            tokenSymbol,
             FiatCurrency.USD
           );
           return { network, balance, usdValue, address };
@@ -134,14 +122,10 @@ export default function TokenDetailsScreen() {
         (item) => item.balance > 0
       );
 
-      const tokenPrice = await pricingService.getFiatValue(
-        1,
-        tokenSymbol as AssetTicker,
-        FiatCurrency.USD
-      );
+      const tokenPrice = await pricingService.getFiatValue(1, tokenSymbol, FiatCurrency.USD);
       const totalUSDValue = await pricingService.getFiatValue(
         totalBalance,
-        tokenSymbol as AssetTicker,
+        tokenSymbol,
         FiatCurrency.USD
       );
 
@@ -160,13 +144,13 @@ export default function TokenDetailsScreen() {
     calculateTokenData();
   }, [balanceResults, tokenSymbol, tokenConfig, addresses, tokenConfigs]);
 
-  const handleSendToken = (network?: NetworkType) => {
+  const handleSendToken = (network?: NetworkId) => {
     if (!tokenData || !network) return;
 
     const networkBalance = tokenData.networkBalances.find((nb) => nb.network === network);
     if (!networkBalance) return;
 
-    const networkName = networkConfigs[network]?.name || network;
+    const networkName = CHAINS[network]?.name || network;
 
     router.push({
       pathname: '/send/details',

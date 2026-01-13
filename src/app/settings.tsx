@@ -1,6 +1,5 @@
 import Header from '@/components/header';
 import { clearAvatar, clearWalletName } from '@/config/avatar-options';
-import { networkConfigs, NetworkType } from '@/config/networks';
 import useWalletAvatar from '@/hooks/use-wallet-avatar';
 import { useWallet, useWalletManager } from '@tetherto/wdk-react-native-core';
 import * as Clipboard from 'expo-clipboard';
@@ -11,12 +10,9 @@ import { Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } f
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
 import { colors } from '@/constants/colors';
-import {
-  getNetworkMode,
-  setNetworkMode,
-  NetworkMode,
-  getNetworksForMode,
-} from '@/services/network-mode-service';
+import { NetworkMode, getNetworksForMode } from '@/services/network-mode-service';
+import { useNetworkMode } from '@/hooks/use-network-mode';
+import { CHAINS, getAddressType, NetworkId } from '@/config/chain';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -26,15 +22,7 @@ export default function SettingsScreen() {
   const { addresses, getAddress, isInitialized } = useWallet({ walletId: currentWalletId });
   const avatar = useWalletAvatar();
   const [walletAddresses, setWalletAddresses] = useState<Record<string, string>>({});
-  const [networkMode, setNetworkModeState] = useState<NetworkMode>('mainnet');
-  const [networkModeLoaded, setNetworkModeLoaded] = useState(false);
-
-  useEffect(() => {
-    getNetworkMode().then((mode) => {
-      setNetworkModeState(mode);
-      setNetworkModeLoaded(true);
-    });
-  }, []);
+  const { mode: networkMode, isLoaded: networkModeLoaded, setMode } = useNetworkMode();
 
   useEffect(() => {
     if (!networkModeLoaded) return;
@@ -161,23 +149,12 @@ export default function SettingsScreen() {
   };
 
   const getNetworkName = (network: string) => {
-    if (network === 'spark' && networkMode === 'testnet') {
-      return 'Spark Regtest';
-    }
-    return networkConfigs[network as NetworkType]?.name || network;
-  };
-
-  const getAddressType = (network: string): string | null => {
-    const config = networkConfigs[network as NetworkType];
-    if (config?.accountType === 'Safe') {
-      return 'Safe';
-    }
-    return null;
+    return CHAINS[network as NetworkId]?.name || network;
   };
 
   const filteredAddresses = Object.entries(walletAddresses).filter(([network]) => {
     const allowedNetworks = getNetworksForMode(networkMode);
-    return allowedNetworks.includes(network as NetworkType);
+    return allowedNetworks.includes(network as NetworkId);
   });
 
   const handleNetworkModeToggle = async (value: boolean) => {
@@ -191,8 +168,7 @@ export default function SettingsScreen() {
         {
           text: 'Switch',
           onPress: async () => {
-            await setNetworkMode(newMode);
-            setNetworkModeState(newMode);
+            await setMode(newMode);
             toast.success(
               `Switched to ${newMode === 'testnet' ? 'Testnet' : 'Mainnet'}. Please restart the app.`
             );
@@ -270,8 +246,10 @@ export default function SettingsScreen() {
                   <View style={styles.addressContent}>
                     <View style={styles.networkLabelRow}>
                       <Text style={styles.networkLabel}>{getNetworkName(network)}</Text>
-                      {getAddressType(network) && (
-                        <Text style={styles.addressTypeTag}>{getAddressType(network)}</Text>
+                      {getAddressType(network as NetworkId) && (
+                        <Text style={styles.addressTypeTag}>
+                          {getAddressType(network as NetworkId)}
+                        </Text>
                       )}
                     </View>
                     <Text style={styles.addressValue}>{formatAddress(address)}</Text>

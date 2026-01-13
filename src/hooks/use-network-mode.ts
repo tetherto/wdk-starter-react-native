@@ -54,11 +54,11 @@ export const useNetworkMode = () => {
     const chainConfigs: NetworkConfigs = {};
     const chainList = [
       CHAINS[NetworkId.SEPOLIA],
-      CHAINS[NetworkId.ETHEREUM],
-      CHAINS[NetworkId.POLYGON],
-      CHAINS[NetworkId.ARBITRUM],
-      mode === 'testnet' ? CHAINS[NetworkId.SPARK_REGTEST] : CHAINS[NetworkId.SPARK],
-      CHAINS[NetworkId.PLASMA],
+      // CHAINS[NetworkId.ETHEREUM],
+      // CHAINS[NetworkId.POLYGON],
+      // CHAINS[NetworkId.ARBITRUM],
+      // mode === 'testnet' ? CHAINS[NetworkId.SPARK_REGTEST] : CHAINS[NetworkId.SPARK],
+      // CHAINS[NetworkId.PLASMA],
     ];
 
     chainList.forEach((chain) => {

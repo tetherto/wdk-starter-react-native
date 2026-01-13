@@ -1,11 +1,10 @@
-import { networkConfigs, NetworkType } from '@/config/networks';
-import { AssetTicker } from '@/config/assets';
 import formatAmount from '@/utils/format-amount';
 import formatTokenAmount from '@/utils/format-token-amount';
 import formatUSDValue from '@/utils/format-usd-value';
 import { Send } from 'lucide-react-native';
 import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors } from '@/constants/colors';
+import { CHAINS, NetworkId, getAddressType } from '@/config/chain';
 
 interface TokenNetworkBalance {
   network: string;
@@ -27,15 +26,15 @@ interface TokenData {
 
 interface TokenDetailsProps {
   tokenData: TokenData;
-  onSendPress?: (network?: NetworkType) => void;
+  onSendPress?: (network?: NetworkId) => void;
 }
 
 export function TokenDetails({ tokenData, onSendPress }: TokenDetailsProps) {
-  const handleSend = (network?: NetworkType) => {
+  const handleSend = (network?: NetworkId) => {
     if (onSendPress) {
       onSendPress(network);
     } else {
-      const networkName = network ? networkConfigs[network]?.name || network : 'any network';
+      const networkName = network ? CHAINS[network]?.name || network : 'any network';
       Alert.alert('Send Token', `Send ${tokenData.symbol} on ${networkName}`);
     }
   };
@@ -53,7 +52,7 @@ export function TokenDetails({ tokenData, onSendPress }: TokenDetailsProps) {
         </View>
         <Text style={styles.totalLabel}>Total {tokenData.name} Balance</Text>
         <Text style={styles.totalAmount}>
-          {formatTokenAmount(tokenData.totalBalance, tokenData.symbol as AssetTicker)}
+          {formatTokenAmount(tokenData.totalBalance, tokenData.symbol)}
         </Text>
         <Text style={styles.totalValue}>{formatUSDValue(tokenData.totalUSDValue)}</Text>
         {tokenData.priceUSD > 0 && (
@@ -69,22 +68,22 @@ export function TokenDetails({ tokenData, onSendPress }: TokenDetailsProps) {
           <Text style={styles.sectionTitle}>Available on Networks</Text>
           <ScrollView style={styles.networkList} showsVerticalScrollIndicator={false}>
             {tokenData.networkBalances.map((item, index) => {
-              const networkName = networkConfigs[item.network as NetworkType]?.name || item.network;
-              const networkColor = networkConfigs[item.network as NetworkType]?.color || '#999';
+              const networkName = CHAINS[item.network as NetworkId]?.name || item.network;
+              const networkColor = CHAINS[item.network as NetworkId]?.color || '#999';
 
               return (
                 <View key={`${item.network}-${index}`} style={styles.networkRow}>
                   <View style={styles.networkInfo}>
                     <View style={[styles.networkIcon, { backgroundColor: networkColor }]}>
                       <Image
-                        source={networkConfigs[item.network as NetworkType]?.icon}
+                        source={CHAINS[item.network as NetworkId]?.icon}
                         style={styles.tokenIconImage}
                       />
                     </View>
                     <View style={styles.networkDetails}>
                       <View style={styles.networkNameRow}>
                         <Text style={styles.networkName}>{networkName}</Text>
-                        {networkConfigs[item.network as NetworkType]?.accountType === 'Safe' && (
+                        {getAddressType(item.network as NetworkId) === 'Safe' && (
                           <Text style={styles.accountTypeTag}>Safe</Text>
                         )}
                       </View>
@@ -98,7 +97,7 @@ export function TokenDetails({ tokenData, onSendPress }: TokenDetailsProps) {
 
                   <View style={styles.networkBalance}>
                     <Text style={styles.networkAmount}>
-                      {formatTokenAmount(item.balance, tokenData.symbol as AssetTicker)}
+                      {formatTokenAmount(item.balance, tokenData.symbol as NetworkId)}
                     </Text>
                     <Text style={styles.networkValue}>{formatUSDValue(item.usdValue)}</Text>
                   </View>
@@ -106,7 +105,7 @@ export function TokenDetails({ tokenData, onSendPress }: TokenDetailsProps) {
                   {item.balance > 0 && (
                     <TouchableOpacity
                       style={styles.sendButton}
-                      onPress={() => handleSend(item.network as NetworkType)}
+                      onPress={() => handleSend(item.network as NetworkId)}
                     >
                       <Send size={16} color="#FF6501" />
                     </TouchableOpacity>

@@ -1,6 +1,7 @@
 import { TokenConfig, TokenConfigs } from '@tetherto/wdk-react-native-core';
-import { NetworkId } from '@/config/chain';
+import { NetworkId, isChainTestnet } from '@/config/chain';
 import { FiatCurrency } from '@/services/pricing-service';
+import { NetworkMode } from '@/services/network-mode-service';
 
 export interface TokenUiConfig {
   id: string;
@@ -134,21 +135,40 @@ export const TOKENS: TokenConfigs = {
 
 export interface Asset {
   id: string;
-
   name: string;
-
   symbol: string;
-
   amount: string;
-
   fiatValue: number;
-
   fiatCurrency: FiatCurrency;
-
   icon: string | any;
-
   color: string;
 }
+
+export const getTestnetTokens = (): TokenConfigs => {
+  return Object.keys(TOKENS).reduce((acc, networkId) => {
+    if (isChainTestnet(networkId as NetworkId)) {
+      acc[networkId] = TOKENS[networkId as NetworkId];
+    }
+    return acc;
+  }, {} as any);
+};
+
+export const getMainnetTokens = (): TokenConfigs => {
+  return Object.keys(TOKENS).reduce((acc, networkId) => {
+    if (!isChainTestnet(networkId as NetworkId)) {
+      acc[networkId] = TOKENS[networkId as NetworkId];
+    }
+    return acc;
+  }, {} as any);
+};
+
+export const getTokenConfigs = (networkMode: NetworkMode = 'mainnet'): TokenConfigs => {
+  if (networkMode === 'mainnet') {
+    return getMainnetTokens();
+  } else {
+    return getTestnetTokens();
+  }
+};
 
 export function getAssetTicker(token: TokenConfig | TokenUiConfig): string {
   // Standardize ticker lookup (e.g. handle wrapped tokens or special cases here)

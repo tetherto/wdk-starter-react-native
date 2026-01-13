@@ -1,4 +1,3 @@
-import { assetConfig, AssetTicker } from '@/config/assets';
 import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -6,7 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 import { useWallet, useWalletManager, useBalancesForWallet } from '@tetherto/wdk-react-native-core';
-import getTokenConfigs from '@/config/get-token-configs';
+import { getTokenConfigs, TOKEN_UI_CONFIGS } from '@/config/token';
 import { AssetSelector, type Token } from '@tetherto/wdk-uikit-react-native';
 import { FiatCurrency, pricingService } from '@/services/pricing-service';
 import formatAmount from '@/utils/format-amount';
@@ -93,7 +92,7 @@ export default function SelectTokenScreen() {
       const tokensWithBalances: Token[] = [];
 
       for (const [assetSymbol, { totalBalance }] of balanceMap.entries()) {
-        const config = assetConfig[assetSymbol as keyof typeof assetConfig];
+        const config = TOKEN_UI_CONFIGS[assetSymbol];
         if (!config) continue;
 
         const availableNetworks = filterNetworksByMode(config.supportedNetworks, networkMode);
@@ -101,11 +100,7 @@ export default function SelectTokenScreen() {
 
         let usdValue = 0;
         try {
-          usdValue = await pricingService.getFiatValue(
-            totalBalance,
-            assetSymbol as AssetTicker,
-            FiatCurrency.USD
-          );
+          usdValue = await pricingService.getFiatValue(totalBalance, assetSymbol, FiatCurrency.USD);
         } catch {
           usdValue = 0;
         }
@@ -114,7 +109,7 @@ export default function SelectTokenScreen() {
           id: assetSymbol,
           symbol: getDisplaySymbol(assetSymbol),
           name: config.name,
-          balance: formatTokenAmount(totalBalance, assetSymbol as AssetTicker, false),
+          balance: formatTokenAmount(totalBalance, assetSymbol, false),
           balanceUSD: `${formatAmount(usdValue)} USD`,
           icon: config.icon,
           color: config.color,

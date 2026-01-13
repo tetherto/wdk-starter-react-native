@@ -207,6 +207,14 @@ export const getTestnets = (): ChainConfig[] => Object.values(CHAINS).filter((c)
 export const getChainsByFamily = (family: ProtocolFamily): ChainConfig[] =>
   Object.values(CHAINS).filter((c) => c.family === family);
 
+export const isChainTestnet = (networkId: NetworkId): boolean => {
+  return CHAINS[networkId].isTestnet;
+};
+
+export const getAddressType = (networkId: NetworkId) => {
+  return CHAINS[networkId].supportedAccountTypes[0];
+};
+
 export const toNetworkConfig = (chain: ChainConfig): NetworkConfig => {
   if (chain.family === 'spark') {
     return {

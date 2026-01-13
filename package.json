@@ -26,7 +26,7 @@
     "@react-navigation/native": "7.1.26",
     "@tetherto/wdk-pricing-bitfinex-http": "^1.0.0-beta.1",
     "@tetherto/wdk-pricing-provider": "^1.0.0-beta.1",
-    "@tetherto/wdk-react-native-core": "github:tetherto/wdk-react-native-core#0b2be6eb5eed5b039cb1083441c3ae0e653fd02d",
+    "@tetherto/wdk-react-native-core": "/home/nampc/dev/tether/wdk-react-native-core-fork/tetherto-wdk-react-native-core-1.0.0.tgz",
     "@tetherto/wdk-uikit-react-native": "^1.0.0-beta.2",
     "bip39": "3.1.0",
     "decimal.js": "10.6.0",
