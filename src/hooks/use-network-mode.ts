@@ -52,19 +52,21 @@ export const useNetworkMode = () => {
 
   const workletChainConfigs = useMemo(() => {
     const chainConfigs: NetworkConfigs = {};
-    const chainList =
-      mode === 'testnet'
-        ? [CHAINS[NetworkId.SEPOLIA], CHAINS[NetworkId.SPARK_REGTEST]]
-        : [
-            CHAINS[NetworkId.ETHEREUM],
-            CHAINS[NetworkId.POLYGON],
-            CHAINS[NetworkId.ARBITRUM],
-            CHAINS[NetworkId.SPARK],
-            CHAINS[NetworkId.PLASMA],
-          ];
+    const chainList = [
+      CHAINS[NetworkId.SEPOLIA],
+      CHAINS[NetworkId.ETHEREUM],
+      CHAINS[NetworkId.POLYGON],
+      CHAINS[NetworkId.ARBITRUM],
+      mode === 'testnet' ? CHAINS[NetworkId.SPARK_REGTEST] : CHAINS[NetworkId.SPARK],
+      CHAINS[NetworkId.PLASMA],
+    ];
 
     chainList.forEach((chain) => {
-      chainConfigs[chain.id] = toNetworkConfig(chain);
+      if (mode === 'testnet' && chain.id === NetworkId.SPARK_REGTEST) {
+        chainConfigs[NetworkId.SPARK] = toNetworkConfig(chain);
+      } else {
+        chainConfigs[chain.id] = toNetworkConfig(chain);
+      }
     });
 
     return chainConfigs;
