@@ -4,11 +4,7 @@ declare module 'multicoin-address-validator' {
   }
 
   interface Validator {
-    validate(
-      address: string,
-      currency: string,
-      options?: ValidateOptions
-    ): boolean;
+    validate(address: string, currency: string, options?: ValidateOptions): boolean;
   }
 
   const WAValidator: Validator;

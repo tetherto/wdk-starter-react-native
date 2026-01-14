@@ -1,9 +1,9 @@
-import { assetConfig } from '@/config/assets';
+import { TOKEN_UI_CONFIGS } from '@/config/token';
 
-const getDisplaySymbol = (denomination: string) => {
-  const lower = denomination.toLowerCase();
+const getDisplaySymbol = (tokenSymbol: string) => {
+  const lower = tokenSymbol.toLowerCase();
 
-  const config = assetConfig[lower];
+  const config = TOKEN_UI_CONFIGS[lower];
   if (config) return config.symbol;
 
   return lower.toUpperCase();

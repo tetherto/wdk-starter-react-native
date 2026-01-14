@@ -1,13 +1,10 @@
 import { Network, NetworkSelector } from '@/components/NetworkSelector';
-import { assetConfig, AssetTicker } from '@/config/assets';
-import { networkConfigs, NetworkType } from '@/config/networks';
 import formatAmount from '@/utils/format-amount';
 import { useWallet, useWalletManager, useBalancesForWallet } from '@tetherto/wdk-react-native-core';
-import getTokenConfigs from '@/config/get-token-configs';
+import { getTokenConfigs, TOKEN_UI_CONFIGS } from '@/config/token';
 import { useLocalSearchParams } from 'expo-router';
-import { useFocusEffect } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FiatCurrency, pricingService } from '@/services/pricing-service';
@@ -15,7 +12,9 @@ import getDisplaySymbol from '@/utils/get-display-symbol';
 import formatTokenAmount from '@/utils/format-token-amount';
 import Header from '@/components/header';
 import { colors } from '@/constants/colors';
-import { getNetworkMode, filterNetworksByMode, NetworkMode } from '@/services/network-mode-service';
+import { filterNetworksByMode } from '@/services/network-mode-service';
+import { useNetworkMode } from '@/hooks/use-network-mode';
+import { CHAINS, NetworkId } from '@/config/chain';
 
 export default function SelectNetworkScreen() {
   const insets = useSafeAreaInsets();
@@ -32,18 +31,7 @@ export default function SelectNetworkScreen() {
   };
 
   const [networks, setNetworks] = useState<Network[]>([]);
-  const [networkMode, setNetworkModeState] = useState<NetworkMode>('mainnet');
-  const [networkModeLoaded, setNetworkModeLoaded] = useState(false);
-
-  // Load network mode on focus to pick up changes from settings
-  useFocusEffect(
-    useCallback(() => {
-      getNetworkMode().then((mode) => {
-        setNetworkModeState(mode);
-        setNetworkModeLoaded(true);
-      });
-    }, [])
-  );
+  const { mode: networkMode, isLoaded: networkModeLoaded } = useNetworkMode();
 
   const tokenConfigs = useMemo(() => {
     if (!networkModeLoaded) return {};
@@ -51,12 +39,12 @@ export default function SelectNetworkScreen() {
   }, [networkMode, networkModeLoaded]);
 
   const { data: balanceResults } = useBalancesForWallet(0, tokenConfigs, {
-    enabled: isInitialized && networkModeLoaded && Object.keys(tokenConfigs).length > 0
+    enabled: isInitialized && networkModeLoaded && Object.keys(tokenConfigs).length > 0,
   });
 
   useEffect(() => {
     const calculateNetworks = async () => {
-      const tokenConfig = assetConfig[tokenId as keyof typeof assetConfig];
+      const tokenConfig = TOKEN_UI_CONFIGS[tokenId];
 
       if (!tokenConfig) {
         setNetworks([]);
@@ -81,7 +69,9 @@ export default function SelectNetworkScreen() {
             matchedSymbol = networkTokens.native.symbol.toLowerCase();
             decimals = networkTokens.native.decimals;
           } else {
-            const token = networkTokens.tokens.find((t) => t.address?.toLowerCase() === result.tokenAddress?.toLowerCase());
+            const token = networkTokens.tokens.find(
+              (t) => t.address?.toLowerCase() === result.tokenAddress?.toLowerCase()
+            );
             if (token) {
               matchedSymbol = token.symbol.toLowerCase();
               decimals = token.decimals;
@@ -90,30 +80,29 @@ export default function SelectNetworkScreen() {
 
           if (matchedSymbol === tokenId.toLowerCase()) {
             const balanceNum = parseFloat(result.balance) / Math.pow(10, decimals);
-            networkBalanceMap.set(result.network, (networkBalanceMap.get(result.network) || 0) + balanceNum);
+            networkBalanceMap.set(
+              result.network,
+              (networkBalanceMap.get(result.network) || 0) + balanceNum
+            );
           }
         });
       }
 
       const networksWithBalances = await Promise.all(
-        filteredNetworks.map(async (networkType: NetworkType) => {
-          const network = networkConfigs[networkType];
+        filteredNetworks.map(async (networkType: NetworkId) => {
+          const network = CHAINS[networkType];
           const balanceValue = networkBalanceMap.get(networkType) || 0;
 
           const balanceUSD = await pricingService.getFiatValue(
             balanceValue,
-            tokenId as AssetTicker,
+            tokenId,
             FiatCurrency.USD
           );
 
-          const displayName = network.id === 'spark' && networkMode === 'testnet'
-            ? 'Spark Regtest'
-            : network.name;
-
           return {
             ...network,
-            name: displayName,
-            balance: formatTokenAmount(balanceValue, tokenId as AssetTicker, false),
+            name: network.name,
+            balance: formatTokenAmount(balanceValue, tokenId, false),
             balanceFiat: formatAmount(balanceUSD),
             fiatCurrency: FiatCurrency.USD,
             token: getDisplaySymbol(tokenId),

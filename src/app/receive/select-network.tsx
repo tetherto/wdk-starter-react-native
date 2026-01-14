@@ -1,22 +1,29 @@
 import Header from '@/components/header';
-import { assetConfig } from '@/config/assets';
-import { Network, networkConfigs } from '@/config/networks';
-import { NetworkType } from '@/config/networks';
 import { useWallet, useWalletManager } from '@tetherto/wdk-react-native-core';
 import { useLocalSearchParams } from 'expo-router';
-import { useFocusEffect } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
-import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
-import { getNetworkMode, filterNetworksByMode, NetworkMode } from '@/services/network-mode-service';
+import { filterNetworksByMode } from '@/services/network-mode-service';
+import { TOKEN_UI_CONFIGS } from '@/config/token';
+import { ChainConfig, CHAINS, getAddressType, NetworkId } from '@/config/chain';
+import { useNetworkMode } from '@/hooks/use-network-mode';
 
-interface NetworkOption extends Network {
+type NetworkOption = ChainConfig & {
   address?: string;
   hasAddress: boolean;
   description?: string;
-}
+};
 
 const NETWORK_DESCRIPTIONS: Record<string, string> = {
   ethereum: 'ERC20',
@@ -43,18 +50,11 @@ export default function ReceiveSelectNetworkScreen() {
 
   const [networks, setNetworks] = useState<NetworkOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [networkMode, setNetworkMode] = useState<NetworkMode>('mainnet');
-
-  // Load network mode on focus to pick up changes from settings
-  useFocusEffect(
-    useCallback(() => {
-      getNetworkMode().then(setNetworkMode);
-    }, [])
-  );
+  const { mode: networkMode } = useNetworkMode();
 
   useEffect(() => {
     const fetchNetworks = async () => {
-      const tokenConfig = assetConfig[tokenId as keyof typeof assetConfig];
+      const tokenConfig = TOKEN_UI_CONFIGS[tokenId];
       if (!tokenConfig) {
         setNetworks([]);
         setIsLoading(false);
@@ -64,33 +64,29 @@ export default function ReceiveSelectNetworkScreen() {
       const filteredNetworks = filterNetworksByMode(tokenConfig.supportedNetworks, networkMode);
 
       const networksWithAddresses = await Promise.all(
-        filteredNetworks.map(async (networkType: NetworkType) => {
-          const network = networkConfigs[networkType];
+        filteredNetworks.map(async (networkId: NetworkId) => {
+          const network = CHAINS[networkId];
           let address: string | undefined;
 
-          const addressData = addresses?.[networkType];
+          const addressData = addresses?.[networkId];
           if (Array.isArray(addressData) && addressData[0]) {
             address = addressData[0];
           } else if (typeof addressData === 'string') {
             address = addressData;
           } else {
             try {
-              const fetchedAddress = await getAddress(networkType, 0);
+              const fetchedAddress = await getAddress(networkId, 0);
               if (fetchedAddress) {
                 address = fetchedAddress;
               }
             } catch (err) {
-              console.log(`Failed to get address for ${networkType}:`, err);
+              console.log(`Failed to get address for ${networkId}:`, err);
             }
           }
 
-          const displayName = network.id === 'spark' && networkMode === 'testnet'
-            ? 'Spark Regtest'
-            : network.name;
-
           return {
             ...network,
-            name: displayName,
+            name: network.name,
             address,
             hasAddress: Boolean(address),
             description: NETWORK_DESCRIPTIONS[network.id],
@@ -160,7 +156,7 @@ export default function ReceiveSelectNetworkScreen() {
               <Text style={[styles.networkName, isDisabled && styles.networkNameDisabled]}>
                 {item.name}
               </Text>
-              {item.accountType === 'Safe' && (
+              {getAddressType(item.id) === 'Safe' && (
                 <Text style={styles.accountTypeTag}>Safe</Text>
               )}
             </View>
@@ -203,7 +199,7 @@ export default function ReceiveSelectNetworkScreen() {
       <FlatList
         data={networks}
         renderItem={renderNetwork}
-        keyExtractor={item => item.id}
+        keyExtractor={(item) => item.id}
         style={styles.networksList}
         contentContainerStyle={styles.networksContent}
         showsVerticalScrollIndicator={false}

@@ -1,9 +1,8 @@
 import { SeedPhrase } from '@/components/SeedPhrase';
-import * as bip39 from 'bip39';
 import * as Clipboard from 'expo-clipboard';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { ChevronLeft, Download, FileText, ScanText } from 'lucide-react-native';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { colors } from '@/constants/colors';
 import {
   Alert,
@@ -69,11 +68,27 @@ export default function ImportWalletScreen() {
   };
 
   const isFormValid = () => {
-    return secretWords.every(word => word.trim().length > 0);
+    return secretWords.every((word) => word.trim().length > 0);
   };
 
   const validateSeedPhrase = (phrase: string): boolean => {
-    return bip39.validateMnemonic(phrase, bip39.wordlists.english);
+    // todo: should use react-native-core to validate seed
+    const words = phrase
+      .trim()
+      .split(' ')
+      .filter((word) => word.length > 0);
+
+    // Check if we have exactly 12 or 24 words
+    if (words.length !== 12 && words.length !== 24) {
+      return false;
+    }
+
+    // Basic word validation - each word should be at least 3 characters
+    const validWords = words.every(
+      (word) => word.length >= 3 && /^[a-z]+$/.test(word) // only lowercase letters
+    );
+
+    return validWords;
   };
 
   const handleImportWallet = () => {

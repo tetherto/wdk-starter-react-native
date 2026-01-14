@@ -1,23 +1,14 @@
-import { AssetTicker } from '@/config/assets';
-import { NetworkType, networkConfigs } from '@/config/networks';
 import { useRefreshBalance, useWallet, useWalletManager } from '@tetherto/wdk-react-native-core';
-import getTokenConfigs from '@/config/get-token-configs';
 import { CryptoAddressInput } from '@tetherto/wdk-uikit-react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { useFocusEffect } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { RefreshCw } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { getNetworkMode, NetworkMode } from '@/services/network-mode-service';
 import { FiatCurrency, pricingService } from '@/services/pricing-service';
 import { useKeyboard } from '@/hooks/use-keyboard';
 import { colors } from '@/constants/colors';
-import {
-  getAssetTicker,
-  getNetworkType,
-  calculateGasFee,
-  type GasFeeEstimate,
-} from '@/utils/gas-fee-calculator';
+import { calculateGasFee, type GasFeeEstimate } from '@/utils/gas-fee-calculator';
+import { getAssetTicker, getTokenConfigs, TOKEN_UI_CONFIGS } from '@/config/token';
 import {
   ActivityIndicator,
   Alert,
@@ -43,6 +34,8 @@ import Header from '@/components/header';
 import { toast } from 'sonner-native';
 import { validateAddressByNetwork } from '@/utils/address-validators';
 import { useDebouncedCallback } from '@/hooks/use-debounced-callback';
+import { CHAINS, getAddressType, NetworkId } from '@/config/chain';
+import { useNetworkMode } from '@/hooks/use-network-mode';
 
 export default function SendDetailsScreen() {
   const insets = useSafeAreaInsets();
@@ -53,17 +46,7 @@ export default function SendDetailsScreen() {
   const { callAccountMethod, isInitialized, addresses } = useWallet({ walletId: currentWalletId });
   const params = useLocalSearchParams();
 
-  const [networkMode, setNetworkMode] = useState<NetworkMode>('mainnet');
-  const [networkModeLoaded, setNetworkModeLoaded] = useState(false);
-
-  useFocusEffect(
-    useCallback(() => {
-      getNetworkMode().then((mode) => {
-        setNetworkMode(mode);
-        setNetworkModeLoaded(true);
-      });
-    }, [])
-  );
+  const { mode: networkMode, isLoaded: networkModeLoaded } = useNetworkMode();
 
   const tokenConfigs = useMemo(() => {
     if (!networkModeLoaded) return {};
@@ -86,7 +69,7 @@ export default function SendDetailsScreen() {
     tokenBalance: string;
     tokenBalanceUSD: string;
     networkName: string;
-    networkId: NetworkType;
+    networkId: NetworkId;
     scannedAddress?: string;
   };
 
@@ -160,7 +143,7 @@ export default function SendDetailsScreen() {
   useEffect(() => {
     const calculateTokenPrice = async () => {
       try {
-        const assetTicker = getAssetTicker(tokenId);
+        const assetTicker = getAssetTicker(TOKEN_UI_CONFIGS[tokenId]);
         const price = await pricingService.getFiatValue(1, assetTicker, FiatCurrency.USD);
         setTokenPrice(price);
       } catch (error) {
@@ -224,7 +207,7 @@ export default function SendDetailsScreen() {
     const interval = setInterval(async () => {
       // Refetch token price
       try {
-        const assetTicker = getAssetTicker(tokenId);
+        const assetTicker = getAssetTicker(TOKEN_UI_CONFIGS[tokenId]);
         const price = await pricingService.getFiatValue(1, assetTicker, FiatCurrency.USD);
         setTokenPrice(price);
       } catch (error) {
@@ -315,9 +298,7 @@ export default function SendDetailsScreen() {
 
       if (inputMode === 'token') {
         if (numericAmount > numericBalance) {
-          setAmountError(
-            `Maximum: ${formatTokenAmount(numericBalance, tokenSymbol as AssetTicker)}`
-          );
+          setAmountError(`Maximum: ${formatTokenAmount(numericBalance, tokenSymbol)}`);
         } else {
           setAmountError(null);
         }
@@ -416,14 +397,18 @@ export default function SendDetailsScreen() {
       }
 
       if (!addresses?.[networkId]?.[0]) {
-        Alert.alert('Error', `No address found for network ${networkId}. Please wait for wallet to initialize.`);
+        Alert.alert(
+          'Error',
+          `No address found for network ${networkId}. Please wait for wallet to initialize.`
+        );
         setSendingTransaction(false);
         return;
       }
 
       // Check if it's a native token or ERC20 token
       if (networkTokenConfig) {
-        const isNativeToken = networkTokenConfig.native.symbol.toLowerCase() === tokenId.toLowerCase();
+        const isNativeToken =
+          networkTokenConfig.native.symbol.toLowerCase() === tokenId.toLowerCase();
         if (isNativeToken) {
           tokenAddress = null;
           decimals = networkTokenConfig.native.decimals;
@@ -472,11 +457,11 @@ export default function SendDetailsScreen() {
         return;
       } else {
         const maxFeeByNetwork: Record<string, number> = {
-          ethereum: 2000000,  // 2 USDT for Ethereum mainnet (higher gas)
-          arbitrum: 500000,   // 0.5 USDT for Arbitrum
-          polygon: 500000,    // 0.5 USDT for Polygon
-          sepolia: 500000,    // 0.5 USDT for Sepolia testnet
-          plasma: 500000,     // 0.5 USDT for Plasma
+          ethereum: 2000000, // 2 USDT for Ethereum mainnet (higher gas)
+          arbitrum: 500000, // 0.5 USDT for Arbitrum
+          polygon: 500000, // 0.5 USDT for Polygon
+          sepolia: 500000, // 0.5 USDT for Sepolia testnet
+          plasma: 500000, // 0.5 USDT for Plasma
         };
 
         transferParams = {
@@ -512,7 +497,6 @@ export default function SendDetailsScreen() {
     validateTransaction,
     amount,
     recipientAddress,
-    tokenSymbol,
     refreshBalance,
     inputMode,
     tokenPrice,
@@ -522,7 +506,6 @@ export default function SendDetailsScreen() {
     callAccountMethod,
     isInitialized,
     addresses,
-    currentWalletId,
   ]);
 
   const handleConfirmSend = useCallback(async () => {
@@ -532,14 +515,14 @@ export default function SendDetailsScreen() {
 
   const balanceDisplay = useMemo(() => {
     if (inputMode === 'token') {
-      return `Balance: ${formatTokenAmount(parseFloat(tokenBalance), tokenSymbol as AssetTicker)}`;
+      return `Balance: ${formatTokenAmount(parseFloat(tokenBalance), tokenSymbol)}`;
     }
     return `Balance: ${formatUSDValue(parseFloat(tokenBalanceUSD))}`;
   }, [inputMode, tokenBalance, tokenBalanceUSD, tokenSymbol]);
 
   const getFeeFromTransactionResult = (
     transactionResult: { txId?: { fee: string; hash: string } },
-    token: AssetTicker
+    token: string
   ) => {
     const fee = transactionResult.txId?.fee;
     if (!fee) return formatTokenAmount(0, token);
@@ -554,24 +537,27 @@ export default function SendDetailsScreen() {
     return formatTokenAmount(value, token);
   };
 
-  const getExplorerUrl = (hash: string, network: string): string | null => {
-    const networkConfig = networkConfigs[network as NetworkType];
-    if (!networkConfig) return null;
+  const getExplorerUrl = useCallback(
+    (hash: string, network: string): string | null => {
+      const networkConfig = CHAINS[network as NetworkId];
+      if (!networkConfig) return null;
 
-    if (networkConfig.userOpExplorerUrl) {
-      return `${networkConfig.userOpExplorerUrl}${hash}`;
-    }
-
-    if (networkConfig.explorerUrl) {
-      if (network === 'spark') {
-        const sparkNetwork = networkMode === 'testnet' ? 'regtest' : 'mainnet';
-        return `${networkConfig.explorerUrl}${hash}?network=${sparkNetwork}`;
+      if (networkConfig.family === 'evm') {
+        return `${networkConfig.userOpExplorerUrl}${hash}`;
       }
-      return `${networkConfig.explorerUrl}${hash}`;
-    }
 
-    return null;
-  };
+      if (networkConfig.explorerUrl) {
+        if (network === 'spark') {
+          const sparkNetwork = networkMode === 'testnet' ? 'regtest' : 'mainnet';
+          return `${networkConfig.explorerUrl}${hash}?network=${sparkNetwork}`;
+        }
+        return `${networkConfig.explorerUrl}${hash}`;
+      }
+
+      return null;
+    },
+    [networkMode]
+  );
 
   const handleOpenExplorer = useCallback(() => {
     const hash = transactionResult?.txId?.hash;
@@ -581,7 +567,7 @@ export default function SendDetailsScreen() {
     if (url) {
       Linking.openURL(url);
     }
-  }, [transactionResult, networkId]);
+  }, [transactionResult, networkId, getExplorerUrl]);
 
   const getTransactionAmout = useCallback(() => {
     const numericAmount = parseFloat(amount.replace(/,/g, ''));
@@ -589,7 +575,7 @@ export default function SendDetailsScreen() {
       return formatUSDValue(numericAmount);
     }
 
-    return formatTokenAmount(parseFloat(amount || '0'), tokenSymbol as AssetTicker);
+    return formatTokenAmount(parseFloat(amount || '0'), tokenSymbol);
   }, [inputMode, tokenPrice, amount, tokenSymbol]);
 
   const isUseMaxDisabled = useMemo(() => {
@@ -630,7 +616,7 @@ export default function SendDetailsScreen() {
                   <Text style={styles.recapLabel}>Network:</Text>
                   <Text style={styles.recapValue}>
                     {networkName}
-                    {networkConfigs[networkId as NetworkType]?.accountType === 'Safe' && (
+                    {getAddressType(networkId) === 'Safe' && (
                       <Text style={styles.recapValueSecondary}> (Safe)</Text>
                     )}
                   </Text>
@@ -711,7 +697,7 @@ export default function SendDetailsScreen() {
                 ) : gasEstimate.fee !== undefined ? (
                   <>
                     <Text style={styles.gasAmount}>
-                      {formatTokenAmount(gasEstimate.fee, tokenSymbol as AssetTicker)}
+                      {formatTokenAmount(gasEstimate.fee, tokenSymbol)}
                     </Text>
                     <Text style={styles.gasUsd}>
                       ≈ {formatUSDValue(gasEstimate.fee * tokenPrice)}
@@ -768,7 +754,7 @@ export default function SendDetailsScreen() {
             {transactionResult?.txId?.hash && (
               <TouchableOpacity onPress={handleOpenExplorer} style={styles.txHashContainer}>
                 <Text style={styles.txHashLabel}>
-                  {networkConfigs[networkId as NetworkType]?.userOpExplorerUrl
+                  {CHAINS[networkId as NetworkId]?.family === 'evm'
                     ? 'UserOperation Hash:'
                     : 'Transaction Hash:'}
                 </Text>
@@ -783,7 +769,7 @@ export default function SendDetailsScreen() {
               <View style={styles.transactionSummary}>
                 <Text style={styles.summaryLabel}>Fee:</Text>
                 <Text style={styles.summaryValue}>
-                  {getFeeFromTransactionResult(transactionResult, tokenSymbol as AssetTicker)}
+                  {getFeeFromTransactionResult(transactionResult, tokenSymbol)}
                 </Text>
               </View>
             )}
@@ -803,7 +789,8 @@ export default function SendDetailsScreen() {
             <View style={styles.transactionSummary}>
               <Text style={styles.summaryLabel}>Network:</Text>
               <Text style={styles.summaryValue}>
-                {networkName}{networkConfigs[networkId as NetworkType]?.accountType === 'Safe' ? ' (Safe)' : ''}
+                {networkName}
+                {getAddressType(networkId) === 'Safe' ? ' (Safe)' : ''}
               </Text>
             </View>
 

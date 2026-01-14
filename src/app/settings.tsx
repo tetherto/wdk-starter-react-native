@@ -1,18 +1,18 @@
 import Header from '@/components/header';
 import { clearAvatar, clearWalletName } from '@/config/avatar-options';
-import { networkConfigs, NetworkType } from '@/config/networks';
 import useWalletAvatar from '@/hooks/use-wallet-avatar';
 import { useWallet, useWalletManager } from '@tetherto/wdk-react-native-core';
 import * as Clipboard from 'expo-clipboard';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { Copy, Info, Shield, Trash2, Wallet, Globe } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
 import { colors } from '@/constants/colors';
-import getChainsConfig, { SparkNetworkMode } from '@/config/get-chains-config';
-import { getNetworkMode, setNetworkMode, NetworkMode, getNetworksForMode } from '@/services/network-mode-service';
+import { NetworkMode, getNetworksForMode } from '@/services/network-mode-service';
+import { useNetworkMode } from '@/hooks/use-network-mode';
+import { CHAINS, getAddressType, NetworkId } from '@/config/chain';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -22,21 +22,12 @@ export default function SettingsScreen() {
   const { addresses, getAddress, isInitialized } = useWallet({ walletId: currentWalletId });
   const avatar = useWalletAvatar();
   const [walletAddresses, setWalletAddresses] = useState<Record<string, string>>({});
-  const [networkMode, setNetworkModeState] = useState<NetworkMode>('mainnet');
-  const [networkModeLoaded, setNetworkModeLoaded] = useState(false);
-
-  useEffect(() => {
-    getNetworkMode().then((mode) => {
-      setNetworkModeState(mode);
-      setNetworkModeLoaded(true);
-    });
-  }, []);
+  const { mode: networkMode, isLoaded: networkModeLoaded, setMode } = useNetworkMode();
 
   useEffect(() => {
     if (!networkModeLoaded) return;
 
     const fetchAddresses = async () => {
-      const sparkNetwork: SparkNetworkMode = networkMode === 'testnet' ? 'REGTEST' : 'MAINNET';
       const allowedNetworks = getNetworksForMode(networkMode);
 
       console.log('[Settings] === Starting fetchAddresses ===');
@@ -50,7 +41,10 @@ export default function SettingsScreen() {
         console.log(`[Settings] Processing network: ${network}`);
         try {
           const addressData = addresses?.[network];
-          console.log(`[Settings] ${network} - addressData from hook:`, JSON.stringify(addressData));
+          console.log(
+            `[Settings] ${network} - addressData from hook:`,
+            JSON.stringify(addressData)
+          );
           let address: string | undefined;
 
           // Handle different address formats: {0: "0x..."} or ["0x..."] or "0x..."
@@ -65,19 +59,24 @@ export default function SettingsScreen() {
           }
 
           if (!address && isInitialized) {
-            console.log(`[Settings] ${network} - No cached address, calling getAddress with 10s timeout...`);
+            console.log(
+              `[Settings] ${network} - No cached address, calling getAddress with 10s timeout...`
+            );
             const startTime = Date.now();
             try {
               const timeoutPromise = new Promise<undefined>((_, reject) =>
                 setTimeout(() => reject(new Error(`Timeout deriving ${network} address`)), 10000)
               );
-              address = await Promise.race([
-                getAddress(network, 0),
-                timeoutPromise
-              ]);
-              console.log(`[Settings] ${network} - getAddress returned in ${Date.now() - startTime}ms:`, address);
+              address = await Promise.race([getAddress(network, 0), timeoutPromise]);
+              console.log(
+                `[Settings] ${network} - getAddress returned in ${Date.now() - startTime}ms:`,
+                address
+              );
             } catch (deriveError) {
-              console.error(`[Settings] ${network} - getAddress ERROR after ${Date.now() - startTime}ms:`, deriveError);
+              console.error(
+                `[Settings] ${network} - getAddress ERROR after ${Date.now() - startTime}ms:`,
+                deriveError
+              );
             }
           } else if (!address && !isInitialized) {
             console.log(`[Settings] ${network} - Skipping derivation, WDK not initialized yet`);
@@ -150,23 +149,12 @@ export default function SettingsScreen() {
   };
 
   const getNetworkName = (network: string) => {
-    if (network === 'spark' && networkMode === 'testnet') {
-      return 'Spark Regtest';
-    }
-    return networkConfigs[network as NetworkType]?.name || network;
-  };
-
-  const getAddressType = (network: string): string | null => {
-    const config = networkConfigs[network as NetworkType];
-    if (config?.accountType === 'Safe') {
-      return 'Safe';
-    }
-    return null;
+    return CHAINS[network as NetworkId]?.name || network;
   };
 
   const filteredAddresses = Object.entries(walletAddresses).filter(([network]) => {
     const allowedNetworks = getNetworksForMode(networkMode);
-    return allowedNetworks.includes(network as NetworkType);
+    return allowedNetworks.includes(network as NetworkId);
   });
 
   const handleNetworkModeToggle = async (value: boolean) => {
@@ -180,9 +168,10 @@ export default function SettingsScreen() {
         {
           text: 'Switch',
           onPress: async () => {
-            await setNetworkMode(newMode);
-            setNetworkModeState(newMode);
-            toast.success(`Switched to ${newMode === 'testnet' ? 'Testnet' : 'Mainnet'}. Please restart the app.`);
+            await setMode(newMode);
+            toast.success(
+              `Switched to ${newMode === 'testnet' ? 'Testnet' : 'Mainnet'}. Please restart the app.`
+            );
           },
         },
       ]
@@ -257,8 +246,10 @@ export default function SettingsScreen() {
                   <View style={styles.addressContent}>
                     <View style={styles.networkLabelRow}>
                       <Text style={styles.networkLabel}>{getNetworkName(network)}</Text>
-                      {getAddressType(network) && (
-                        <Text style={styles.addressTypeTag}>{getAddressType(network)}</Text>
+                      {getAddressType(network as NetworkId) && (
+                        <Text style={styles.addressTypeTag}>
+                          {getAddressType(network as NetworkId)}
+                        </Text>
                       )}
                     </View>
                     <Text style={styles.addressValue}>{formatAddress(address)}</Text>

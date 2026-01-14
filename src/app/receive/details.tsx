@@ -3,12 +3,12 @@ import { useLocalSearchParams } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import * as Clipboard from 'expo-clipboard';
 import { ArrowLeft, Copy, Share, X } from 'lucide-react-native';
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { Share as RNShare, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
 import { colors } from '@/constants/colors';
-import { networkConfigs, NetworkType } from '@/config/networks';
+import { getAddressType, NetworkId } from '@/config/chain';
 
 export default function ReceiveQRCodeScreen() {
   const insets = useSafeAreaInsets();
@@ -23,8 +23,8 @@ export default function ReceiveQRCodeScreen() {
   };
 
   const getAddressTypeLabel = (): string | null => {
-    const config = networkConfigs[networkId as NetworkType];
-    if (config?.accountType === 'Safe') {
+    const addressType = getAddressType(networkId as NetworkId);
+    if (addressType === 'Safe') {
       return 'Safe Account Address';
     }
     return null; // No special label for native addresses

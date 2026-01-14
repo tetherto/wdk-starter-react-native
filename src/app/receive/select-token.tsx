@@ -1,10 +1,9 @@
-import { assetConfig } from '@/config/assets';
 import getDisplaySymbol from '@/utils/get-display-symbol';
 import { getRecentTokens, addToRecentTokens } from '@/utils/recent-tokens';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { useFocusEffect } from 'expo-router';
 import { ArrowLeft, Search, X } from 'lucide-react-native';
-import React, { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { colors } from '@/constants/colors';
 import {
   FlatList,
@@ -18,7 +17,9 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getNetworkMode, filterNetworksByMode, NetworkMode } from '@/services/network-mode-service';
+import { filterNetworksByMode } from '@/services/network-mode-service';
+import { useNetworkMode } from '@/hooks/use-network-mode';
+import { TOKEN_UI_CONFIGS } from '@/config/token';
 
 interface Token {
   id: string;
@@ -33,25 +34,20 @@ export default function ReceiveSelectTokenScreen() {
   const router = useDebouncedNavigation();
   const [searchQuery, setSearchQuery] = useState('');
   const [recentTokens, setRecentTokens] = useState<string[]>([]);
-  const [networkMode, setNetworkMode] = useState<NetworkMode>('mainnet');
+  const { mode: networkMode } = useNetworkMode();
 
-  // Load network mode on focus to pick up changes from settings
   useFocusEffect(
     useCallback(() => {
       const loadData = async () => {
-        const [recent, mode] = await Promise.all([
-          getRecentTokens('receive'),
-          getNetworkMode(),
-        ]);
+        const recent = await getRecentTokens('receive');
         setRecentTokens(recent);
-        setNetworkMode(mode);
       };
       loadData();
     }, [])
   );
 
   const tokens: Token[] = useMemo(() => {
-    return Object.entries(assetConfig)
+    return Object.entries(TOKEN_UI_CONFIGS)
       .filter(([_, config]) => {
         const availableNetworks = filterNetworksByMode(config.supportedNetworks, networkMode);
         return availableNetworks.length > 0;
@@ -71,7 +67,7 @@ export default function ReceiveSelectTokenScreen() {
     if (!searchQuery) return tokens;
     const query = searchQuery.toLowerCase();
     return tokens.filter(
-      token =>
+      (token) =>
         token.name.toLowerCase().includes(query) || token.symbol.toLowerCase().includes(query)
     );
   }, [searchQuery, tokens]);
@@ -103,7 +99,7 @@ export default function ReceiveSelectTokenScreen() {
   }, []);
 
   const renderRecentToken = (tokenName: string) => {
-    const token = tokens.find(t => t.name === tokenName);
+    const token = tokens.find((t) => t.name === tokenName);
     if (!token) return null;
 
     return (
@@ -189,7 +185,7 @@ export default function ReceiveSelectTokenScreen() {
           <FlatList
             data={filteredTokens}
             renderItem={renderToken}
-            keyExtractor={item => item.id}
+            keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.tokensList}
           />

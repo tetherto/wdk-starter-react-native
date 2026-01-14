@@ -1,9 +1,8 @@
-import { AssetTicker } from '@/config/assets';
 import formatAmount from './format-amount';
 import getDisplaySymbol from './get-display-symbol';
 
-const formatTokenAmount = (amount: number, token: AssetTicker, includeSymbol: boolean = true) => {
-  const symbol = getDisplaySymbol(token);
+const formatTokenAmount = (amount: number, tokenSymbol: string, includeSymbol: boolean = true) => {
+  const symbol = getDisplaySymbol(tokenSymbol);
 
   if (amount === 0) return `0.00${includeSymbol ? ` ${symbol}` : ''}`;
 

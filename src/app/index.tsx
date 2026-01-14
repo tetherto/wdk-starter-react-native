@@ -39,7 +39,7 @@ export default function Index() {
     );
   }
 
-  const walletExists = wallets.some(w => w.exists);
+  const walletExists = wallets.some((w) => w.exists);
 
   if (!walletExists) {
     return <Redirect href="/onboarding" />;

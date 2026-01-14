@@ -29,7 +29,7 @@ export function NetworkSelector({ networks, onSelectNetwork }: NetworkSelectorPr
   const filteredNetworks = useMemo(() => {
     if (!searchQuery) return networks;
     const query = searchQuery.toLowerCase();
-    return networks.filter(network => network.name.toLowerCase().includes(query));
+    return networks.filter((network) => network.name.toLowerCase().includes(query));
   }, [searchQuery, networks]);
 
   const clearSearch = useCallback(() => {
@@ -170,9 +170,7 @@ export function NetworkSelector({ networks, onSelectNetwork }: NetworkSelectorPr
           <View style={styles.networkTextContainer}>
             <View style={styles.networkNameRow}>
               <Text style={styles.networkName}>{item.name}</Text>
-              {item.accountType === 'Safe' && (
-                <Text style={styles.accountTypeTag}>Safe</Text>
-              )}
+              {item.accountType === 'Safe' && <Text style={styles.accountTypeTag}>Safe</Text>}
             </View>
             <Text style={[styles.gasLevel, { color: item.gasColor }]}>
               {item.gasLevel} Gas fees
@@ -217,7 +215,7 @@ export function NetworkSelector({ networks, onSelectNetwork }: NetworkSelectorPr
         <FlatList
           data={filteredNetworks}
           renderItem={renderNetwork}
-          keyExtractor={item => item.id}
+          keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.networksList}
         />

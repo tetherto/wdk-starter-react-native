@@ -1,10 +1,10 @@
 import { SeedPhrase } from '@/components/SeedPhrase';
-import { generateMnemonic } from 'bip39';
+import { useWorklet } from '@tetherto/wdk-react-native-core';
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { AlertCircle, ChevronLeft, Copy, Eye, EyeOff } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
@@ -22,6 +22,7 @@ export default function SecureWalletScreen() {
   const [showPhrase, setShowPhrase] = useState(true);
   const [isGenerating, setIsGenerating] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { generateEntropyAndEncrypt, getMnemonicFromEntropy } = useWorklet();
 
   useEffect(() => {
     generateNewMnemonic();
@@ -31,18 +32,18 @@ export default function SecureWalletScreen() {
     try {
       setIsGenerating(true);
       setError(null);
-      const mnemonicString = generateMnemonic();
 
-      if (!mnemonicString) {
-        throw new Error('Received empty mnemonic');
+      const { encryptedEntropyBuffer, encryptionKey } = await generateEntropyAndEncrypt(12);
+      const { mnemonic: phrase } = await getMnemonicFromEntropy(
+        encryptedEntropyBuffer,
+        encryptionKey
+      );
+
+      if (!phrase) {
+        throw new Error('Failed to generate mnemonic');
       }
 
-      const words = mnemonicString.split(' ');
-      if (words.length !== 12) {
-        throw new Error(`Invalid mnemonic length: expected 12 words, got ${words.length}`);
-      }
-
-      setMnemonic(words);
+      setMnemonic(phrase.split(' '));
     } catch (error) {
       console.error('Failed to generate seed phrase', error);
       setError(getErrorMessage(error, 'Failed to generate seed phrase. Please try again.'));

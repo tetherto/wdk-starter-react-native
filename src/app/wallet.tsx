@@ -1,18 +1,23 @@
 import { BalanceLoader } from '@/components/BalanceLoader';
-import { useWallet, useWalletManager, useBalancesForWallet, useRefreshBalance } from '@tetherto/wdk-react-native-core';
+import {
+  useWallet,
+  useWalletManager,
+  useBalancesForWallet,
+  useRefreshBalance,
+} from '@tetherto/wdk-react-native-core';
 import { Balance } from '@tetherto/wdk-uikit-react-native';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { useFocusEffect } from 'expo-router';
 import {
   ArrowDownLeft,
   ArrowUpRight,
-  Palette,
   QrCode,
   Settings,
   Shield,
   Star,
+  Palette,
 } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -26,21 +31,20 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AssetConfig, assetConfig, AssetTicker } from '../config/assets';
-import getTokenConfigs from '../config/get-token-configs';
+import { getTokenConfigs, TOKEN_UI_CONFIGS, TokenUiConfig } from '@/config/token';
 import { FiatCurrency, pricingService } from '../services/pricing-service';
-import { getNetworkMode, NetworkMode } from '../services/network-mode-service';
 import formatAmount from '@/utils/format-amount';
 import formatTokenAmount from '@/utils/format-token-amount';
 import useWalletAvatar from '@/hooks/use-wallet-avatar';
 import { colors } from '@/constants/colors';
 import { getWalletName } from '@/config/avatar-options';
+import { useNetworkMode } from '@/hooks/use-network-mode';
 
 type AggregatedBalance = ({
   denomination: string;
   balance: number;
   usdValue: number;
-  config: AssetConfig;
+  config: TokenUiConfig;
 } | null)[];
 
 export default function WalletScreen() {
@@ -50,19 +54,7 @@ export default function WalletScreen() {
   const currentWalletId = activeWalletId || wallets[0]?.identifier || 'default';
   const { isInitialized, addresses } = useWallet({ walletId: currentWalletId });
   const { mutate: refreshBalance } = useRefreshBalance();
-
-  const [networkMode, setNetworkMode] = useState<NetworkMode | null>(null);
-  const [networkModeLoaded, setNetworkModeLoaded] = useState(false);
-
-  // Load network mode on mount and when screen gains focus (after settings change)
-  useFocusEffect(
-    useCallback(() => {
-      getNetworkMode().then((mode) => {
-        setNetworkMode(mode);
-        setNetworkModeLoaded(true);
-      });
-    }, [])
-  );
+  const { mode: networkMode, isLoaded: networkModeLoaded } = useNetworkMode();
 
   const tokenConfigs = useMemo(() => {
     if (!networkModeLoaded) {
@@ -71,11 +63,13 @@ export default function WalletScreen() {
     return getTokenConfigs(networkMode!);
   }, [networkMode, networkModeLoaded]);
 
-  const { data: balanceResults, isLoading: isLoadingBalances, refetch } = useBalancesForWallet(
-    0,
-    tokenConfigs,
-    { enabled: isInitialized && networkModeLoaded && Object.keys(tokenConfigs).length > 0 }
-  );
+  const {
+    data: balanceResults,
+    isLoading: isLoadingBalances,
+    refetch,
+  } = useBalancesForWallet(0, tokenConfigs, {
+    enabled: isInitialized && networkModeLoaded && Object.keys(tokenConfigs).length > 0,
+  });
 
   const [refreshing, setRefreshing] = useState(false);
   const [aggregatedBalances, setAggregatedBalances] = useState<AggregatedBalance>([]);
@@ -111,17 +105,25 @@ export default function WalletScreen() {
         if (tokenAddress === null) {
           denomination = networkTokens.native.symbol.toLowerCase();
         } else {
-          const token = networkTokens.tokens.find(t => t.address?.toLowerCase() === tokenAddress?.toLowerCase());
+          const token = networkTokens.tokens.find(
+            (t) => t.address?.toLowerCase() === tokenAddress?.toLowerCase()
+          );
           if (token) {
             denomination = token.symbol.toLowerCase();
           }
         }
       }
 
-      const balanceNum = parseFloat(result.balance) / Math.pow(10,
-        tokenAddress === null ? networkTokens?.native.decimals || 18 :
-        networkTokens?.tokens.find(t => t.address?.toLowerCase() === tokenAddress?.toLowerCase())?.decimals || 6
-      );
+      const balanceNum =
+        parseFloat(result.balance) /
+        Math.pow(
+          10,
+          tokenAddress === null
+            ? networkTokens?.native.decimals || 18
+            : networkTokens?.tokens.find(
+                (t) => t.address?.toLowerCase() === tokenAddress?.toLowerCase()
+              )?.decimals || 6
+        );
 
       const current = map.get(denomination) || { totalBalance: 0 };
       map.set(denomination, {
@@ -130,12 +132,12 @@ export default function WalletScreen() {
     });
 
     const promises = Array.from(map.entries()).map(async ([denomination, { totalBalance }]) => {
-      const config = assetConfig[denomination];
+      const config = TOKEN_UI_CONFIGS[denomination];
       if (!config) return null;
 
       const fiatValue = await pricingService.getFiatValue(
         totalBalance,
-        denomination as AssetTicker,
+        denomination,
         FiatCurrency.USD
       );
 
@@ -378,7 +380,7 @@ export default function WalletScreen() {
                   </View>
                   <View style={styles.assetBalance}>
                     <Text style={styles.assetAmount}>
-                      {formatTokenAmount(asset.balance, asset.denomination as AssetTicker)}
+                      {formatTokenAmount(asset.balance, asset.denomination)}
                     </Text>
                     <Text style={styles.assetValue}>{formatAmount(asset.usdValue)} USD</Text>
                   </View>

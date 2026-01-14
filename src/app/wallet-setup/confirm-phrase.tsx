@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
@@ -31,7 +31,7 @@ export default function ConfirmPhraseScreen() {
 
       // Select 4 random positions to verify
       const positions = [2, 4, 6, 11]; // Word #3, #5, #7, #12 (0-indexed + 1)
-      const verificationWords: WordPosition[] = positions.map(pos => {
+      const verificationWords: WordPosition[] = positions.map((pos) => {
         const correctWord = words[pos];
         // Generate fake options
         const fakeWords = [
@@ -45,7 +45,7 @@ export default function ConfirmPhraseScreen() {
           'current',
           'flow',
           'zenith',
-        ].filter(w => w !== correctWord);
+        ].filter((w) => w !== correctWord);
 
         // Shuffle options
         const options = [correctWord, fakeWords[0], fakeWords[1]].sort(() => Math.random() - 0.5);
@@ -62,18 +62,18 @@ export default function ConfirmPhraseScreen() {
   }, [params.mnemonic]);
 
   const handleWordSelect = (position: number, word: string) => {
-    setSelectedWords(prev => ({
+    setSelectedWords((prev) => ({
       ...prev,
       [position]: word,
     }));
   };
 
   const isAllSelected = () => {
-    return wordPositions.every(wp => selectedWords[wp.position] !== undefined);
+    return wordPositions.every((wp) => selectedWords[wp.position] !== undefined);
   };
 
   const isCorrect = () => {
-    return wordPositions.every(wp => selectedWords[wp.position] === wp.word);
+    return wordPositions.every((wp) => selectedWords[wp.position] === wp.word);
   };
 
   const handleNext = () => {
@@ -90,7 +90,7 @@ export default function ConfirmPhraseScreen() {
       ]);
       // Reset selections for incorrect words
       const newSelections = { ...selectedWords };
-      wordPositions.forEach(wp => {
+      wordPositions.forEach((wp) => {
         if (selectedWords[wp.position] !== wp.word) {
           delete newSelections[wp.position];
         }
@@ -112,7 +112,7 @@ export default function ConfirmPhraseScreen() {
 
   const getButtonStyle = (position: number, word: string) => {
     const selected = selectedWords[position] === word;
-    const isCorrectWord = wordPositions.find(wp => wp.position === position)?.word === word;
+    const isCorrectWord = wordPositions.find((wp) => wp.position === position)?.word === word;
 
     if (selected) {
       if (isAllSelected() && !isCorrect() && !isCorrectWord) {
@@ -136,11 +136,11 @@ export default function ConfirmPhraseScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>Confirm your secret phrase</Text>
 
-        {wordPositions.map(wp => (
+        {wordPositions.map((wp) => (
           <View key={wp.position} style={styles.wordSection}>
             <Text style={styles.wordLabel}>Word #{wp.position}</Text>
             <View style={styles.optionsContainer}>
-              {wp.options.map(option => (
+              {wp.options.map((option) => (
                 <TouchableOpacity
                   key={`${wp.position}-${option}`}
                   style={getButtonStyle(wp.position, option)}
