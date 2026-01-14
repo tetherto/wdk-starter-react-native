@@ -6,6 +6,7 @@ import { Buffer } from '@craftzdog/react-native-buffer';
 global.Buffer = Buffer as unknown as BufferConstructor;
 
 import { DarkTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
+import { bundle, HRPC } from '@tetherto/pear-wrk-wdk';
 import { WdkAppProvider } from '@tetherto/wdk-react-native-core';
 import { ThemeProvider } from '@tetherto/wdk-uikit-react-native';
 import { Stack } from 'expo-router';
@@ -62,6 +63,7 @@ export default function RootLayout() {
         }}
       >
         <WdkAppProvider
+          bundle={{ bundle, HRPC }}
           networkConfigs={getChainsConfig(sparkNetwork)}
           tokenConfigs={getTokenConfigs(networkMode)}
         >

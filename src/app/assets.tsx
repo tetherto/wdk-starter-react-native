@@ -121,7 +121,7 @@ export default function AssetsScreen() {
     router.push({
       pathname: '/token-details',
       params: {
-        walletId: 'default',
+        walletId: currentWalletId,
         token: asset.id,
       },
     });
