@@ -33,7 +33,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getTokenConfigs, TOKEN_UI_CONFIGS, TokenUiConfig } from '@/config/token';
 import { FiatCurrency, pricingService } from '../services/pricing-service';
-import { getNetworkMode, NetworkMode } from '../services/network-mode-service';
 import formatAmount from '@/utils/format-amount';
 import formatTokenAmount from '@/utils/format-token-amount';
 import useWalletAvatar from '@/hooks/use-wallet-avatar';
