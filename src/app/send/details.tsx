@@ -1,9 +1,11 @@
 import { useRefreshBalance, useWallet, useWalletManager } from '@tetherto/wdk-react-native-core';
 import { CryptoAddressInput } from '@tetherto/wdk-uikit-react-native';
 import { useLocalSearchParams } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { RefreshCw } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { getNetworkMode, NetworkMode } from '@/services/network-mode-service';
 import { FiatCurrency, pricingService } from '@/services/pricing-service';
 import { useKeyboard } from '@/hooks/use-keyboard';
 import { colors } from '@/constants/colors';
@@ -457,11 +459,11 @@ export default function SendDetailsScreen() {
         return;
       } else {
         const maxFeeByNetwork: Record<string, number> = {
-          ethereum: 2000000, // 2 USDT for Ethereum mainnet (higher gas)
-          arbitrum: 500000, // 0.5 USDT for Arbitrum
-          polygon: 500000, // 0.5 USDT for Polygon
-          sepolia: 500000, // 0.5 USDT for Sepolia testnet
-          plasma: 500000, // 0.5 USDT for Plasma
+          ethereum: 2000000,  // 2 USDT for Ethereum mainnet (higher gas)
+          arbitrum: 500000,   // 0.5 USDT for Arbitrum
+          polygon: 500000,    // 0.5 USDT for Polygon
+          sepolia: 500000,    // 0.5 USDT for Sepolia testnet
+          plasma: 500000,     // 0.5 USDT for Plasma
         };
 
         transferParams = {

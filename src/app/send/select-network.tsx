@@ -3,6 +3,7 @@ import formatAmount from '@/utils/format-amount';
 import { useWallet, useWalletManager, useBalancesForWallet } from '@tetherto/wdk-react-native-core';
 import { getTokenConfigs, TOKEN_UI_CONFIGS } from '@/config/token';
 import { useLocalSearchParams } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -98,6 +99,10 @@ export default function SelectNetworkScreen() {
             tokenId,
             FiatCurrency.USD
           );
+
+          const displayName = network.id === 'spark' && networkMode === 'testnet'
+            ? 'Spark Regtest'
+            : network.name;
 
           return {
             ...network,

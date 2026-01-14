@@ -1,10 +1,17 @@
+// Crypto polyfill - MUST be first import before anything else
+import 'react-native-get-random-values';
+
+import { Buffer } from '@craftzdog/react-native-buffer';
+// @ts-ignore
+global.Buffer = Buffer as unknown as BufferConstructor;
+
 import { DarkTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { WdkAppProvider } from '@tetherto/wdk-react-native-core';
 import { ThemeProvider } from '@tetherto/wdk-uikit-react-native';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
@@ -33,6 +40,10 @@ export default function RootLayout() {
   }, [isLoaded]);
 
   if (!isLoaded) {
+    return null;
+  }
+
+  if (!isReady) {
     return null;
   }
 
