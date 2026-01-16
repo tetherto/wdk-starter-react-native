@@ -5,7 +5,7 @@ import useWalletAvatar from '@/hooks/use-wallet-avatar';
 import { useWallet, useWalletManager } from '@tetherto/wdk-react-native-core';
 import * as Clipboard from 'expo-clipboard';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
-import { Copy, Info, Shield, Trash2, Wallet, Globe } from 'lucide-react-native';
+import { Copy, Info, Shield, Trash2, Wallet, Globe, Users, ChevronRight } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -274,6 +274,24 @@ export default function SettingsScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
+            <Users size={20} color={colors.primary} />
+            <Text style={styles.sectionTitle}>Multisig Safes</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.menuCard}
+            onPress={() => router.push('/multisig')}
+          >
+            <View style={styles.menuContent}>
+              <Text style={styles.menuLabel}>Manage Multisig Safes</Text>
+              <Text style={styles.menuDescription}>Create, import, and manage multi-signature wallets</Text>
+            </View>
+            <ChevronRight size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
             <Info size={20} color={colors.primary} />
             <Text style={styles.sectionTitle}>About</Text>
           </View>
@@ -442,5 +460,25 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 18,
+  },
+  menuCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    padding: 16,
+  },
+  menuContent: {
+    flex: 1,
+  },
+  menuLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  menuDescription: {
+    fontSize: 13,
+    color: colors.textSecondary,
   },
 });
