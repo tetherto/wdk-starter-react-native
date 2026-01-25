@@ -1,10 +1,13 @@
-import avatarOptions, { setAvatar } from '@/config/avatar-options';
+import avatarOptions from '@/config/avatar-options';
+import { addWallet, createWalletEntry, setActiveWalletId, updateWallet } from '@/utils/wallet-storage';
+import { saveWalletMnemonic } from '@/utils/wallet-secrets';
 import { CommonActions, useNavigation } from '@react-navigation/native';
 import { useWallet } from '@tetherto/wdk-react-native-provider';
 import { useLocalSearchParams } from 'expo-router';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
+import { clearWalletCache } from '@/utils/wallet-cache';
 import { ChevronLeft } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { colors } from '@/constants/colors';
 import {
   ActivityIndicator,
@@ -26,13 +29,55 @@ export default function ImportNameWalletScreen() {
   const navigation = useNavigation();
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
-  const { createWallet } = useWallet();
+  const { createWallet, addresses } = useWallet();
   const [walletName, setWalletName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState(avatarOptions[0]);
   const [isImporting, setIsImporting] = useState(false);
+  const addressesRef = useRef(addresses);
+
+  useEffect(() => {
+    addressesRef.current = addresses;
+  }, [addresses]);
 
   // Get the seed phrase from navigation params
   const seedPhrase = params.seedPhrase ? decodeURIComponent(params.seedPhrase as string) : '';
+
+  const getPrimaryAddress = (value?: typeof addresses) => {
+    if (!value) return undefined;
+    const candidate = Object.values(value).find(Boolean);
+    return typeof candidate === 'string' ? candidate : undefined;
+  };
+
+  const getAddressMap = (value?: typeof addresses) => {
+    if (!value) return undefined;
+    const entries = Object.entries(value).filter(
+      (entry): entry is [string, string] => typeof entry[1] === 'string' && !!entry[1]
+    );
+    return entries.length ? Object.fromEntries(entries) : undefined;
+  };
+
+  const areAddressMapsEqual = (
+    left?: Record<string, string>,
+    right?: Record<string, string>
+  ) => {
+    if (!left && !right) return true;
+    if (!left || !right) return false;
+    const leftKeys = Object.keys(left);
+    const rightKeys = Object.keys(right);
+    if (leftKeys.length !== rightKeys.length) return false;
+    return leftKeys.every((key) => left[key] === right[key]);
+  };
+
+  const waitForPrimaryAddress = async (previous?: string) => {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const next = getPrimaryAddress(addressesRef.current);
+      if (next && next !== previous) {
+        return next;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    }
+    return getPrimaryAddress(addressesRef.current);
+  };
 
   const handleNext = async () => {
     if (!seedPhrase) {
@@ -43,10 +88,41 @@ export default function ImportNameWalletScreen() {
     setIsImporting(true);
 
     try {
+      const previousAddress = getPrimaryAddress(addressesRef.current);
+      const previousAddressMap = getAddressMap(addressesRef.current);
+      await clearWalletCache();
       // Use the context's createWallet method which handles everything including unlocking
       await createWallet({ name: walletName, mnemonic: seedPhrase });
-      await setAvatar(selectedAvatar.id);
-
+      const storedWallet = createWalletEntry(walletName, undefined, selectedAvatar.id);
+      await addWallet(storedWallet);
+      await saveWalletMnemonic(storedWallet.id, seedPhrase);
+      await setActiveWalletId(storedWallet.id);
+      if (__DEV__) {
+        console.info('[wallet-import] stored wallet', {
+          id: storedWallet.id,
+          name: storedWallet.name,
+        });
+      }
+      const primaryAddress = await waitForPrimaryAddress(previousAddress);
+      const addressMap = getAddressMap(addressesRef.current);
+      // Persist addresses when they change, or when a new wallet has none yet.
+      const addressesChanged =
+        (primaryAddress && primaryAddress !== previousAddress) ||
+        !areAddressMapsEqual(previousAddressMap, addressMap);
+      const shouldPersistAddresses =
+        (!!primaryAddress || !!addressMap) && !storedWallet.address && !storedWallet.addresses
+          ? true
+          : addressesChanged;
+      if (shouldPersistAddresses && primaryAddress) {
+        await updateWallet(storedWallet.id, {
+          address: primaryAddress,
+          addresses: addressMap,
+        });
+      } else if (shouldPersistAddresses && addressMap) {
+        await updateWallet(storedWallet.id, { addresses: addressMap });
+      } else if (__DEV__) {
+        console.info('[wallet-import] address not updated (no change detected)');
+      }
       toast.success('Your wallet has been imported successfully.');
 
       navigation.dispatch(
@@ -82,14 +158,14 @@ export default function ImportNameWalletScreen() {
         style={styles.content}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <Text style={styles.title}>Name Your Wallet</Text>
           <Text style={styles.subtitle}>This name is just for you and can be changed later.</Text>
 
           <View style={styles.inputSection}>
             <Text style={styles.label}>Wallet Name*</Text>
             <View style={styles.inputContainer}>
-              <Text style={styles.inputIcon}>💼</Text>
+              <Text style={styles.inputIcon}>{selectedAvatar.emoji}</Text>
               <TextInput
                 style={styles.input}
                 value={walletName}

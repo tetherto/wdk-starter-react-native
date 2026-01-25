@@ -2,13 +2,22 @@ import Header from '@/components/header';
 import { clearAvatar } from '@/config/avatar-options';
 import { networkConfigs } from '@/config/networks';
 import useWalletAvatar from '@/hooks/use-wallet-avatar';
+import { useWalletSwitcher } from '@/hooks/use-wallet-switcher';
 import getDisplaySymbol from '@/utils/get-display-symbol';
 import { NetworkType, useWallet } from '@tetherto/wdk-react-native-provider';
 import * as Clipboard from 'expo-clipboard';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { Copy, Info, Shield, Trash2, Wallet } from 'lucide-react-native';
 import React from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
 import { colors } from '@/constants/colors';
@@ -18,6 +27,9 @@ export default function SettingsScreen() {
   const router = useDebouncedNavigation();
   const { wallet, clearWallet, addresses } = useWallet();
   const avatar = useWalletAvatar();
+  const { wallets, activeWallet, deleteWallet, resetWallets } = useWalletSwitcher();
+  const [deletingWalletId, setDeletingWalletId] = React.useState<string | null>(null);
+  const [isResettingWallets, setIsResettingWallets] = React.useState(false);
 
   const handleDeleteWallet = () => {
     Alert.alert(
@@ -33,18 +45,51 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await clearWallet();
+              setIsResettingWallets(true);
+              await resetWallets();
               await clearAvatar();
-              toast.success('Wallet deleted successfully');
+              toast.success('All wallet data cleared');
               router.dismissAll('/');
             } catch (error) {
               console.error('Failed to delete wallet:', error);
               toast.error('Failed to delete wallet');
+            } finally {
+              setIsResettingWallets(false);
             }
           },
         },
       ]
     );
+  };
+
+  const handleDeleteSelectedWallet = (walletId: string, walletName: string) => {
+    const isActive = walletId === activeWallet?.id;
+    const hasOtherWallets = wallets.length > 1;
+    const message = isActive
+      ? hasOtherWallets
+        ? 'This will delete the active wallet and switch to another wallet. Make sure you have backed up the recovery phrase.'
+        : 'This will delete your only wallet on this device. Make sure you have backed up the recovery phrase.'
+      : 'This will permanently delete this wallet from the device. Make sure you have backed up the recovery phrase.';
+
+    Alert.alert('Delete Wallet', message, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            setDeletingWalletId(walletId);
+            await deleteWallet(walletId);
+            toast.success(`Deleted ${walletName}`);
+          } catch (error) {
+            console.error('Failed to delete wallet:', error);
+            toast.error('Failed to delete wallet');
+          } finally {
+            setDeletingWalletId(null);
+          }
+        },
+      },
+    ]);
   };
 
   const handleCopyAddress = async (address: string, networkName: string) => {
@@ -92,7 +137,8 @@ export default function SettingsScreen() {
             <View style={[styles.infoRow, styles.infoRowLast]}>
               <Text style={styles.infoLabel}>Enabled Assets</Text>
               <Text style={styles.infoValue}>
-                {wallet?.enabledAssets?.map(asset => getDisplaySymbol(asset)).join(', ') || 'None'}
+                {wallet?.enabledAssets?.map((asset) => getDisplaySymbol(asset)).join(', ') ||
+                  'None'}
               </Text>
             </View>
           </View>
@@ -127,6 +173,92 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* Manage Wallets Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Wallet size={20} color={colors.primary} />
+            <Text style={styles.sectionTitle}>Manage Wallets</Text>
+          </View>
+
+          <View style={styles.walletsCard}>
+            {wallets.length === 0 ? (
+              <View style={styles.walletEmptyState}>
+                <Text style={styles.walletEmptyTitle}>No wallets found</Text>
+                <Text style={styles.walletEmptyText}>
+                  Create or import a wallet to start managing them here.
+                </Text>
+              </View>
+            ) : (
+              <>
+                {wallets.map((item, index) => {
+                  const isActive = item.id === activeWallet?.id;
+                  const showInlineDelete = wallets.length > 1;
+                  return (
+                    <View
+                      key={item.id}
+                      style={[
+                        styles.walletRow,
+                        index === wallets.length - 1 ? styles.walletRowLast : null,
+                      ]}
+                    >
+                      <View style={styles.walletInfo}>
+                        <Text style={styles.walletName}>{item.name}</Text>
+                        <Text style={styles.walletAddress}>
+                          {item.address
+                            ? `${item.address.slice(0, 10)}...${item.address.slice(-10)}`
+                            : 'No address'}
+                        </Text>
+                      </View>
+
+                      {isActive && <Text style={styles.walletActiveBadge}>Active</Text>}
+
+                      {showInlineDelete && (
+                        <TouchableOpacity
+                          onPress={() => handleDeleteSelectedWallet(item.id, item.name)}
+                          style={styles.walletDeleteButton}
+                          disabled={isResettingWallets || deletingWalletId === item.id}
+                          accessibilityLabel={`Delete ${item.name}`}
+                        >
+                          {deletingWalletId === item.id ? (
+                            <ActivityIndicator size="small" color={colors.danger} />
+                          ) : (
+                            <Trash2 size={18} color={colors.danger} />
+                          )}
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  );
+                })}
+
+              </>
+            )}
+          </View>
+
+          {wallets.length === 1 && (
+            <View style={styles.dangerPanel}>
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={handleDeleteWallet}
+                disabled={isResettingWallets}
+              >
+                {isResettingWallets ? (
+                  <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                  <Trash2 size={20} color={colors.white} />
+                )}
+                <Text style={styles.deleteButtonText}>
+                  {isResettingWallets ? 'Deleting...' : 'Delete Wallet'}
+                </Text>
+              </TouchableOpacity>
+
+              <Text style={styles.warningText}>
+                Deleting your wallet will remove all data from this device. Make sure you have backed
+                up your recovery phrase before proceeding.
+              </Text>
+            </View>
+          )}
+        </View>
+
         {/* About Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -147,23 +279,7 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Danger Zone */}
-        <View style={styles.dangerSection}>
-          <View style={styles.sectionHeader}>
-            <Trash2 size={20} color={colors.danger} />
-            <Text style={[styles.sectionTitle, styles.dangerTitle]}>Danger Zone</Text>
-          </View>
-
-          <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteWallet}>
-            <Trash2 size={20} color={colors.white} />
-            <Text style={styles.deleteButtonText}>Delete Wallet</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.warningText}>
-            Deleting your wallet will remove all data from this device. Make sure you have backed up
-            your recovery phrase before proceeding.
-          </Text>
-        </View>
+        {/* Danger Zone removed (now under Manage Wallets) */}
       </ScrollView>
     </View>
   );
@@ -256,13 +372,69 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontFamily: 'monospace',
   },
-  dangerSection: {
-    paddingHorizontal: 20,
-    paddingTop: 32,
-    paddingBottom: 40,
+  walletsCard: {
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    padding: 16,
   },
-  dangerTitle: {
-    color: colors.danger,
+  walletRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderDark,
+  },
+  walletRowLast: {
+    borderBottomWidth: 0,
+  },
+  walletInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  walletName: {
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  walletAddress: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontFamily: 'monospace',
+  },
+  walletActiveBadge: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.black,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    marginRight: 8,
+  },
+  walletDeleteButton: {
+    padding: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  walletEmptyState: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  walletEmptyTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 6,
+  },
+  walletEmptyText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  dangerPanel: {
+    marginTop: 12,
   },
   deleteButton: {
     flexDirection: 'row',

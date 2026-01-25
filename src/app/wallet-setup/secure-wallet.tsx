@@ -6,19 +6,20 @@ import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import { AlertCircle, ChevronLeft, Copy, Eye, EyeOff } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { getUniqueId } from 'react-native-device-info';
+import * as Crypto from 'expo-crypto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import parseWorkletError from '@/utils/parse-worklet-error';
 import { toast } from 'sonner-native';
 import { colors } from '@/constants/colors';
 import getErrorMessage from '@/utils/get-error-message';
+import { ensureDeviceAuthentication } from '@/utils/ensure-device-auth';
 
 export default function SecureWalletScreen() {
   const router = useDebouncedNavigation();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     walletName?: string;
-    avatar?: string;
+    avatarId?: string;
+    sessionId?: string;
   }>();
   const [mnemonic, setMnemonic] = useState<string[]>([]);
   const [showPhrase, setShowPhrase] = useState(true);
@@ -26,15 +27,21 @@ export default function SecureWalletScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Generate mnemonic using WDK on mount
+    // Generate mnemonic using WDK when a new flow starts
     generateMnemonic();
-  }, []);
+  }, [params.sessionId]);
 
   const generateMnemonic = async () => {
     try {
       setIsGenerating(true);
       setError(null);
-      const prf = await getUniqueId();
+
+      await ensureDeviceAuthentication();
+
+      const randomBytes = await Crypto.getRandomBytesAsync(32);
+      const prf = Array.from(randomBytes)
+        .map((byte) => byte.toString(16).padStart(2, '0'))
+        .join('');
       const mnemonicString = await WDKService.createSeed({ prf });
 
       if (!mnemonicString) {
@@ -73,7 +80,7 @@ export default function SecureWalletScreen() {
       params: {
         mnemonic: mnemonic.join(','),
         walletName: params.walletName,
-        avatar: params.avatar,
+        avatarId: params.avatarId,
       },
     });
   };

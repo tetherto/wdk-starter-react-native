@@ -5,6 +5,7 @@ import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  ChevronDown,
   Palette,
   QrCode,
   Settings,
@@ -32,6 +33,7 @@ import formatTokenAmount from '@/utils/format-token-amount';
 import formatUSDValue from '@/utils/format-usd-value';
 import useWalletAvatar from '@/hooks/use-wallet-avatar';
 import { colors } from '@/constants/colors';
+import { useWalletSwitcher } from '@/hooks/use-wallet-switcher';
 
 type AggregatedBalance = ({
   denomination: string;
@@ -66,14 +68,38 @@ export default function WalletScreen() {
     addresses,
     transactions: walletTransactions,
   } = useWallet();
+  const { wallets, activeWallet, isSwitchingWallet, open: openWalletSwitcher } = useWalletSwitcher();
   const [refreshing, setRefreshing] = useState(false);
   const [aggregatedBalances, setAggregatedBalances] = useState<AggregatedBalance>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [mounted, setMounted] = useState(false);
   const avatar = useWalletAvatar();
   const scrollY = useRef(new Animated.Value(0)).current;
+  const primaryAddress = useMemo(() => {
+    if (!addresses) return undefined;
+    const value = Object.values(addresses).find(Boolean);
+    return typeof value === 'string' ? value : undefined;
+  }, [addresses]);
+  const fallbackAddress =
+    activeWallet?.address ||
+    activeWallet?.addresses?.bitcoin ||
+    activeWallet?.addresses?.ethereum ||
+    activeWallet?.addresses?.polygon ||
+    activeWallet?.addresses?.arbitrum ||
+    activeWallet?.addresses?.ton ||
+    undefined;
+  const fullAddress =
+    (!isSwitchingWallet && primaryAddress ? primaryAddress : fallbackAddress) || 'No address';
+  const displayWalletName =
+    (!isSwitchingWallet && wallet?.name ? wallet.name : activeWallet?.name) || 'No Wallet';
+  const walletId = activeWallet?.id || wallet?.id;
+  const formattedWalletId =
+    walletId && walletId.length > 12
+      ? `${walletId.slice(0, 6)}...${walletId.slice(-4)}`
+      : walletId;
 
   const hasWallet = !!wallet;
+  const isWalletBusy = isLoading || isSwitchingWallet;
 
   // Redirect to authorization if wallet is not unlocked
   useEffect(() => {
@@ -230,6 +256,11 @@ export default function WalletScreen() {
     router.push('/settings');
   };
 
+  const handleWalletPress = () => {
+    // Always open wallet switcher to show current wallet and option to add more
+    openWalletSwitcher();
+  };
+
   const handleRefresh = async () => {
     if (!wallet) return;
 
@@ -244,12 +275,28 @@ export default function WalletScreen() {
   };
 
   useEffect(() => {
-    getAggregatedBalances().then(setAggregatedBalances);
+    getAggregatedBalances().then((nextBalances) => {
+      setAggregatedBalances(nextBalances);
+      if (__DEV__) {
+        const totalUsd = nextBalances.reduce((sum, asset) => sum + (asset?.usdValue || 0), 0);
+        console.info('[wallet] balances refreshed', {
+          count: nextBalances.length,
+          totalUsd,
+        });
+      }
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [balances]);
 
   useEffect(() => {
-    getTransactions().then(setTransactions);
+    getTransactions().then((nextTransactions) => {
+      setTransactions(nextTransactions);
+      if (__DEV__) {
+        console.info('[wallet] transactions refreshed', {
+          count: nextTransactions.length,
+        });
+      }
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [walletTransactions?.list, addresses]);
 
@@ -275,12 +322,37 @@ export default function WalletScreen() {
           },
         ]}
       >
-        <View style={styles.walletInfo}>
-          <View style={styles.walletIcon}>
-            <Text style={styles.walletIconText}>{avatar}</Text>
+        <TouchableOpacity
+          style={styles.walletButton}
+          onPress={handleWalletPress}
+          activeOpacity={0.7}
+        >
+          <View style={styles.walletInfo}>
+            <View style={styles.walletIcon}>
+              <Text style={styles.walletIconText}>{avatar}</Text>
+            </View>
+            <View style={styles.walletText}>
+              <View style={styles.walletNameRow}>
+                <Text style={styles.walletName} numberOfLines={1} ellipsizeMode="tail">
+                  {displayWalletName}
+                </Text>
+              </View>
+              {isSwitchingWallet ? (
+                <Text style={styles.walletStatusText}>Switching…</Text>
+              ) : (
+                <>
+                  <Text style={styles.walletAddress}>{fullAddress}</Text>
+                  {formattedWalletId ? (
+                    <Text style={styles.walletIdText}>ID: {formattedWalletId}</Text>
+                  ) : null}
+                </>
+              )}
+            </View>
+            <View style={styles.chevronBadge}>
+              <ChevronDown size={16} color={colors.textSecondary} />
+            </View>
           </View>
-          <Text style={styles.walletName}>{wallet?.name || 'No Wallet'}</Text>
-        </View>
+        </TouchableOpacity>
 
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.settingsButton} onPress={handleSettingsPress}>
@@ -337,10 +409,10 @@ export default function WalletScreen() {
             <Balance
               value={totalPortfolioValue}
               currency="USD"
-              isLoading={isLoading}
+              isLoading={isWalletBusy}
               Loader={BalanceLoader}
             />
-            {balances.isLoading ? (
+            {balances.isLoading || isSwitchingWallet ? (
               <View style={{ top: 16, marginRight: 8 }}>
                 <ActivityIndicator size="small" color={colors.primary} />
               </View>
@@ -351,7 +423,7 @@ export default function WalletScreen() {
         {/* Portfolio */}
         <View style={styles.portfolioSection}>
           {aggregatedBalances.length > 0 ? (
-            aggregatedBalances.map(asset => {
+            aggregatedBalances.map((asset) => {
               if (!asset) return null;
 
               return (
@@ -405,7 +477,7 @@ export default function WalletScreen() {
           </View>
 
           <View style={styles.suggestionsGrid}>
-            {suggestions.map(suggestion => (
+            {suggestions.map((suggestion) => (
               <TouchableOpacity
                 onPress={() => {
                   Linking.openURL(suggestion.url);
@@ -426,7 +498,7 @@ export default function WalletScreen() {
             style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
           >
             <Text style={styles.sectionTitle}>Activity</Text>
-            {walletTransactions.isLoading ? (
+            {walletTransactions.isLoading || isSwitchingWallet ? (
               <View style={{ marginRight: 8 }}>
                 <ActivityIndicator size="small" color={colors.primary} />
               </View>
@@ -434,7 +506,7 @@ export default function WalletScreen() {
           </View>
 
           {transactions.length > 0 ? (
-            transactions.map(tx => (
+            transactions.map((tx) => (
               <View key={tx.id} style={styles.transactionRow}>
                 <View style={styles.transactionIcon}>
                   <tx.icon size={16} color={tx.iconColor} />
@@ -499,7 +571,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
@@ -510,30 +582,94 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 12,
   },
+  walletButton: {
+    backgroundColor: colors.background,
+    borderRadius: 18,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: colors.borderDark,
+    flex: 1,
+    marginRight: 8,
+    position: 'relative',
+    shadowColor: colors.black,
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+    minHeight: 56,
+  },
   walletIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
+    marginRight: 10,
   },
   walletIconText: {
-    fontSize: 12,
+    fontSize: 14,
   },
   walletName: {
     color: colors.text,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     flex: 1,
+    flexShrink: 1,
+    lineHeight: 20,
+  },
+  walletText: {
+    flex: 1,
+    marginRight: 6,
+  },
+  walletNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  walletAddress: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontFamily: 'monospace',
+    flexWrap: 'wrap',
+    flexShrink: 1,
+    marginTop: 3,
+  },
+  walletStatusText: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    marginTop: 3,
+  },
+  walletIdText: {
+    color: colors.text,
+    fontSize: 10,
+    marginTop: 2,
+  },
+  chevronBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.tintedBackground,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   settingsButton: {
-    padding: 8,
+    padding: 10,
+    borderRadius: 18,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.borderDark,
+    minWidth: 56,
+    minHeight: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   portfolioSection: {
     paddingHorizontal: 20,

@@ -22,10 +22,12 @@ export default function NameWalletScreen() {
   const [selectedAvatar, setSelectedAvatar] = useState(avatarOptions[0]);
 
   const handleNext = () => {
+    // Force a fresh mnemonic when starting a new wallet flow.
+    const sessionId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     // Pass wallet name to next screen
     router.push({
       pathname: './secure-wallet',
-      params: { walletName, avatar: selectedAvatar.emoji },
+      params: { walletName, avatarId: String(selectedAvatar.id), sessionId },
     });
   };
 
@@ -66,7 +68,7 @@ export default function NameWalletScreen() {
           <View style={styles.avatarSection}>
             <Text style={styles.sectionTitle}>Choose an avatar</Text>
             <View style={styles.avatarGrid}>
-              {avatarOptions.map(avatar => (
+              {avatarOptions.map((avatar) => (
                 <TouchableOpacity
                   key={avatar.id}
                   style={[

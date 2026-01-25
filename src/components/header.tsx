@@ -15,10 +15,15 @@ interface HeaderProps {
   title: string;
   isLoading?: boolean;
   style?: StyleProp<ViewStyle>;
+  /**
+   * Optional wallet switcher trigger.
+   * If not provided, layout remains unchanged.
+   */
+  onWalletPress?: () => void;
 }
 
 const Header = (params: HeaderProps) => {
-  const { title, isLoading = false, style } = params;
+  const { title, isLoading = false, style, onWalletPress } = params;
   const router = useDebouncedNavigation();
 
   const handleBack = () => {
@@ -27,10 +32,13 @@ const Header = (params: HeaderProps) => {
 
   return (
     <View style={[styles.header, style]}>
+      {/* Back button */}
       <TouchableOpacity onPress={handleBack} style={styles.backButton}>
         <ChevronLeft size={24} color={colors.primary} />
         <Text style={styles.backText}>Back</Text>
       </TouchableOpacity>
+
+      {/* Title */}
       <View style={styles.titleContainer}>
         <Text style={styles.title}>{title}</Text>
         {isLoading ? (
@@ -39,7 +47,15 @@ const Header = (params: HeaderProps) => {
           </View>
         ) : null}
       </View>
-      <View style={styles.spacer} />
+
+      {/* Right action (wallet switcher or spacer) */}
+      {onWalletPress ? (
+        <TouchableOpacity onPress={onWalletPress}>
+          <Text style={styles.walletText}>Wallet</Text>
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.spacer} />
+      )}
     </View>
   );
 };
@@ -65,24 +81,29 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginLeft: 4,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-    textAlign: 'center',
-  },
-  spacer: {
-    width: 60,
-  },
   titleContainer: {
     position: 'relative',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    textAlign: 'center',
+  },
   loadingContainer: {
     position: 'absolute',
     top: 2,
     right: -28,
+  },
+  spacer: {
+    width: 60,
+  },
+  walletText: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: '500',
   },
 });

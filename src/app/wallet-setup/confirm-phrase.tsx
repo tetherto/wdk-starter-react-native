@@ -18,7 +18,7 @@ export default function ConfirmPhraseScreen() {
   const params = useLocalSearchParams<{
     mnemonic?: string;
     walletName?: string;
-    avatar?: string;
+    avatarId?: string;
   }>();
   const [selectedWords, setSelectedWords] = useState<{ [key: number]: string }>({});
   const [wordPositions, setWordPositions] = useState<WordPosition[]>([]);
@@ -104,7 +104,7 @@ export default function ConfirmPhraseScreen() {
       pathname: './complete',
       params: {
         walletName: params.walletName,
-        avatar: params.avatar,
+        avatarId: params.avatarId,
         mnemonic: params.mnemonic,
       },
     });

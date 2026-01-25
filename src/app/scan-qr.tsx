@@ -13,9 +13,16 @@ const qrSize = screenWidth * 0.7;
 export default function ScanQRScreen() {
   const insets = useSafeAreaInsets();
   const router = useDebouncedNavigation();
-  const { returnRoute, ...params } = useLocalSearchParams();
+  const { returnRoute, scanType, returnParamKey, ...params } = useLocalSearchParams();
+  const scanTypeValue = Array.isArray(scanType) ? scanType[0] : scanType;
+  const returnParamKeyValue = Array.isArray(returnParamKey) ? returnParamKey[0] : returnParamKey;
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
+  const isAddressScan = scanTypeValue !== 'text';
+  const titleText = isAddressScan ? 'Scan QR code to make payment.' : 'Scan QR code to import.';
+  const subtitleText = isAddressScan
+    ? 'Hold your phone up to the QR code.'
+    : 'Hold your phone steady to capture the code.';
 
   const handleBarCodeScanned = useCallback(
     ({ type, data }: { type: string; data: string }) => {
@@ -23,22 +30,39 @@ export default function ScanQRScreen() {
 
       setScanned(true);
 
-      // Validate if it's a valid address format (basic validation)
-      if (!data || data.length < 10) {
-        Alert.alert('Invalid QR Code', 'The scanned QR code does not contain a valid address.', [
-          {
-            text: 'Try Again',
-            onPress: () => setScanned(false),
-          },
-        ]);
-        return;
+      if (isAddressScan) {
+        // Validate if it's a valid address format (basic validation)
+        if (!data || data.length < 10) {
+          Alert.alert('Invalid QR Code', 'The scanned QR code does not contain a valid address.', [
+            {
+              text: 'Try Again',
+              onPress: () => setScanned(false),
+            },
+          ]);
+          return;
+        }
+      } else {
+        if (!data || data.trim().length === 0) {
+          Alert.alert('Invalid QR Code', 'The scanned QR code does not contain valid text.', [
+            {
+              text: 'Try Again',
+              onPress: () => setScanned(false),
+            },
+          ]);
+          return;
+        }
       }
 
       // Navigate back with the scanned address
       if (returnRoute) {
+        const paramKey = returnParamKeyValue
+          ? String(returnParamKeyValue)
+          : isAddressScan
+            ? 'scannedAddress'
+            : 'scannedText';
         router.replace({
           pathname: returnRoute as any,
-          params: { scannedAddress: data, ...params },
+          params: { [paramKey]: data, ...params },
         });
       } else {
         // Fallback - navigate to send flow starting with token selection
@@ -48,7 +72,7 @@ export default function ScanQRScreen() {
         });
       }
     },
-    [scanned, router, returnRoute, params]
+    [scanned, router, returnRoute, params, isAddressScan, returnParamKeyValue]
   );
 
   const handleClose = useCallback(() => {
@@ -117,8 +141,8 @@ export default function ScanQRScreen() {
 
       {/* Title Section */}
       <View style={styles.titleSection}>
-        <Text style={styles.title}>Scan QR code to make payment.</Text>
-        <Text style={styles.subtitle}>Hold your phone up to the QR code.</Text>
+        <Text style={styles.title}>{titleText}</Text>
+        <Text style={styles.subtitle}>{subtitleText}</Text>
       </View>
 
       {/* Camera View */}
@@ -135,7 +159,7 @@ export default function ScanQRScreen() {
             </View>
 
             <View style={styles.scanInfo}>
-              <Text style={styles.scanLabel}>Scan address</Text>
+              <Text style={styles.scanLabel}>{isAddressScan ? 'Scan address' : 'Scan text'}</Text>
             </View>
           </View>
         </CameraView>

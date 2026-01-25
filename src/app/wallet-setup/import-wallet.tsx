@@ -1,8 +1,10 @@
 import { SeedPhrase } from '@/components/SeedPhrase';
 import * as Clipboard from 'expo-clipboard';
 import { useDebouncedNavigation } from '@/hooks/use-debounced-navigation';
+import { useLocalSearchParams } from 'expo-router';
+import * as bip39 from 'bip39';
 import { ChevronLeft, Download, FileText, ScanText } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { colors } from '@/constants/colors';
 import {
   Alert,
@@ -21,12 +23,55 @@ export default function ImportWalletScreen() {
   const router = useDebouncedNavigation();
   const insets = useSafeAreaInsets();
   const [secretWords, setSecretWords] = useState<string[]>(Array(12).fill(''));
+  const params = useLocalSearchParams<{ scannedText?: string }>();
+  const lastScannedRef = useRef<string | null>(null);
 
   const handleWordChange = (index: number, text: string) => {
     const newWords = [...secretWords];
     newWords[index] = text.trim().toLowerCase();
     setSecretWords(newWords);
   };
+
+  const normalizePhrase = useCallback((phrase: string) => {
+    return phrase
+      .trim()
+      .replace(/[\n\r]+/g, ' ')
+      .replace(/,/g, ' ')
+      .split(/\s+/)
+      .filter(Boolean);
+  }, []);
+
+  const applyPhraseToFields = useCallback(
+    (phrase: string) => {
+      const words = normalizePhrase(phrase);
+
+      if (words.length !== 12) {
+        toast.error(
+          `Invalid Phrase! Found ${words.length} words. Please ensure you have exactly 12 words.`
+        );
+        return false;
+      }
+
+      const newWords = Array(12).fill('');
+      words.forEach((word, index) => {
+        newWords[index] = word.toLowerCase().trim();
+      });
+      setSecretWords(newWords);
+      return true;
+    },
+    [normalizePhrase]
+  );
+
+  useEffect(() => {
+    if (!params.scannedText || params.scannedText === lastScannedRef.current) {
+      return;
+    }
+
+    lastScannedRef.current = params.scannedText;
+    if (applyPhraseToFields(params.scannedText)) {
+      toast.success('Phrase imported from QR code');
+    }
+  }, [applyPhraseToFields, params.scannedText]);
 
   const handlePaste = async () => {
     try {
@@ -37,24 +82,9 @@ export default function ImportWalletScreen() {
         return;
       }
 
-      const words = clipboardContent.trim().split(/\s+/).slice(0, 12);
-
-      if (words.length < 12) {
-        toast.error(
-          `Invalid Phrase! Found only ${words.length} words in clipboard. Please ensure you have exactly 12 words.`
-        );
-        return;
+      if (applyPhraseToFields(clipboardContent)) {
+        toast.success('12 words have been pasted from clipboard');
       }
-
-      const newWords = [...secretWords];
-      words.forEach((word, index) => {
-        if (index < 12) {
-          newWords[index] = word.toLowerCase().trim();
-        }
-      });
-      setSecretWords(newWords);
-
-      toast.success('12 words have been pasted from clipboard');
     } catch (error) {
       console.error('Paste error:', error);
       toast.error('Could not paste from clipboard');
@@ -62,32 +92,41 @@ export default function ImportWalletScreen() {
   };
 
   const handleScanText = () => {
-    Alert.alert('Scan Text', 'Camera functionality would open here to scan QR code or text', [
-      { text: 'OK' },
-    ]);
+    router.push({
+      pathname: '/scan-qr',
+      params: {
+        returnRoute: '/wallet-setup/import-wallet',
+        scanType: 'text',
+        returnParamKey: 'scannedText',
+      },
+    });
   };
 
   const isFormValid = () => {
-    return secretWords.every(word => word.trim().length > 0);
+    return secretWords.every((word) => word.trim().length > 0);
   };
 
   const validateSeedPhrase = (phrase: string): boolean => {
-    const words = phrase
-      .trim()
-      .split(' ')
-      .filter(word => word.length > 0);
+    const normalized = normalizePhrase(phrase).join(' ');
+    if (!normalized) return false;
 
-    // Check if we have exactly 12 or 24 words
-    if (words.length !== 12 && words.length !== 24) {
-      return false;
+    const words = normalized.split(' ');
+    if (words.length !== 12) return false;
+
+    const hasBip39 = typeof (bip39 as any)?.validateMnemonic === 'function';
+    if (__DEV__) {
+      console.info('[import-wallet] validate mnemonic', {
+        hasBip39,
+        wordCount: words.length,
+      });
     }
 
-    // Basic word validation - each word should be at least 3 characters
-    const validWords = words.every(
-      word => word.length >= 3 && /^[a-z]+$/.test(word) // only lowercase letters
-    );
+    if (hasBip39) {
+      return (bip39 as any).validateMnemonic(normalized);
+    }
 
-    return validWords;
+    // Fallback: basic validation if bip39 isn't available
+    return words.every((word) => word.length >= 3 && /^[a-z]+$/.test(word));
   };
 
   const handleImportWallet = () => {
@@ -105,7 +144,7 @@ export default function ImportWalletScreen() {
     if (!validateSeedPhrase(seedPhrase)) {
       Alert.alert(
         'Invalid Seed Phrase',
-        'Please check your seed phrase. Make sure all words are spelled correctly and contain only lowercase letters.',
+        'Please check your seed phrase. Make sure all 12 words are spelled correctly and contain only lowercase letters.',
         [{ text: 'OK' }]
       );
       return;
