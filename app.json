@@ -31,7 +31,11 @@
       "statusBar": {
         "style": "light",
         "backgroundColor": "#000000"
-      }
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "output": "static",
@@ -71,7 +75,8 @@
             "compileSdkVersion": 36,
             "buildToolsVersion": "36.0.0",
             "enableProguardInReleaseBuilds": true,
-            "enableShrinkResourcesInReleaseBuilds": true
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "enableMinifyInReleaseBuilds": true
           }
         }
       ],
@@ -80,6 +85,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "e57e4bd6-28ea-4fbc-8090-c10adf17773d"
+      }
     }
   }
 }
