@@ -1,12 +1,14 @@
-import avatarOptions, { getAvatar } from '@/config/avatar-options';
-import { useEffect, useState } from 'react';
+import avatarOptions from '@/config/avatar-options';
+import { useWalletSwitcher } from '@/hooks/use-wallet-switcher';
+import { useMemo } from 'react';
 
 const useWalletAvatar = () => {
-  const [avatar, setAvatar] = useState<string>(avatarOptions[0].emoji);
-
-  useEffect(() => {
-    getAvatar().then(avatar => setAvatar(avatar.emoji));
-  }, []);
+  const { activeWallet } = useWalletSwitcher();
+  const avatar = useMemo(() => {
+    const option =
+      avatarOptions.find((item) => item.id === activeWallet?.avatarId) ?? avatarOptions[0];
+    return option.emoji;
+  }, [activeWallet?.avatarId]);
 
   return avatar;
 };

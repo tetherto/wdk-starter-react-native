@@ -21,6 +21,13 @@ export interface Asset {
 }
 
 export const assetConfig: Record<string, AssetConfig> = {
+  eth: {
+    name: 'Ethereum',
+    symbol: 'ETH',
+    icon: require('../../assets/images/chains/ethereum-eth-logo.png'),
+    color: '#ffffff',
+    supportedNetworks: [NetworkType.ETHEREUM],
+  },
   btc: {
     name: 'Bitcoin',
     symbol: 'BTC',
