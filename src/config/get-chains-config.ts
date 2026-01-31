@@ -77,6 +77,21 @@ const getChainsConfig = () => {
         address: 'TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf',
       },
     },
+    // Plasma Network (Testnet) - Requires NetworkType.PLASMA support in WDK provider
+    // Chain info: https://chainlist.org/chain/9746
+    plasma: {
+      chainId: 9746, // Plasma Testnet (Mainnet is 9745)
+      blockchain: 'plasma',
+      provider: 'https://testnet-rpc.plasma.to',
+      // Note: Plasma uses native gas (XPL token), no bundler/paymaster setup yet
+      // bundlerUrl: '', // To be configured when available
+      // paymasterUrl: '', // To be configured when available
+      // paymasterAddress: '', // To be configured when available
+      entrypointAddress: '0x0000000071727De22E5E9d8BAf0edAc6f37da032', // Standard ERC-4337 entrypoint
+      transferMaxFee: 5000000,
+      swapMaxFee: 5000000,
+      bridgeMaxFee: 5000000,
+    },
   };
 };
 
