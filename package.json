@@ -22,6 +22,7 @@
     "build:e2e:ios": "export NVM_DIR=\"$HOME/.nvm\" && [ -s \"$NVM_DIR/nvm.sh\" ] && \\. \"$NVM_DIR/nvm.sh\" && npx expo export --platform ios --output-dir ./dist && cp -r dist/_expo ios/ 2>/dev/null || true && RELEASE_APP=$(find ~/Library/Developer/Xcode/DerivedData -name 'wdkstarterreactnative.app' -path '*/Release-iphonesimulator/*' -type d | head -1) && if [ -n \"$RELEASE_APP\" ]; then rm -rf test/apps/wdkstarterreactnative.app && cp -r \"$RELEASE_APP\" test/apps/wdkstarterreactnative.app && echo 'Copied existing Release build'; else echo 'No existing Release build found. Please run: npx expo run:ios --configuration Release first'; exit 1; fi"
   },
   "dependencies": {
+    "@tetherto/wdk-secret-manager": "^1.0.0-beta.3",
     "@craftzdog/react-native-buffer": "^6.1.0",
     "@expo/vector-icons": "^15.0.2",
     "@gorhom/bottom-sheet": "^5.2.6",
