@@ -49,4 +49,11 @@ export const assetConfig: Record<string, AssetConfig> = {
     color: '#ffffff',
     supportedNetworks: [NetworkType.ETHEREUM],
   },
+  rgb: {
+    name: 'RGB',
+    symbol: 'RGB',
+    icon: require('../../assets/images/tokens/bitcoin-btc-logo.png'),
+    color: '#f59e0b',
+    supportedNetworks: [],
+  },
 };

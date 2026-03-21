@@ -135,6 +135,13 @@ export default function WalletScreen() {
 
   const suggestions = [
     {
+      id: 0,
+      icon: Palette,
+      title: 'RGB Wallet',
+      color: '#f59e0b',
+      onPress: () => router.push('/rgb-test'),
+    },
+    {
       id: 1,
       icon: Star,
       title: 'Star repo on GitHub',
@@ -408,7 +415,8 @@ export default function WalletScreen() {
             {suggestions.map(suggestion => (
               <TouchableOpacity
                 onPress={() => {
-                  Linking.openURL(suggestion.url);
+                  if ((suggestion as any).onPress) (suggestion as any).onPress();
+                  else if ((suggestion as any).url) Linking.openURL((suggestion as any).url);
                 }}
                 key={suggestion.id}
                 style={styles.suggestionCard}

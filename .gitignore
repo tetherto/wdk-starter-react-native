@@ -49,3 +49,4 @@ app-example
 # E2E tests
 test/apps/
 
+package-lock.json

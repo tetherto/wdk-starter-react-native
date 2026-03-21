@@ -62,6 +62,18 @@ const getChainsConfig = () => {
       host: 'api.ordimint.com',
       port: 50001,
     },
+    // rgb: {
+    //   network: 'mainnet',
+    //   indexerUrl: 'ssl://electrum.iriswallet.com:50003',
+    //   transportEndpoint: 'rpcs://proxy.iriswallet.com/0.2/json-rpc',
+    //   dataDir: '/tmp/rgb-wallet-data',
+    // },
+    rgb: {
+      network: 'testnet',
+      indexerUrl: 'ssl://electrum.iriswallet.com:50013',
+      transportEndpoint: 'rpcs://rgb-proxy-testnet3.utexo.com/json-rpc',
+      dataDir: '/tmp/rgb-wallet-data',
+    },
     tron: {
       chainId: 3448148188,
       provider: 'https://trongrid.io',
