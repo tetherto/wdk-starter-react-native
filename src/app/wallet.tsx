@@ -251,14 +251,16 @@ export default function WalletScreen() {
   };
 
   useEffect(() => {
+    if (!isUnlocked) return;
     getAggregatedBalances().then(setAggregatedBalances);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [balances]);
+  }, [balances, isUnlocked]);
 
   useEffect(() => {
+    if (!isUnlocked) return;
     getTransactions().then(setTransactions);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [walletTransactions?.list, addresses]);
+  }, [walletTransactions?.list, addresses, isUnlocked]);
 
   // Force component to fully mount before enabling RefreshControl on iOS
   useEffect(() => {
