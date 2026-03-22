@@ -282,8 +282,7 @@ export default function RgbTestScreen() {
   const [transfers, setTransfers] = useState<TransferItem[]>([]);
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
   const [loading, setLoading] = useState<string | null>(null);
-  const [result, setResult] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [sectionResults, setSectionResults] = useState<Record<string, { result?: string; error?: string }>>({});
 
   // Input fields
   const [sendInvoice, setSendInvoice] = useState('');
@@ -297,18 +296,51 @@ export default function RgbTestScreen() {
 
   const isConnected = status === 'connected';
 
-  const clearResult = () => { setResult(null); setError(null); };
+  // Map loading keys to section names for per-section results
+  const keyToSection: Record<string, string> = {
+    init: 'init', sync: 'overview', balance: 'overview', refresh: 'assets',
+    assets: 'assets', assetBal: 'assets',
+    utxos: 'utxo', unspents: 'utxo', fee: 'utxo',
+    issueNia: 'issue', issueCfa: 'issue',
+    blindRecv: 'receive', witnessRecv: 'receive',
+    sendRgb: 'send', sendBtc: 'send',
+    transfers: 'history', txns: 'history',
+    backup: 'backup', backupInfo: 'backup',
+  };
+
+  const setResult = (msg: string, key?: string) => {
+    const section = key ? (keyToSection[key] || key) : 'init';
+    setSectionResults(prev => ({ ...prev, [section]: { result: msg } }));
+  };
+
+  const setError = (msg: string, key?: string) => {
+    const section = key ? (keyToSection[key] || key) : 'init';
+    setSectionResults(prev => ({ ...prev, [section]: { error: msg } }));
+  };
+
+  const clearSectionResult = (section: string) => {
+    setSectionResults(prev => {
+      const next = { ...prev };
+      delete next[section];
+      return next;
+    });
+  };
 
   const withLoading = useCallback(
     (key: string, fn: () => Promise<void>) => async () => {
       setLoading(key);
-      setError(null);
-      setResult(null);
+      const section = keyToSection[key] || key;
+      setSectionResults(prev => {
+        const next = { ...prev };
+        delete next[section];
+        return next;
+      });
       try {
         await fn();
       } catch (err: any) {
         console.log(`[RGB] ${key} error:`, err?.message || err);
-        setError(err?.message || String(err));
+        const section2 = keyToSection[key] || key;
+        setSectionResults(prev => ({ ...prev, [section2]: { error: err?.message || String(err) } }));
       } finally {
         setLoading(null);
       }
@@ -333,7 +365,7 @@ export default function RgbTestScreen() {
 
     setBalance(bal);
     setStatus('connected');
-    setResult('RGB wallet initialized successfully');
+    setResult('RGB wallet initialized successfully', 'init');
   });
 
   const refreshBalance = withLoading('balance', async () => {
@@ -342,25 +374,25 @@ export default function RgbTestScreen() {
     if (res?.balance === undefined || res?.balance === null)
       throw new Error('Balance unavailable');
     setBalance(res.balance);
-    setResult(`Balance: ${formatSats(res.balance)}`);
+    setResult(`Balance: ${formatSats(res.balance)}`, 'balance');
   });
 
   const syncWallet = withLoading('sync', async () => {
     const wdk = getWdk();
     await wdk.rgbSync({ accountIndex: 0 });
-    setResult('Wallet synced with electrum');
+    setResult('Wallet synced with electrum', 'sync');
   });
 
   const refreshWallet = withLoading('refresh', async () => {
     const wdk = getWdk();
     await wdk.rgbRefresh({ accountIndex: 0 });
-    setResult('Wallet data refreshed');
+    setResult('Wallet data refreshed', 'refresh');
   });
 
   const copyAddress = async () => {
     if (address) {
       await Clipboard.setStringAsync(address);
-      setResult('Address copied to clipboard');
+      setResult('Address copied to clipboard', 'balance');
     }
   };
 
@@ -375,7 +407,7 @@ export default function RgbTestScreen() {
     const uda = (parsed?.uda || []).map((a: any) => ({ ...a, _type: 'UDA' }));
     const all = [...nia, ...cfa, ...uda];
     setAssets(all);
-    setResult(`Found ${all.length} asset(s)${nia.length ? ` (${nia.length} NIA` : ''}${cfa.length ? `, ${cfa.length} CFA` : ''}${uda.length ? `, ${uda.length} UDA` : ''}${all.length ? ')' : ''}`);
+    setResult(`Found ${all.length} asset(s)${nia.length ? ` (${nia.length} NIA` : ''}${cfa.length ? `, ${cfa.length} CFA` : ''}${uda.length ? `, ${uda.length} UDA` : ''}${all.length ? ')' : ''}`, 'assets');
   });
 
   const getAssetBalance = withLoading('assetBal', async () => {
@@ -383,7 +415,7 @@ export default function RgbTestScreen() {
     const wdk = getWdk();
     const res = await wdk.rgbGetAssetBalance({ accountIndex: 0, assetId: sendAssetId.trim() });
     const bal = res?.balance ? JSON.parse(res.balance) : res;
-    setResult(`Asset balance — settled: ${bal?.settled ?? '?'}, future: ${bal?.future ?? '?'}, spendable: ${bal?.spendable ?? '?'}`);
+    setResult(`Asset balance — settled: ${bal?.settled ?? '?'}, future: ${bal?.future ?? '?'}, spendable: ${bal?.spendable ?? '?'}`, 'assetBal');
   });
 
   // ─── UTXO Management ────────────────────────────────────────────────────
@@ -391,7 +423,7 @@ export default function RgbTestScreen() {
   const createUtxos = withLoading('utxos', async () => {
     const wdk = getWdk();
     const res = await wdk.rgbCreateUtxos({ accountIndex: 0, num: 5, size: 2000, feeRate: 2 });
-    setResult(`Created ${res?.created || 0} UTXOs`);
+    setResult(`Created ${res?.created || 0} UTXOs`, 'utxos');
     // Refresh balance after UTXO creation
     try {
       const balRes = await wdk.getAddressBalance({ network: 'rgb', accountIndex: 0 });
@@ -403,7 +435,7 @@ export default function RgbTestScreen() {
     const wdk = getWdk();
     const res = await wdk.rgbListUnspents({ accountIndex: 0 });
     const unspents = res?.unspents ? JSON.parse(res.unspents) : [];
-    setResult(`Found ${unspents.length} unspent UTXO(s)`);
+    setResult(`Found ${unspents.length} unspent UTXO(s)`, 'unspents');
   });
 
   // ─── Issue Asset ─────────────────────────────────────────────────────────
@@ -424,7 +456,7 @@ export default function RgbTestScreen() {
       precision: 0,
     });
     const assetId = res?.assetId || 'unknown';
-    setResult(`Issued ${ticker} (NIA) — ${amount} units\nID: ${assetId}`);
+    setResult(`Issued ${ticker} (NIA) — ${amount} units\nID: ${assetId}`, 'issueNia');
     setIssueTicker('');
     setIssueName('');
     setIssueAmount('1000');
@@ -443,7 +475,7 @@ export default function RgbTestScreen() {
       precision: 0,
     });
     const assetId = res?.assetId || 'unknown';
-    setResult(`Issued ${name} (CFA) — ${amount} units\nID: ${assetId}`);
+    setResult(`Issued ${name} (CFA) — ${amount} units\nID: ${assetId}`, 'issueCfa');
   });
 
   // ─── Receive ─────────────────────────────────────────────────────────────
@@ -452,14 +484,14 @@ export default function RgbTestScreen() {
     const wdk = getWdk();
     const res = await wdk.rgbBlindReceive({ accountIndex: 0 });
     const invoice = res?.invoice || '';
-    setResult(`Invoice created:\n${invoice}`);
+    setResult(`Invoice created:\n${invoice}`, 'blindRecv');
   });
 
   const witnessReceive = withLoading('witnessRecv', async () => {
     const wdk = getWdk();
     const res = await wdk.rgbWitnessReceive({ accountIndex: 0 });
     const invoice = res?.invoice || '';
-    setResult(`Witness invoice:\n${invoice}`);
+    setResult(`Witness invoice:\n${invoice}`, 'witnessRecv');
   });
 
   // ─── Send ────────────────────────────────────────────────────────────────
@@ -480,7 +512,7 @@ export default function RgbTestScreen() {
       recipientMap,
       feeRate: 2,
     });
-    setResult(`Send TX: ${res?.txid || 'submitted'}`);
+    setResult(`Send TX: ${res?.txid || 'submitted'}`, 'sendRgb');
     setSendInvoice('');
     setSendAmount('');
   });
@@ -495,7 +527,7 @@ export default function RgbTestScreen() {
       amount: parseInt(sendBtcAmount.trim(), 10),
       feeRate: 2,
     });
-    setResult(`BTC sent — TX: ${res?.txid || 'submitted'}`);
+    setResult(`BTC sent — TX: ${res?.txid || 'submitted'}`, 'sendBtc');
     setSendBtcAddress('');
     setSendBtcAmount('');
   });
@@ -507,7 +539,7 @@ export default function RgbTestScreen() {
     const res = await wdk.rgbListTransfers({ accountIndex: 0 });
     const parsed = res?.transfers ? JSON.parse(res.transfers) : [];
     setTransfers(Array.isArray(parsed) ? parsed : []);
-    setResult(`Found ${Array.isArray(parsed) ? parsed.length : 0} transfer(s)`);
+    setResult(`Found ${Array.isArray(parsed) ? parsed.length : 0} transfer(s)`, 'transfers');
   });
 
   const loadTransactions = withLoading('txns', async () => {
@@ -515,7 +547,7 @@ export default function RgbTestScreen() {
     const res = await wdk.rgbListTransactions({ accountIndex: 0 });
     const parsed = res?.transactions ? JSON.parse(res.transactions) : [];
     setTransactions(Array.isArray(parsed) ? parsed : []);
-    setResult(`Found ${Array.isArray(parsed) ? parsed.length : 0} transaction(s)`);
+    setResult(`Found ${Array.isArray(parsed) ? parsed.length : 0} transaction(s)`, 'txns');
   });
 
   // ─── Backup ──────────────────────────────────────────────────────────────
@@ -523,14 +555,14 @@ export default function RgbTestScreen() {
   const createBackup = withLoading('backup', async () => {
     const wdk = getWdk();
     const res = await wdk.rgbCreateBackup({ accountIndex: 0, backupPath: '/tmp/rgb-backup', password: 'demo123' });
-    setResult('Backup created at /tmp/rgb-backup');
+    setResult('Backup created at /tmp/rgb-backup', 'backup');
   });
 
   const backupInfo = withLoading('backupInfo', async () => {
     const wdk = getWdk();
     const res = await wdk.rgbBackupInfo({ accountIndex: 0 });
     const info = res?.info ? JSON.parse(res.info) : res;
-    setResult(`Backup info: ${JSON.stringify(info, null, 2)}`);
+    setResult(`Backup info: ${JSON.stringify(info, null, 2)}`, 'backupInfo');
   });
 
   // ─── Fee Estimation ─────────────────────────────────────────────────────
@@ -539,7 +571,7 @@ export default function RgbTestScreen() {
     const wdk = getWdk();
     const res = await wdk.rgbEstimateFee({ accountIndex: 0, blocks: 6 });
     const fee = res?.feeRate ?? res?.fee ?? JSON.stringify(res);
-    setResult(`Fee estimate (6 blocks): ${fee} sat/vB`);
+    setResult(`Fee estimate (6 blocks): ${fee} sat/vB`, 'fee');
   });
 
   // ─── Render ──────────────────────────────────────────────────────────────
@@ -593,8 +625,12 @@ export default function RgbTestScreen() {
           />
         )}
 
-        {/* ─── Result / Error Card ──────────────────────────────────────── */}
-        <ResultCard result={result} error={error} onDismiss={clearResult} />
+        {/* ─── Init Result ────────────────────────────────────────────────── */}
+        <ResultCard
+          result={sectionResults.init?.result || null}
+          error={sectionResults.init?.error || null}
+          onDismiss={() => clearSectionResult('init')}
+        />
 
         {/* ─── Wallet Overview Card ─────────────────────────────────────── */}
         {isConnected && (
@@ -633,6 +669,12 @@ export default function RgbTestScreen() {
                 Send testnet BTC to the address above to get started
               </Text>
             )}
+
+            <ResultCard
+              result={sectionResults.overview?.result || null}
+              error={sectionResults.overview?.error || null}
+              onDismiss={() => clearSectionResult('overview')}
+            />
           </View>
         )}
 
@@ -709,6 +751,12 @@ export default function RgbTestScreen() {
                   small
                 />
               </View>
+
+              <ResultCard
+                result={sectionResults.assets?.result || null}
+                error={sectionResults.assets?.error || null}
+                onDismiss={() => clearSectionResult('assets')}
+              />
             </Section>
 
             {/* ─── UTXO Management ──────────────────────────────────────── */}
@@ -745,6 +793,11 @@ export default function RgbTestScreen() {
                 loadingKey="fee"
                 icon={<ArrowUpDown size={14} color={colors.text} />}
                 small
+              />
+              <ResultCard
+                result={sectionResults.utxo?.result || null}
+                error={sectionResults.utxo?.error || null}
+                onDismiss={() => clearSectionResult('utxo')}
               />
             </Section>
 
@@ -803,6 +856,11 @@ export default function RgbTestScreen() {
                   />
                 </View>
               </View>
+              <ResultCard
+                result={sectionResults.issue?.result || null}
+                error={sectionResults.issue?.error || null}
+                onDismiss={() => clearSectionResult('issue')}
+              />
             </Section>
 
             {/* ─── Receive ──────────────────────────────────────────────── */}
@@ -833,6 +891,11 @@ export default function RgbTestScreen() {
                   small
                 />
               </View>
+              <ResultCard
+                result={sectionResults.receive?.result || null}
+                error={sectionResults.receive?.error || null}
+                onDismiss={() => clearSectionResult('receive')}
+              />
             </Section>
 
             {/* ─── Send ─────────────────────────────────────────────────── */}
@@ -906,6 +969,11 @@ export default function RgbTestScreen() {
                   small
                 />
               </View>
+              <ResultCard
+                result={sectionResults.send?.result || null}
+                error={sectionResults.send?.error || null}
+                onDismiss={() => clearSectionResult('send')}
+              />
             </Section>
 
             {/* ─── History ──────────────────────────────────────────────── */}
@@ -978,6 +1046,11 @@ export default function RgbTestScreen() {
                   {transactions.length > 10 && <Text style={styles.moreText}>+ {transactions.length - 10} more</Text>}
                 </View>
               )}
+              <ResultCard
+                result={sectionResults.history?.result || null}
+                error={sectionResults.history?.error || null}
+                onDismiss={() => clearSectionResult('history')}
+              />
             </Section>
 
             {/* ─── Backup & Tools ───────────────────────────────────────── */}
@@ -1003,6 +1076,11 @@ export default function RgbTestScreen() {
                   small
                 />
               </View>
+              <ResultCard
+                result={sectionResults.backup?.result || null}
+                error={sectionResults.backup?.error || null}
+                onDismiss={() => clearSectionResult('backup')}
+              />
             </Section>
           </>
         )}
