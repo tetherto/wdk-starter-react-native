@@ -574,6 +574,71 @@ export default function RgbTestScreen() {
     setResult(`Fee estimate (6 blocks): ${fee} sat/vB`, 'fee');
   });
 
+  // ─── Additional Functions (uncovered) ─────────────────────────────────────
+
+  const signMessage = withLoading('signMsg', async () => {
+    const wdk = getWdk();
+    const res = await wdk.rgbSignMessage({ accountIndex: 0, message: 'RGB test message' });
+    setResult(`Signature: ${String(res?.signature || res).substring(0, 40)}...`, 'signMsg');
+  });
+
+  const verifyMessage = withLoading('verifyMsg', async () => {
+    const wdk = getWdk();
+    const res = await wdk.rgbVerifyMessage({
+      accountIndex: 0,
+      message: 'RGB test message',
+      signature: 'test-signature',
+    });
+    setResult(`Verified: ${res?.valid ?? res}`, 'verifyMsg');
+  });
+
+  const issueAssetUda = withLoading('issueUda', async () => {
+    const wdk = getWdk();
+    const res = await wdk.rgbIssueAssetUda({
+      accountIndex: 0,
+      ticker: 'TNFT',
+      name: 'Test NFT',
+      precision: 0,
+    });
+    const assetId = res?.assetId || res?.asset_id || 'unknown';
+    setResult(`Issued UDA: ${assetId}`, 'issueUda');
+  });
+
+  const inflateAsset = withLoading('inflate', async () => {
+    const wdk = getWdk();
+    if (!assetIdInput.trim()) {
+      throw new Error('Enter an IFA asset ID to inflate');
+    }
+    const res = await wdk.rgbInflate({
+      accountIndex: 0,
+      assetId: assetIdInput.trim(),
+      amounts: JSON.stringify([100]),
+      feeRate: 2,
+    });
+    setResult(`Inflated: ${JSON.stringify(res)}`, 'inflate');
+  });
+
+  const decodeInvoice = withLoading('decode', async () => {
+    const wdk = getWdk();
+    if (!sendInvoice.trim()) {
+      throw new Error('Enter an RGB invoice to decode');
+    }
+    const res = await wdk.rgbDecodeInvoice({ invoice: sendInvoice.trim() });
+    const data = typeof res?.data === 'string' ? JSON.parse(res.data) : res;
+    setResult(`Invoice: ${JSON.stringify(data).substring(0, 200)}`, 'decode');
+  });
+
+  const restoreFromBackup = withLoading('restore', async () => {
+    const wdk = getWdk();
+    const res = await wdk.rgbRestoreFromBackup({
+      accountIndex: 0,
+      backupFilePath: '/tmp/rgb-backup.rgb',
+      password: 'test-password',
+      dataDir: '/tmp/rgb-restore',
+    });
+    setResult(`Restored: ${JSON.stringify(res)}`, 'restore');
+  });
+
   // ─── Render ──────────────────────────────────────────────────────────────
 
   const statusColor = status === 'connected' ? colors.success : status === 'error' ? colors.error : status === 'initializing' ? colors.warning : colors.textSecondary;
@@ -1080,6 +1145,72 @@ export default function RgbTestScreen() {
                 result={sectionResults.backup?.result || null}
                 error={sectionResults.backup?.error || null}
                 onDismiss={() => clearSectionResult('backup')}
+              />
+            </Section>
+
+            {/* ─── Advanced Operations ─────────────────────────────────── */}
+            <Section
+              title="Advanced Operations"
+              icon={<Shield size={18} color={colors.textSecondary} />}
+            >
+              <View style={styles.btnRow}>
+                <ActionButton
+                  label="Sign Message"
+                  onPress={signMessage}
+                  loading={loading}
+                  loadingKey="signMsg"
+                  icon={<Hash size={14} color={colors.text} />}
+                  small
+                />
+                <ActionButton
+                  label="Verify Message"
+                  onPress={verifyMessage}
+                  loading={loading}
+                  loadingKey="verifyMsg"
+                  icon={<CircleCheck size={14} color={colors.text} />}
+                  small
+                />
+              </View>
+              <View style={styles.btnRow}>
+                <ActionButton
+                  label="Issue UDA"
+                  onPress={issueAssetUda}
+                  loading={loading}
+                  loadingKey="issueUda"
+                  icon={<Plus size={14} color={colors.text} />}
+                  small
+                />
+                <ActionButton
+                  label="Inflate IFA"
+                  onPress={inflateAsset}
+                  loading={loading}
+                  loadingKey="inflate"
+                  icon={<ArrowUpDown size={14} color={colors.text} />}
+                  small
+                />
+              </View>
+              <View style={styles.btnRow}>
+                <ActionButton
+                  label="Decode Invoice"
+                  onPress={decodeInvoice}
+                  loading={loading}
+                  loadingKey="decode"
+                  icon={<Hash size={14} color={colors.text} />}
+                  small
+                />
+                <ActionButton
+                  label="Restore Backup"
+                  onPress={restoreFromBackup}
+                  loading={loading}
+                  loadingKey="restore"
+                  icon={<Download size={14} color={colors.text} />}
+                  small
+                />
+              </View>
+              <ResultCard
+                result={sectionResults.signMsg?.result || sectionResults.verifyMsg?.result || sectionResults.issueUda?.result || sectionResults.inflate?.result || sectionResults.decode?.result || sectionResults.restore?.result || null}
+                error={sectionResults.signMsg?.error || sectionResults.verifyMsg?.error || sectionResults.issueUda?.error || sectionResults.inflate?.error || sectionResults.decode?.error || sectionResults.restore?.error || null}
+                onDismiss={() => { clearSectionResult('signMsg'); clearSectionResult('verifyMsg'); clearSectionResult('issueUda'); clearSectionResult('inflate'); clearSectionResult('decode'); clearSectionResult('restore'); }}
               />
             </Section>
           </>
