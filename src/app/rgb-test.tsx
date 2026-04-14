@@ -632,9 +632,9 @@ export default function RgbTestScreen() {
     const wdk = getWdk();
     const res = await wdk.rgbRestoreFromBackup({
       accountIndex: 0,
-      backupFilePath: '/tmp/rgb-backup.rgb',
+      backupFilePath: 'rgb-backup.rgb',
       password: 'test-password',
-      dataDir: '/tmp/rgb-restore',
+      // dataDir omitted — bare-binding uses os.tmpdir() for cross-platform support
     });
     setResult(`Restored: ${JSON.stringify(res)}`, 'restore');
   });

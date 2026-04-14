@@ -72,7 +72,7 @@ const getChainsConfig = () => {
       network: 'testnet',
       indexerUrl: 'ssl://electrum.iriswallet.com:50013',
       transportEndpoint: 'rpcs://rgb-proxy-testnet3.utexo.com/json-rpc',
-      dataDir: '/tmp/rgb-wallet-data',
+      // dataDir omitted — bare-binding uses os.tmpdir() for cross-platform support
     },
     tron: {
       chainId: 3448148188,
