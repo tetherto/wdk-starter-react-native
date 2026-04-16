@@ -523,8 +523,8 @@ export default function RgbTestScreen() {
     const wdk = getWdk();
     const res = await wdk.rgbSendBtc({
       accountIndex: 0,
-      address: sendBtcAddress.trim(),
-      amount: parseInt(sendBtcAmount.trim(), 10),
+      to: sendBtcAddress.trim(),
+      value: String(parseInt(sendBtcAmount.trim(), 10)),
       feeRate: 2,
     });
     setResult(`BTC sent — TX: ${res?.txid || 'submitted'}`, 'sendBtc');
