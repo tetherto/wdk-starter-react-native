@@ -484,35 +484,38 @@ export default function RgbTestScreen() {
     const wdk = getWdk();
     const res = await wdk.rgbBlindReceive({ accountIndex: 0 });
     const invoice = res?.invoice || '';
-    setResult(`Invoice created:\n${invoice}`, 'blindRecv');
+    if (invoice) {
+      await Clipboard.setStringAsync(invoice);
+      setSendInvoice(invoice);
+    }
+    setResult(`Invoice copied to clipboard and filled "RGB Invoice" field:\n${invoice}`, 'blindRecv');
   });
 
   const witnessReceive = withLoading('witnessRecv', async () => {
     const wdk = getWdk();
     const res = await wdk.rgbWitnessReceive({ accountIndex: 0 });
     const invoice = res?.invoice || '';
-    setResult(`Witness invoice:\n${invoice}`, 'witnessRecv');
+    if (invoice) {
+      await Clipboard.setStringAsync(invoice);
+      setSendInvoice(invoice);
+    }
+    setResult(`Witness invoice copied to clipboard and filled "RGB Invoice" field:\n${invoice}`, 'witnessRecv');
   });
 
   // ─── Send ────────────────────────────────────────────────────────────────
 
   const sendRgb = withLoading('sendRgb', async () => {
     if (!sendInvoice.trim()) { Alert.alert('Paste an RGB invoice'); return; }
+    if (!sendAssetId.trim()) { Alert.alert('Enter or select an Asset ID'); return; }
     const wdk = getWdk();
-    const recipientMap = JSON.stringify({
-      [sendAssetId.trim()]: [{
-        recipientId: sendInvoice.trim(),
-        witnessLevel: 1,
-        amount: parseInt(sendAmount.trim() || '1', 10),
-        transportEndpoints: ['rpc://proxy.iri.ls/0.2/json-rpc'],
-      }],
-    });
     const res = await wdk.rgbSend({
       accountIndex: 0,
-      recipientMap,
+      token: sendAssetId.trim(),
+      recipient: sendInvoice.trim(),
+      amount: parseInt(sendAmount.trim() || '1', 10),
       feeRate: 2,
     });
-    setResult(`Send TX: ${res?.txid || 'submitted'}`, 'sendRgb');
+    setResult(`Send TX: ${res?.hash || 'submitted'}`, 'sendRgb');
     setSendInvoice('');
     setSendAmount('');
   });
@@ -523,8 +526,8 @@ export default function RgbTestScreen() {
     const wdk = getWdk();
     const res = await wdk.rgbSendBtc({
       accountIndex: 0,
-      to: sendBtcAddress.trim(),
-      value: String(parseInt(sendBtcAmount.trim(), 10)),
+      address: sendBtcAddress.trim(),
+      amount: parseInt(sendBtcAmount.trim(), 10),
       feeRate: 2,
     });
     setResult(`BTC sent — TX: ${res?.txid || 'submitted'}`, 'sendBtc');
@@ -779,7 +782,16 @@ export default function RgbTestScreen() {
                     const id = asset.assetId || asset.asset_id || '';
                     const settled = asset.balance?.settled ?? asset.settledBalance ?? asset.totalBalance ?? 0;
                     return (
-                      <View key={idx} style={[styles.listItem, idx < assets.length - 1 && styles.listItemBorder]}>
+                      <TouchableOpacity
+                        key={idx}
+                        style={[styles.listItem, idx < assets.length - 1 && styles.listItemBorder]}
+                        onPress={async () => {
+                          await Clipboard.setStringAsync(id);
+                          setSendAssetId(id);
+                          setResult(`Copied asset ID and filled "Asset ID" field:\n${id}`, 'assets');
+                        }}
+                        activeOpacity={0.7}
+                      >
                         <View style={styles.assetHeader}>
                           <View style={styles.assetBadge}>
                             <Text style={styles.assetBadgeText}>{(asset as any)._type || 'RGB'}</Text>
@@ -791,7 +803,7 @@ export default function RgbTestScreen() {
                           <Text style={styles.assetName}>{asset.name}</Text>
                         )}
                         <Text style={styles.assetId} numberOfLines={1}>{truncate(id, 40)}</Text>
-                      </View>
+                      </TouchableOpacity>
                     );
                   })}
                 </View>
