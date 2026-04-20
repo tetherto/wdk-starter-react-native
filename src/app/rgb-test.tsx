@@ -288,6 +288,7 @@ export default function RgbTestScreen() {
   const [sendInvoice, setSendInvoice] = useState('');
   const [sendAmount, setSendAmount] = useState('');
   const [sendAssetId, setSendAssetId] = useState('');
+  const [lastSignature, setLastSignature] = useState('');
   const [sendBtcAddress, setSendBtcAddress] = useState('');
   const [sendBtcAmount, setSendBtcAmount] = useState('');
   const [issueTicker, setIssueTicker] = useState('');
@@ -582,15 +583,20 @@ export default function RgbTestScreen() {
   const signMessage = withLoading('signMsg', async () => {
     const wdk = getWdk();
     const res = await wdk.rgbSignMessage({ accountIndex: 0, message: 'RGB test message' });
-    setResult(`Signature: ${String(res?.signature || res).substring(0, 40)}...`, 'signMsg');
+    const sig = String(res?.signature || res);
+    setLastSignature(sig);
+    setResult(`Signature: ${sig.substring(0, 40)}...`, 'signMsg');
   });
 
   const verifyMessage = withLoading('verifyMsg', async () => {
+    if (!lastSignature) {
+      throw new Error('Run "Sign Message" first to generate a signature');
+    }
     const wdk = getWdk();
     const res = await wdk.rgbVerifyMessage({
       accountIndex: 0,
       message: 'RGB test message',
-      signature: 'test-signature',
+      signature: lastSignature,
     });
     setResult(`Verified: ${res?.valid ?? res}`, 'verifyMsg');
   });
@@ -609,12 +615,12 @@ export default function RgbTestScreen() {
 
   const inflateAsset = withLoading('inflate', async () => {
     const wdk = getWdk();
-    if (!assetIdInput.trim()) {
-      throw new Error('Enter an IFA asset ID to inflate');
+    if (!sendAssetId.trim()) {
+      throw new Error('Select or enter an IFA asset ID to inflate (tap an asset above)');
     }
     const res = await wdk.rgbInflate({
       accountIndex: 0,
-      assetId: assetIdInput.trim(),
+      assetId: sendAssetId.trim(),
       amounts: JSON.stringify([100]),
       feeRate: 2,
     });
