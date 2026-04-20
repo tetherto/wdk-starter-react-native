@@ -62,16 +62,17 @@ const getChainsConfig = () => {
       host: 'api.ordimint.com',
       port: 50001,
     },
-    // rgb: {
-    //   network: 'mainnet',
-    //   indexerUrl: 'ssl://electrum.iriswallet.com:50003',
-    //   transportEndpoint: 'rpcs://proxy.iriswallet.com/0.2/json-rpc',
-    //   dataDir: '/tmp/rgb-wallet-data',
-    // },
     rgb: {
-      network: 'testnet',
-      indexerUrl: 'ssl://electrum.iriswallet.com:50013',
-      transportEndpoint: 'rpcs://rgb-proxy-testnet3.utexo.com/json-rpc',
+      // Configured via .env. Defaults target RGB testnet (Iris public indexer
+      // + Utexo proxy). For local regtest against the rgb-lib test
+      // docker-compose, set:
+      //   EXPO_PUBLIC_RGB_NETWORK=regtest
+      //   EXPO_PUBLIC_RGB_INDEXER_URL=tcp://localhost:50001     (iOS sim)
+      //                               tcp://10.0.2.2:50001      (Android emulator)
+      //   EXPO_PUBLIC_RGB_TRANSPORT_ENDPOINT=rpc://localhost:3000/json-rpc
+      network: process.env.EXPO_PUBLIC_RGB_NETWORK || 'testnet',
+      indexerUrl: process.env.EXPO_PUBLIC_RGB_INDEXER_URL || 'ssl://electrum.iriswallet.com:50013',
+      transportEndpoint: process.env.EXPO_PUBLIC_RGB_TRANSPORT_ENDPOINT || 'rpcs://rgb-proxy-testnet3.utexo.com/json-rpc',
       // dataDir omitted — bare-binding uses os.tmpdir() for cross-platform support
     },
     tron: {
