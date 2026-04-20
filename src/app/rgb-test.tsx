@@ -525,13 +525,16 @@ export default function RgbTestScreen() {
     if (!sendBtcAddress.trim()) { Alert.alert('Enter a BTC address'); return; }
     if (!sendBtcAmount.trim()) { Alert.alert('Enter amount in sats'); return; }
     const wdk = getWdk();
+    // HRPC schema expects `to` (string) and `value` (string) — matches
+    // BTC send flow. The worklet handler maps payload.to → options.to and
+    // payload.value → options.value before calling sendTransaction.
     const res = await wdk.rgbSendBtc({
       accountIndex: 0,
-      address: sendBtcAddress.trim(),
-      amount: parseInt(sendBtcAmount.trim(), 10),
+      to: sendBtcAddress.trim(),
+      value: sendBtcAmount.trim(),
       feeRate: 2,
     });
-    setResult(`BTC sent — TX: ${res?.txid || 'submitted'}`, 'sendBtc');
+    setResult(`BTC sent — TX: ${res?.hash || 'submitted'}`, 'sendBtc');
     setSendBtcAddress('');
     setSendBtcAmount('');
   });
