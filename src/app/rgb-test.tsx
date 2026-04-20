@@ -613,6 +613,21 @@ export default function RgbTestScreen() {
     setResult(`Issued UDA: ${assetId}`, 'issueUda');
   });
 
+  const issueAssetIfa = withLoading('issueIfa', async () => {
+    const wdk = getWdk();
+    const res = await wdk.rgbIssueAssetIfa({
+      accountIndex: 0,
+      ticker: 'TIFA',
+      name: 'Test IFA',
+      precision: 0,
+      amounts: JSON.stringify([1000]),
+      inflationAmounts: JSON.stringify([500]),
+    });
+    const assetId = res?.assetId || res?.asset_id || 'unknown';
+    setSendAssetId(assetId);
+    setResult(`Issued IFA: ${assetId}\n(copied to Asset ID field — tap Inflate IFA to mint more)`, 'issueIfa');
+  });
+
   const inflateAsset = withLoading('inflate', async () => {
     const wdk = getWdk();
     if (!sendAssetId.trim()) {
@@ -1199,6 +1214,16 @@ export default function RgbTestScreen() {
                   small
                 />
                 <ActionButton
+                  label="Issue IFA"
+                  onPress={issueAssetIfa}
+                  loading={loading}
+                  loadingKey="issueIfa"
+                  icon={<Plus size={14} color={colors.text} />}
+                  small
+                />
+              </View>
+              <View style={styles.btnRow}>
+                <ActionButton
                   label="Inflate IFA"
                   onPress={inflateAsset}
                   loading={loading}
@@ -1226,9 +1251,9 @@ export default function RgbTestScreen() {
                 />
               </View>
               <ResultCard
-                result={sectionResults.signMsg?.result || sectionResults.verifyMsg?.result || sectionResults.issueUda?.result || sectionResults.inflate?.result || sectionResults.decode?.result || sectionResults.restore?.result || null}
-                error={sectionResults.signMsg?.error || sectionResults.verifyMsg?.error || sectionResults.issueUda?.error || sectionResults.inflate?.error || sectionResults.decode?.error || sectionResults.restore?.error || null}
-                onDismiss={() => { clearSectionResult('signMsg'); clearSectionResult('verifyMsg'); clearSectionResult('issueUda'); clearSectionResult('inflate'); clearSectionResult('decode'); clearSectionResult('restore'); }}
+                result={sectionResults.signMsg?.result || sectionResults.verifyMsg?.result || sectionResults.issueUda?.result || sectionResults.issueIfa?.result || sectionResults.inflate?.result || sectionResults.decode?.result || sectionResults.restore?.result || null}
+                error={sectionResults.signMsg?.error || sectionResults.verifyMsg?.error || sectionResults.issueUda?.error || sectionResults.issueIfa?.error || sectionResults.inflate?.error || sectionResults.decode?.error || sectionResults.restore?.error || null}
+                onDismiss={() => { clearSectionResult('signMsg'); clearSectionResult('verifyMsg'); clearSectionResult('issueUda'); clearSectionResult('issueIfa'); clearSectionResult('inflate'); clearSectionResult('decode'); clearSectionResult('restore'); }}
               />
             </Section>
           </>
