@@ -7,10 +7,9 @@
     "developmentClient": false,
     "icon": "./assets/images/icon.png",
     "scheme": "wdkstarterreactnative",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.wdkstarterreactnative",
+      "bundleIdentifier": "io.tether.wdkstarterreactnative",
       "infoPlist": {
         "UIStatusBarStyle": "UIStatusBarStyleLightContent",
         "UIViewControllerBasedStatusBarAppearance": false,
@@ -27,7 +26,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.wdkstarterreactnative",
+      "package": "io.tether.wdkstarterreactnative",
       "statusBar": {
         "style": "light",
         "backgroundColor": "#000000"
@@ -49,18 +48,19 @@
     "plugins": [
       "expo-router",
       [
+        "expo-navigation-bar",
+        {
+          "visibility": "hidden",
+          "behavior": "overlay-swipe"
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-logo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#FF6501"
-        }
-      ],
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera"
         }
       ],
       [
@@ -74,12 +74,7 @@
             "enableShrinkResourcesInReleaseBuilds": true
           }
         }
-      ],
-      "./plugins/withAndroidSubprojects.js"
-    ],
-    "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
-    }
+      ]
+    ]
   }
 }
