@@ -1,31 +1,35 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { View, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowUp, ArrowDown, ChevronDown } from 'lucide-react-native';
-import { Screen, Text, Card, Button, ListItem, TokenIcon } from '@/components';
+import { Screen, Text, Card, Button, ListItem, TokenIcon, LoadingState, ErrorState } from '@/components';
 import { useTheme } from '@/theme';
-import { mockWalletRepository } from '@/data/mock/mockWalletRepository';
-import type { TokenBalance } from '@/domain/models';
+import { useBalances, useAccounts } from '@/data';
 
 const chainColor: Record<string, string> = { tron: '#FF060A', ethereum: '#627EEA', bitcoin: '#F7931A' };
 
 export default function WalletHome() {
   const theme = useTheme();
   const router = useRouter();
-  const [balances, setBalances] = useState<TokenBalance[]>([]);
-  useEffect(() => { mockWalletRepository.getBalances('1').then(setBalances); }, []);
+  const accountsQ = useAccounts();
+  const account = accountsQ.data?.[0];
+  const balancesQ = useBalances(account?.id ?? '');
+
+  if (accountsQ.isLoading || balancesQ.isLoading) return <LoadingState message="Loading wallet" />;
+  if (balancesQ.isError) return <ErrorState message="Couldn't load balances." onRetry={() => balancesQ.refetch()} />;
+
+  const balances = balancesQ.data ?? [];
 
   return (
     <Screen noPadding edges={['top']}>
       <ScrollView contentContainerStyle={{ padding: theme.layout.screenPaddingH, paddingTop: theme.layout.screenPaddingTop }} showsVerticalScrollIndicator={false}>
-        {/* Account switcher -> accounts screen */}
         <Pressable onPress={() => router.push('/accounts')} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 16 }}>
-          <Text variant="headTitle">Account 1</Text>
+          <Text variant="headTitle">{account?.name ?? 'Account'}</Text>
           <ChevronDown size={18} color={theme.colors.textSecondary} />
         </Pressable>
 
         <Text variant="small" color="textSecondary">Total balance</Text>
-        <Text variant="balance" style={{ marginTop: 4 }}>$1,997.32</Text>
+        <Text variant="balance" style={{ marginTop: 4 }}>{account?.fiatTotal ?? '$0.00'}</Text>
 
         <View style={{ flexDirection: 'row', gap: 12, marginTop: 16, marginBottom: 24 }}>
           <View style={{ flex: 1 }}>

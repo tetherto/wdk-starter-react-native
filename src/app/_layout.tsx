@@ -4,24 +4,16 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import * as NavigationBar from 'expo-navigation-bar';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider, useTheme } from '@/theme';
 import { useSession } from '@/state/session';
+import { RepositoriesProvider, queryClient } from '@/data';
 
-/**
- * Edge-to-edge is mandatory on Android in SDK 55, so the app already draws
- * behind the system bars. This makes the Android navigation bar transparent
- * (button style follows the theme) so the app background flows seamlessly to
- * the screen edges. Content stays clear of the bars via SafeAreaView in Screen.
- */
 function useEdgeToEdge() {
   const theme = useTheme();
   useEffect(() => {
     (async () => {
       try {
-        // Button/pill color follows the theme. Visibility (hidden) is set via
-        // the expo-navigation-bar config plugin in app.json, which is the
-        // reliable path under SDK 55 edge-to-edge (runtime setVisibilityAsync
-        // is deprecated/unreliable there).
         await NavigationBar.setStyle(theme.mode === 'dark' ? 'light' : 'dark');
       } catch {}
     })();
@@ -79,10 +71,14 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <ThemeProvider>
-          <AutoLockGate />
-          <RootStack />
-        </ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <RepositoriesProvider>
+            <ThemeProvider>
+              <AutoLockGate />
+              <RootStack />
+            </ThemeProvider>
+          </RepositoriesProvider>
+        </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
