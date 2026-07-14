@@ -5,9 +5,26 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import * as NavigationBar from 'expo-navigation-bar';
 import { QueryClientProvider } from '@tanstack/react-query';
+import { WdkAppProvider, useWdkApp } from '@tetherto/wdk-react-native-core';
 import { ThemeProvider, useTheme } from '@/theme';
 import { useSession } from '@/state/session';
 import { RepositoriesProvider, queryClient } from '@/data';
+import { wdkConfigs } from '@/wdk/config';
+// Generated worklet bundle (produced by `wdk-worklet-bundler generate`).
+import wdkBundle from '../../.wdk-bundle/wdk-worklet.bundle.js';
+
+
+function WdkStatusLogger() {
+  const { state } = useWdkApp();
+  useEffect(() => {
+    // Visible in Metro logs. Expect: INITIALIZING -> NO_WALLET (fresh install).
+    console.log('[WDK] status:', state.status);
+    if (state.status === 'ERROR') {
+      console.warn('[WDK] init error:', state.error?.message);
+    }
+  }, [state]);
+  return null;
+}
 
 function useEdgeToEdge() {
   const theme = useTheme();
@@ -69,17 +86,20 @@ function RootStack() {
 
 export default function RootLayout() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
-          <RepositoriesProvider>
-            <ThemeProvider>
-              <AutoLockGate />
-              <RootStack />
-            </ThemeProvider>
-          </RepositoriesProvider>
-        </QueryClientProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <WdkAppProvider wdkConfigs={wdkConfigs} bundle={{ bundle: wdkBundle as string }}>
+      <WdkStatusLogger />
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <QueryClientProvider client={queryClient}>
+            <RepositoriesProvider>
+              <ThemeProvider>
+                <AutoLockGate />
+                <RootStack />
+              </ThemeProvider>
+            </RepositoriesProvider>
+          </QueryClientProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </WdkAppProvider>
   );
 }

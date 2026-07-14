@@ -74,7 +74,8 @@
             "enableShrinkResourcesInReleaseBuilds": true
           }
         }
-      ]
+      ],
+      "./modules/cloud-backup/withModularHeaders.js"
     ]
   }
 }

@@ -2,15 +2,14 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
+    "esModuleInterop": true,
+    "ignoreDeprecations": "6.0",
     "baseUrl": ".",
+    "jsx": "react-native",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["src/*"],
+      ".wdk-bundle": [".wdk-bundle/wdk-worklet.bundle.js"]
     }
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx"
-  ]
+  "include": ["**/*.ts", "**/*.tsx"]
 }
