@@ -19,7 +19,7 @@ interface SessionState {
 }
 
 export const useSession = create<SessionState>((set, get) => ({
-  status: 'noWallet', // onboarding until WDK/storage says otherwise
+  status: 'loading', // WDK session bridge sets the real status on init
   hasWallet: false,
   setStatus: (status) => set({ status }),
   completeOnboarding: () => set({ hasWallet: true, status: 'unlocked' }),

@@ -49,3 +49,21 @@ app-example
 # E2E tests
 test/apps/
 
+node_modules/
+.expo/
+dist/
+ios/
+android/
+npm-debug.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+*.bundle
+*.bundle.js
+web-build/
+.wdk-bundle/
+.wdk/
+.env

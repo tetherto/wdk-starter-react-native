@@ -22,10 +22,6 @@ export const mockWalletRepository: WalletRepository = {
   hasWallet: async () => false,
   createWallet: async () => ({ mnemonic: ['abandon','ability','able','about','above','absent','absorb','abstract','absurd','abuse','access','accident'] }),
   listAccounts: async () => accounts,
-  getBalances: async () => {
-    await new Promise((r) => setTimeout(r, 1500));   // see LoadingState
-    // throw new Error('test');                        // uncomment to see ErrorState + retry
-    return balances;
-  },
+  getBalances: async () => balances,
   getTransactions: async () => transactions,
 };
