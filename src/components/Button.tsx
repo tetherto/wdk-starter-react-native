@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useTheme } from '@/theme';
+import { useResponsive } from '@/theme/responsive';
 import { Text } from './Text';
 
 interface ButtonProps {
@@ -12,9 +13,9 @@ interface ButtonProps {
   icon?: React.ReactNode;
 }
 
-/** primary = filled brand; secondary = outlined; tinted = brand-tint fill. */
 export function Button({ label, onPress, variant = 'primary', disabled, loading, icon }: ButtonProps) {
   const theme = useTheme();
+  const { moderateScale } = useResponsive();
 
   const bg = (pressed: boolean) => {
     if (disabled) return theme.colors.disabledBg;
@@ -36,6 +37,8 @@ export function Button({ label, onPress, variant = 'primary', disabled, loading,
       style={({ pressed }) => [
         styles.base,
         {
+          paddingVertical: moderateScale(14),
+          paddingHorizontal: moderateScale(16),
           borderRadius: theme.radii.md,
           backgroundColor: bg(pressed),
           borderWidth: variant === 'secondary' ? 1.5 : 0,
@@ -49,6 +52,8 @@ export function Button({ label, onPress, variant = 'primary', disabled, loading,
       ) : (
         <View style={styles.content}>
           {icon ? <View>{icon}</View> : null}
+          {/* fontWeight 700 (bolder than the button token's default 500) to
+              match the visual weight in the design. */}
           <Text variant="button" color={labelColor as any} style={styles.label}>{label}</Text>
         </View>
       )}
@@ -57,7 +62,7 @@ export function Button({ label, onPress, variant = 'primary', disabled, loading,
 }
 
 const styles = StyleSheet.create({
-  base: { paddingVertical: 14, paddingHorizontal: 16, marginTop: 8 },
+  base: { marginTop: 8 },
   content: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  label: { textTransform: 'capitalize' },
+  label: { textTransform: 'capitalize', fontWeight: '700' },
 });

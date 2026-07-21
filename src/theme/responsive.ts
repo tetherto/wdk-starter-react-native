@@ -2,33 +2,29 @@ import { useWindowDimensions } from 'react-native';
 
 /**
  * Responsive scaling, anchored to the prototype's own design canvas (380×720
- * — see the HTML prototype's `.phone` and `.scr` dimensions). Every font size
- * and spacing value in the design system is authored against this baseline;
- * these helpers scale it to whatever screen it's actually running on.
+ * — see the HTML prototype's `.phone` and `.scr` dimensions).
  *
- * Uses "moderate" scaling (react-native-size-matters' well-known pattern):
- * text grows on larger screens and shrinks on smaller ones, but only by a
- * fraction of the full linear ratio — so a tablet doesn't get comically large
- * text, and a small phone doesn't get illegibly small text.
+ * BASE_WIDTH is set slightly below the prototype's literal 380px on purpose:
+ * the design tokens were measured pixel-for-pixel against the prototype's CSS,
+ * but a native device render (San Francisco/Roboto, real device pixel
+ * density) reads slightly smaller than the same nominal size in a desktop
+ * browser mockup. Lowering BASE_WIDTH nudges every scaled size up a small,
+ * consistent amount app-wide, rather than hand-adjusting individual tokens
+ * (which would drift from the prototype's measured values in an untracked
+ * way). If text still needs to read larger/smaller globally, adjust this one
+ * constant — not the theme tokens.
  */
-
-const BASE_WIDTH = 380;
+const BASE_WIDTH = 360;
 const BASE_HEIGHT = 720;
 
 export interface Responsive {
   width: number;
   height: number;
-  /** Full linear scale by width ratio. Rarely used directly — prefer moderateScale. */
   scale: (size: number) => number;
-  /** Full linear scale by height ratio. */
   verticalScale: (size: number) => number;
-  /** Dampened width-based scale. Use for font sizes and horizontal spacing. factor: 0 = no scaling, 1 = full linear. Default 0.5. */
   moderateScale: (size: number, factor?: number) => number;
-  /** Dampened height-based scale. Use for vertical spacing/gaps. */
   moderateVerticalScale: (size: number, factor?: number) => number;
-  /** Percentage of current screen width, in dp (e.g. wp(80) = 80% of screen width). */
   wp: (percent: number) => number;
-  /** Percentage of current screen height, in dp. */
   hp: (percent: number) => number;
 }
 

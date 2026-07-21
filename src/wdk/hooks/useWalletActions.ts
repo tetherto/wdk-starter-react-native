@@ -13,8 +13,12 @@ export function useWalletActions() {
   const wm = useWalletManager();
 
   return {
-    /** Generate a fresh mnemonic (does NOT persist a wallet yet). */
-    generateSeed: (): Promise<string> => wm.generateMnemonic(12),
+    /**
+     * Generate a fresh mnemonic (does NOT persist a wallet yet).
+     * wordCount: 12 (default) or 24 — WDK supports both; the starter
+     * defaults to 12 until the person picks 24 on the seed-hidden screen.
+     */
+    generateSeed: (wordCount: 12 | 24 = 12): Promise<string> => wm.generateMnemonic(wordCount),
 
     /** Persist a wallet from a mnemonic (restore + encrypt + unlock). */
     importWallet: async (mnemonic: string): Promise<void> => {
