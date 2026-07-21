@@ -3,6 +3,7 @@ export { Screen } from './Screen';
 export { ScreenHeader } from './ScreenHeader';
 export { Button } from './Button';
 export { Card } from './Card';
+export { SeedWordGrid } from './SeedWordGrid';
 export { TextField } from './TextField';
 export { ListItem } from './ListItem';
 export { TokenIcon } from './TokenIcon';
