@@ -13,13 +13,15 @@
     "postinstall": "wdk-worklet-bundler generate"
   },
   "dependencies": {
+    "react-native-webview": "13.16.0",
+    "@react-native-google-signin/google-signin": "^16.1.2",
     "@buildonspark/spark-frost-bare-addon": "^0.0.12",
     "@ledgerhq/ledger-bitcoin": "^0.3.1",
     "@react-navigation/native": "^7.3.3",
     "@tanstack/react-query": "^5.101.0",
     "@tetherto/wdk": "^1.0.0-beta.5",
     "@tetherto/wdk-backup-cloud": "github:Boka44/wdk-backup-cloud",
-    "@tetherto/wdk-react-native-core": "1.0.0-beta.10",
+    "@tetherto/wdk-react-native-core": "1.0.0-beta.14",
     "@tetherto/wdk-uikit-react-native": "^1.0.0-beta.2",
     "@tetherto/wdk-utils": "^1.0.0-beta.7",
     "@tetherto/wdk-wallet-btc": "^1.0.0-beta.8",
@@ -52,6 +54,7 @@
     "react-native-screens": "~4.23.0",
     "react-native-svg": "15.15.3",
     "react-native-worklets": "0.7.4",
+    "react-native-bare-kit": "0.14.5",
     "utf-8-validate": "^6.0.6",
     "zustand": "^5.0.14"
   },
