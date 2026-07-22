@@ -11,6 +11,7 @@ import wdkBundle from '../../.wdk-bundle/wdk-worklet.bundle.js';
 import AutoLockOnBackground from '@/wdk/hooks/AutoLockOnBackground';
 import { WdkSessionGate } from '@/wdk/hooks/WdkSessionGate';
 import 'react-native-get-random-values';
+import { CloudBackupProvider } from '@/wdk/cloud-backup/CloudBackupContext';
 
 function useEdgeToEdge() {
   const theme = useTheme();
@@ -48,14 +49,16 @@ export default function RootLayout() {
   return (
     <WdkAppProvider wdkConfigs={wdkConfigs} bundle={{ bundle: wdkBundle as string }}>
       <AutoLockOnBackground />
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <SafeAreaProvider>
-          <ThemeProvider>
-            <WdkSessionGate />
-            <RootStack />
-          </ThemeProvider>
-        </SafeAreaProvider>
-      </GestureHandlerRootView>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <SafeAreaProvider>
+            <ThemeProvider>
+              <CloudBackupProvider>
+                <WdkSessionGate />
+                <RootStack />
+              </CloudBackupProvider>
+            </ThemeProvider>
+          </SafeAreaProvider>
+        </GestureHandlerRootView>
     </WdkAppProvider>
   );
 }
