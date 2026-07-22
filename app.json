@@ -75,7 +75,8 @@
           }
         }
       ],
-      "./modules/cloud-backup/withModularHeaders.js"
+      "./modules/cloud-backup/withModularHeaders.js",
+      "expo-secure-store"
     ]
   }
 }

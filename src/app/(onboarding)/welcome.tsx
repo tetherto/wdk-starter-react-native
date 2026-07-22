@@ -23,9 +23,9 @@ export default function Welcome() {
     <Screen>
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 56 }}>
         <Image
-          source={require('@/../assets/images/android-icon-foreground-old.png')}
+          source={require('@/../assets/images/android-icon-foreground.png')}
           style={{ width: logoWidth, height: logoHeight}}
-          resizeMode="cover"
+          resizeMode="contain"
         />
         <Text
           variant="body"

@@ -20,9 +20,34 @@ export function useWalletActions() {
      */
     generateSeed: (wordCount: 12 | 24 = 12): Promise<string> => wm.generateMnemonic(wordCount),
 
-    /** Persist a wallet from a mnemonic (restore + encrypt + unlock). */
+    /**
+     * Persist a wallet from a mnemonic (restore + encrypt + unlock).
+     *
+     * SELF-HEALS a specific iOS-only condition: iOS Keychain deliberately
+     * SURVIVES app deletion (documented Apple behavior). So after a delete +
+     * reinstall, WDK can still find a 'primary' wallet registered from the
+     * PREVIOUS install and refuse to recreate it ("A wallet with the ID
+     * 'primary' already exists"), even though this is a brand new install
+     * with no wallet from the person's point of view. Android wipes this
+     * kind of app storage on uninstall, so it doesn't hit this.
+     *
+     * If restoreWallet fails with that specific error, silently delete the
+     * stale registration and retry ONCE. We don't retry on any other error —
+     * only this known, identifiable condition — so a genuine unrelated
+     * failure (bad mnemonic, worklet not ready, etc.) still surfaces
+     * normally instead of being silently swallowed and retried forever.
+     */
     importWallet: async (mnemonic: string): Promise<void> => {
-      await wm.restoreWallet(mnemonic.trim(), DEFAULT_WALLET_ID);
+      const trimmed = mnemonic.trim();
+      try {
+        await wm.restoreWallet(trimmed, DEFAULT_WALLET_ID);
+      } catch (e: any) {
+        const alreadyExists = /already exists/i.test(e?.message ?? '');
+        if (!alreadyExists) throw e;
+
+        await wm.deleteWallet(DEFAULT_WALLET_ID);
+        await wm.restoreWallet(trimmed, DEFAULT_WALLET_ID);
+      }
       wm.setActiveWalletId(DEFAULT_WALLET_ID);
       await wm.unlock(DEFAULT_WALLET_ID);
     },
