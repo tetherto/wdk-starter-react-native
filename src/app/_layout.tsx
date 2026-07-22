@@ -10,6 +10,7 @@ import { wdkConfigs } from '@/wdk/config';
 import wdkBundle from '../../.wdk-bundle/wdk-worklet.bundle.js';
 import AutoLockOnBackground from '@/wdk/hooks/AutoLockOnBackground';
 import { WdkSessionGate } from '@/wdk/hooks/WdkSessionGate';
+import 'react-native-get-random-values';
 
 function useEdgeToEdge() {
   const theme = useTheme();
