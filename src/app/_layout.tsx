@@ -12,6 +12,7 @@ import AutoLockOnBackground from '@/wdk/hooks/AutoLockOnBackground';
 import { WdkSessionGate } from '@/wdk/hooks/WdkSessionGate';
 import 'react-native-get-random-values';
 import { CloudBackupProvider } from '@/wdk/cloud-backup/CloudBackupContext';
+import { Toast } from '@/components';
 
 function useEdgeToEdge() {
   const theme = useTheme();
@@ -55,6 +56,7 @@ export default function RootLayout() {
               <CloudBackupProvider>
                 <WdkSessionGate />
                 <RootStack />
+                <Toast />
               </CloudBackupProvider>
             </ThemeProvider>
           </SafeAreaProvider>
