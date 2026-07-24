@@ -12,3 +12,4 @@ export { Toggle } from './Toggle';
 export { EmptyState, LoadingState, ErrorState } from './StateViews';
 export { SeedWordInputGrid } from './SeedWordInputGrid';
 export { Toast } from './Toast';
+export { AssetIcon } from './AssetIcon';

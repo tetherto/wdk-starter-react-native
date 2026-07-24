@@ -8,12 +8,12 @@ import {
   ArrowDownLeft,
   ArrowLeftRight,
   CreditCard,
-  Bitcoin,
 } from 'lucide-react-native';
-import { Screen, Text, LoadingState, ErrorState } from '@/components';
+import { Screen, Text, LoadingState, ErrorState, AssetIcon } from '@/components';
 import { useTheme } from '@/theme';
 import { useResponsive } from '@/theme/responsive';
-import { useWdkBalances, useWdkAccount, useWdkTotalUsd, networkColor } from '@/wdk/hooks/useWalletData';
+import { useWdkBalances, useWdkAccount, useWdkTotalUsd } from '@/wdk/hooks/useWalletData';
+import { useAccounts } from '@/state/accounts';
 import { useToast } from '@/state/toast';
 
 /**
@@ -39,6 +39,7 @@ export default function WalletHome() {
   const account = useWdkAccount();
   const balances = useWdkBalances();
   const { total } = useWdkTotalUsd();
+  const activeIndex = useAccounts((s) => s.activeIndex);
 
   if (account.isLoading || balances.isLoading) return <LoadingState message="Loading wallet" />;
   if (balances.isError) return <ErrorState message="Couldn't load balances." onRetry={() => balances.refetch()} />;
@@ -73,8 +74,10 @@ export default function WalletHome() {
                 justifyContent: 'center',
               }}
             >
+              {/* Was hardcoded to always show "1" — now reflects whichever
+                  account is actually active (see src/state/accounts.ts). */}
               <Text variant="label" color="white" style={{ fontWeight: '700', fontSize: moderateScale(13) }}>
-                1
+                {activeIndex + 1}
               </Text>
             </View>
             <Text variant="body">{account.data?.name ?? 'Account 1'}</Text>
@@ -125,7 +128,7 @@ export default function WalletHome() {
               subtitle={tokenSubtitle(b.token.id, b.token.chain)}
               amount={b.amount}
               fiatValue={b.fiatValue}
-              color={networkColor[b.token.chain] ?? theme.colors.textSecondary}
+              network={b.token.chain}
               isLast={i === balances.data.length - 1}
             />
           ))}
@@ -172,14 +175,14 @@ function TokenRow({
   subtitle,
   amount,
   fiatValue,
-  color,
+  network,
   isLast,
 }: {
   symbol: string;
   subtitle: string;
   amount: string;
   fiatValue: string;
-  color: string;
+  network: string;
   isLast: boolean;
 }) {
   const theme = useTheme();
@@ -197,24 +200,7 @@ function TokenRow({
         borderBottomColor: theme.colors.border,
       }}
     >
-      <View
-        style={{
-          width: iconSize,
-          height: iconSize,
-          borderRadius: iconSize / 2,
-          backgroundColor: color,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        {symbol === 'BTC' ? (
-          <Bitcoin size={moderateScale(20)} color={theme.colors.white} />
-        ) : (
-          <Text variant="label" color="white" style={{ fontWeight: '700' }}>
-            {symbol === 'ETH' ? 'Ξ' : symbol[0]}
-          </Text>
-        )}
-      </View>
+      <AssetIcon symbol={symbol} network={network} size={iconSize} showChainBadge={symbol.startsWith('USDT')} />
       <View style={{ flex: 1 }}>
         <Text variant="tokenName">{symbol}</Text>
         <Text variant="small" color="textSecondary">{subtitle}</Text>

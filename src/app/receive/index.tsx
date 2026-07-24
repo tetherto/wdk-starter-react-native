@@ -3,13 +3,12 @@ import { View, Pressable, Share as RNShare } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
-import { ChevronDown, Check, Copy, Share as ShareIcon, TriangleAlert, Bitcoin } from 'lucide-react-native';
-import { Screen, ScreenHeader, Text, Card } from '@/components';
+import { ChevronDown, Check, Copy, Share as ShareIcon, TriangleAlert } from 'lucide-react-native';
+import { Screen, ScreenHeader, Text, Card, AssetIcon } from '@/components';
 import { useTheme } from '@/theme';
 import { useResponsive } from '@/theme/responsive';
 import { useWdkAddressForNetwork } from '@/wdk/hooks/useWalletData';
 import { ASSETS } from '@/wdk/assets';
-import { networkColor } from '@/wdk/hooks/useWalletData';
 
 /**
  * Receive — rebuilt to match the prototype's `receive` screen exactly (the
@@ -39,12 +38,6 @@ const RECEIVE_SUBTITLE: Record<string, string> = {
   'usdt-ethereum': 'Ethereum · ERC-20 · gasless',
   'usdt0-arbitrum': 'Arbitrum · ERC-20 · gasless',
   'usdt-polygon': 'Polygon · ERC-20 · gasless',
-};
-
-const CHAIN_BADGE_LETTER: Record<string, string> = {
-  ethereum: 'E',
-  arbitrum: 'A',
-  polygon: 'P',
 };
 
 export default function Receive() {
@@ -88,7 +81,7 @@ export default function Receive() {
       {/* Selector card — tap to expand the dropdown below */}
       <Pressable onPress={() => setOpen((v) => !v)}>
         <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <AssetGlyph asset={selected} />
+          <AssetIcon symbol={selected.getSymbol()} network={selected.getNetwork()} showChainBadge={selected.getSymbol().startsWith('USDT')} />
           <View style={{ flex: 1 }}>
             <Text variant="tokenName">{selected.getSymbol()}</Text>
             <Text variant="small" color="textSecondary">{RECEIVE_SUBTITLE[selected.getId()]}</Text>
@@ -130,7 +123,7 @@ export default function Receive() {
                   backgroundColor: isSelected ? theme.colors.brandTint : 'transparent',
                 }}
               >
-                <AssetGlyph asset={asset} />
+                <AssetIcon symbol={asset.getSymbol()} network={asset.getNetwork()} showChainBadge={asset.getSymbol().startsWith('USDT')} />
                 <View style={{ flex: 1 }}>
                   <Text variant="tokenName">{asset.getSymbol()}</Text>
                   <Text variant="small" color="textSecondary">{RECEIVE_SUBTITLE[asset.getId()]}</Text>
@@ -208,62 +201,6 @@ export default function Receive() {
   );
 }
 
-/** Icon for a given asset — plain icon for native coins, a "U" glyph +
- * chain-badge overlay for USDT-family tokens (matching the prototype's
- * chain-badge pattern, sans the actual logo image asset — see file header). */
-function AssetGlyph({ asset }: { asset: (typeof ASSETS)[number] }) {
-  const theme = useTheme();
-  const { moderateScale } = useResponsive();
-  const size = moderateScale(38);
-  const symbol = asset.getSymbol();
-  const network = asset.getNetwork();
-  const color = asset.getColor() ?? theme.colors.textSecondary;
-  const isUsdtFamily = symbol.startsWith('USDT');
-
-  return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: color,
-        alignItems: 'center',
-        justifyContent: 'center',
-        position: 'relative',
-      }}
-    >
-      {symbol === 'BTC' ? (
-        <Bitcoin size={moderateScale(18)} color={theme.colors.white} />
-      ) : (
-        <Text variant="label" color="white" style={{ fontWeight: '700' }}>
-          {symbol === 'ETH' ? 'Ξ' : 'U'}
-        </Text>
-      )}
-
-      {isUsdtFamily && (
-        <View
-          style={{
-            position: 'absolute',
-            bottom: -2,
-            right: -2,
-            width: moderateScale(17),
-            height: moderateScale(17),
-            borderRadius: moderateScale(17) / 2,
-            backgroundColor: networkColor[network] ?? theme.colors.textSecondary,
-            borderWidth: 2,
-            borderColor: theme.colors.bgPrimary,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Text style={{ fontSize: moderateScale(9), fontWeight: '700', color: '#FFFFFF' }}>
-            {CHAIN_BADGE_LETTER[network] ?? '?'}
-          </Text>
-        </View>
-      )}
-    </View>
-  );
-}
 
 function ChipButton({ children, onPress }: { children: React.ReactNode; onPress: () => void }) {
   const theme = useTheme();

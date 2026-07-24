@@ -4,14 +4,22 @@ import { useBalancesForWallet, useAccount, useWalletManager } from '@tetherto/wd
 import { ASSETS } from '../assets';
 import { DEFAULT_WALLET_ID } from '../walletIdentity';
 import { usePrices } from '../pricing';
+import { useAccounts } from '@/state/accounts';
 import type { Account, TokenBalance, ChainId } from '@/domain/models';
 
 /**
  * WDK-backed data hooks. Screens consume these; they never import WDK directly.
  * Each maps WDK's real hook output into the app's domain models.
+ *
+ * MULTI-ACCOUNT: every hook below now reads the ACTIVE account index from
+ * useAccounts() (src/state/accounts.ts) instead of a hardcoded 0. WDK itself
+ * has no concept of "which account is active" — that's this app's own
+ * state; WDK just derives correctly for whatever index it's given. Hooks
+ * that need an ARBITRARY (not-necessarily-active) account's data — e.g. the
+ * Accounts screen showing every account's own total — take an explicit
+ * accountIndex argument instead (useWdkBalancesForAccount,
+ * useWdkAddressForAccountNetwork) rather than assuming "active".
  */
-
-const ACCOUNT_INDEX = 0;
 
 /** Brand color per chain, for the token glyph. Indexed by ChainId. */
 export const networkColor: Record<string, string> = {
@@ -45,14 +53,13 @@ function formatUsd(value: BigNumber | null): string {
 }
 
 /**
- * Balances for the active wallet — one row per configured asset, with real
- * fiat values via usePrices() (CoinGecko). Prices are looked up by SYMBOL,
- * de-duplicated — USDT/USDT0 appear on multiple chains, but we only need to
- * fetch each distinct symbol's price once, not once per chain.
+ * Balances for a SPECIFIC account index — the shared core both the "active
+ * account" hooks and the Accounts screen (which needs every account's own
+ * totals, not just the active one) build on.
  */
-export function useWdkBalances() {
+export function useWdkBalancesForAccount(accountIndex: number) {
   const { data, isLoading, isRefetching, error, refetch } = useBalancesForWallet(
-    ACCOUNT_INDEX,
+    accountIndex,
     ASSETS,
     { enabled: true },
   );
@@ -95,9 +102,9 @@ export function useWdkBalances() {
   };
 }
 
-/** Total portfolio value in USD across every configured asset. */
-export function useWdkTotalUsd() {
-  const balances = useWdkBalances();
+/** Total USD across every configured asset, for a SPECIFIC account index. */
+export function useWdkTotalUsdForAccount(accountIndex: number) {
+  const balances = useWdkBalancesForAccount(accountIndex);
 
   const total = useMemo(() => {
     if (balances.isLoading || !balances.data) return null;
@@ -117,20 +124,51 @@ export function useWdkTotalUsd() {
   };
 }
 
+/** The address for a SPECIFIC account index on a SPECIFIC network — what
+ * the Accounts screen's per-row address chip uses (always that row's own
+ * account, regardless of which one is currently active). */
+export function useWdkAddressForAccountNetwork(accountIndex: number, network: string) {
+  const account = useAccount({ network, accountIndex });
+  return {
+    address: account.address ?? '',
+    isLoading: account.isLoading,
+    isError: !!account.error,
+    error: account.error,
+  };
+}
+
+// ─── Convenience wrappers for the CURRENTLY ACTIVE account ──────────────────
+// These are what Home/Receive/Send use — they never touch accountIndex
+// directly, they just get whatever's active right now.
+
+/** Balances for the ACTIVE account — one row per configured asset. */
+export function useWdkBalances() {
+  const activeIndex = useAccounts((s) => s.activeIndex);
+  return useWdkBalancesForAccount(activeIndex);
+}
+
+/** Total USD for the ACTIVE account. */
+export function useWdkTotalUsd() {
+  const activeIndex = useAccounts((s) => s.activeIndex);
+  return useWdkTotalUsdForAccount(activeIndex);
+}
+
 /**
- * The active account — DEFAULTS to the first configured network's address
- * (Bitcoin). For a SPECIFIC network's address (e.g. Receive), use
- * useWdkAddressForNetwork(network) instead.
+ * The ACTIVE account — its real persisted name (from useAccounts, since WDK
+ * itself doesn't track names) and its address on the first configured
+ * network. For a SPECIFIC network's address, use useWdkAddressForNetwork.
  */
 export function useWdkAccount() {
   const { activeWalletId, status } = useWalletManager();
+  const activeIndex = useAccounts((s) => s.activeIndex);
+  const names = useAccounts((s) => s.names);
   const primary = ASSETS[0];
-  const account = useAccount({ network: primary.getNetwork(), accountIndex: ACCOUNT_INDEX });
+  const account = useAccount({ network: primary.getNetwork(), accountIndex: activeIndex });
 
   const data: Account | null = activeWalletId
     ? {
-        id: String(ACCOUNT_INDEX),
-        name: 'Account 1',
+        id: String(activeIndex),
+        name: names[activeIndex] ?? `Account ${activeIndex + 1}`,
         address: account.address ?? '',
         fiatTotal: '—',
       }
@@ -144,21 +182,17 @@ export function useWdkAccount() {
   };
 }
 
-/** The account address for a SPECIFIC network (e.g. 'arbitrum', 'polygon'). */
+/** The ACTIVE account's address on a SPECIFIC network (e.g. Receive). */
 export function useWdkAddressForNetwork(network: string) {
-  const account = useAccount({ network, accountIndex: ACCOUNT_INDEX });
-  return {
-    address: account.address ?? '',
-    isLoading: account.isLoading,
-    isError: !!account.error,
-    error: account.error,
-  };
+  const activeIndex = useAccounts((s) => s.activeIndex);
+  return useWdkAddressForAccountNetwork(activeIndex, network);
 }
 
 /**
  * Transactions — per the Phase 1 PRD, should use the WDK public indexer
  * service (docs.wdk.tether.io/tools/indexer-api/get-started/) — not yet
- * built; still returns empty.
+ * built; still returns empty. Will also need to scope by active account
+ * once built, same as everything else here.
  */
 export function useWdkTransactions() {
   return { data: [] as unknown[], isLoading: false, isError: false, refetch: () => {} };
