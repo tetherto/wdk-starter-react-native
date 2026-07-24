@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, ScrollView, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import {
   ChevronDown,
   ScanLine,
@@ -15,6 +15,7 @@ import { useResponsive } from '@/theme/responsive';
 import { useWdkBalances, useWdkAccount, useWdkTotalUsd } from '@/wdk/hooks/useWalletData';
 import { useAccounts } from '@/state/accounts';
 import { useToast } from '@/state/toast';
+import { usePendingRefresh, POLL_DELAYS_MS } from '@/state/pendingRefresh';
 
 /**
  * Home (Wallet) — matches the prototype's `home` screen exactly: account
@@ -40,6 +41,34 @@ export default function WalletHome() {
   const balances = useWdkBalances();
   const { total } = useWdkTotalUsd();
   const activeIndex = useAccounts((s) => s.activeIndex);
+
+  // Force a fresh fetch every time Home regains focus — returning from a
+  // send, or from switching accounts — rather than trusting whatever the
+  // query's own staleTime timer happens to allow at that moment. See
+  // useWalletData.ts's comment for the full explanation of the underlying
+  // bug this fixes.
+  const sendPending = usePendingRefresh((s) => s.pending);
+  const clearSendPending = usePendingRefresh((s) => s.clear);
+
+  useFocusEffect(
+    useCallback(() => {
+      balances.refetch();
+
+      if (!sendPending) return;
+
+      // A send just completed — keep polling for a short window to catch
+      // the balance update whenever the transaction actually confirms,
+      // rather than trusting a single refetch's timing.
+      const timers = POLL_DELAYS_MS.map((delay) => setTimeout(() => balances.refetch(), delay));
+      const clearTimer = setTimeout(clearSendPending, POLL_DELAYS_MS[POLL_DELAYS_MS.length - 1] + 2000);
+
+      return () => {
+        timers.forEach(clearTimeout);
+        clearTimeout(clearTimer);
+      };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeIndex, sendPending]),
+  );
 
   if (account.isLoading || balances.isLoading) return <LoadingState message="Loading wallet" />;
   if (balances.isError) return <ErrorState message="Couldn't load balances." onRetry={() => balances.refetch()} />;

@@ -70,7 +70,16 @@ export function AssetIcon({ symbol, network, size, showChainBadge }: AssetIconPr
 
   if (!showChainBadge || !chain) return <View style={{ width: iconSize, height: iconSize }}>{content}</View>;
 
-  const badgeSize = moderateScale(17);
+  // All proportional to iconSize, not fixed pixel values — fixes a real
+  // bug: at the 38px size used on Home/Send/Receive, a flat 17px badge with
+  // a flat -2px offset happened to look right, but at Review's larger 56px
+  // hero icon, that SAME fixed badge looked disconnected and undersized
+  // relative to the now-bigger main icon. Ratios below match what looked
+  // correct at the original 38px reference size, just computed relative to
+  // whatever size is actually passed in.
+  const badgeSize = iconSize * (17 / 38);
+  const badgeOffset = -badgeSize * (2 / 17);
+  const badgeBorderWidth = Math.max(1, badgeSize * (2 / 17));
 
   return (
     <View style={{ width: iconSize, height: iconSize }}>
@@ -78,13 +87,13 @@ export function AssetIcon({ symbol, network, size, showChainBadge }: AssetIconPr
       <View
         style={{
           position: 'absolute',
-          bottom: -2,
-          right: -2,
+          bottom: badgeOffset,
+          right: badgeOffset,
           width: badgeSize,
           height: badgeSize,
           borderRadius: badgeSize / 2,
           backgroundColor: chain.hasBackground ? 'transparent' : (networkColor[network] ?? theme.colors.textSecondary),
-          borderWidth: chain.hasBackground ? 0 : 2,
+          borderWidth: chain.hasBackground ? 0 : badgeBorderWidth,
           borderColor: theme.colors.bgPrimary,
           alignItems: 'center',
           justifyContent: 'center',

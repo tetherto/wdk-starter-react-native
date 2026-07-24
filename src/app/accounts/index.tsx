@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, Pressable, TextInput } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { Search, ChevronDown, ChevronUp, Copy, EllipsisVertical, Plus, Hexagon, Triangle, Diamond, Circle } from 'lucide-react-native';
 import { Screen, ScreenHeader, Text } from '@/components';
@@ -9,6 +9,7 @@ import { useResponsive } from '@/theme/responsive';
 import { useAccounts } from '@/state/accounts';
 import { useWdkTotalUsdForAccount, useWdkAddressForAccountNetwork } from '@/wdk/hooks/useWalletData';
 import { useToast } from '@/state/toast';
+import { usePendingRefresh, POLL_DELAYS_MS } from '@/state/pendingRefresh';
 
 /**
  * Accounts — matches the prototype's `accounts` screen: search bar, a
@@ -183,7 +184,27 @@ function AccountRow({
 }) {
   const theme = useTheme();
   const { moderateScale } = useResponsive();
-  const { total } = useWdkTotalUsdForAccount(index);
+  const { total, refetch } = useWdkTotalUsdForAccount(index);
+
+  // Same fix as Home — force a fresh fetch for THIS account's own balance
+  // whenever the Accounts screen regains focus (e.g. right after a send),
+  // rather than trusting the query's own staleTime timer.
+  const sendPending = usePendingRefresh((s) => s.pending);
+
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+
+      if (!sendPending) return;
+
+      // Same reasoning as Home — a send just completed, and THIS row might
+      // be the recipient, which has no navigation event of its own to react
+      // to at all. Poll for a short window to catch the actual confirmation.
+      const timers = POLL_DELAYS_MS.map((delay) => setTimeout(() => refetch(), delay));
+      return () => timers.forEach(clearTimeout);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [index, sendPending]),
+  );
   // Representative address: Ethereum's, since the same address works
   // across every EVM network this app supports (Ethereum/Arbitrum/Polygon
   // all share one address per account) — a more useful "primary identifier"
