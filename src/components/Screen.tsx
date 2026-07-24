@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ScrollView, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
-import { SafeAreaView, Edge } from 'react-native-safe-area-context';
+import { SafeAreaView, SafeAreaProvider, Edge } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useTheme } from '@/theme';
 
@@ -13,6 +13,20 @@ interface ScreenProps {
 
 /**
  * Standard screen container: themed background, safe-area aware, 20px padding.
+ *
+ * FIX for a real bug: screens presented as a native modal (e.g. send/receive,
+ * both `presentation: 'fullScreenModal'` in _layout.tsx's Stack) don't
+ * reliably inherit safe-area insets from the app-level SafeAreaProvider on
+ * iOS — confirmed as a known, documented issue directly in
+ * react-native-safe-area-context's own GitHub repo (their README explicitly
+ * says to add a SafeAreaProvider "at the root of modals and routes", not
+ * just once at the app root). Symptom: the header/back button renders under
+ * the status bar specifically on modal-presented screens, while regular
+ * pushed screens are unaffected. Wrapping every Screen in its own
+ * SafeAreaProvider (cheap — it's just a context provider, not a real native
+ * view) re-establishes correct insets regardless of how the screen was
+ * presented, fixing this for every current and future screen rather than
+ * patching each modal screen individually.
  *
  * Wrapped in KeyboardAvoidingView so any screen with a TextField (password,
  * unlock, import, etc.) automatically pushes its content above the keyboard
@@ -49,15 +63,17 @@ export function Screen({ children, scroll, noPadding, edges = ['top', 'bottom'] 
   );
 
   return (
-    <SafeAreaView edges={edges} style={[styles.flex, { backgroundColor: theme.colors.bgPrimary }]}>
-      <StatusBar style={theme.mode === 'dark' ? 'light' : 'dark'} />
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        {inner}
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+    <SafeAreaProvider>
+      <SafeAreaView edges={edges} style={[styles.flex, { backgroundColor: theme.colors.bgPrimary }]}>
+        <StatusBar style={theme.mode === 'dark' ? 'light' : 'dark'} />
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          {inner}
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 

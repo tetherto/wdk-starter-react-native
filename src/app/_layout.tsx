@@ -12,6 +12,8 @@ import AutoLockOnBackground from '@/wdk/hooks/AutoLockOnBackground';
 import { WdkSessionGate } from '@/wdk/hooks/WdkSessionGate';
 import 'react-native-get-random-values';
 import { CloudBackupProvider } from '@/wdk/cloud-backup/CloudBackupContext';
+import { Toast } from '@/components';
+import { AccountsHydrator } from '@/wdk/hooks/AccountsHydrator';
 
 function useEdgeToEdge() {
   const theme = useTheme();
@@ -49,12 +51,14 @@ export default function RootLayout() {
   return (
     <WdkAppProvider wdkConfigs={wdkConfigs} bundle={{ bundle: wdkBundle as string }}>
       <AutoLockOnBackground />
+      <AccountsHydrator />
         <GestureHandlerRootView style={{ flex: 1 }}>
           <SafeAreaProvider>
             <ThemeProvider>
               <CloudBackupProvider>
                 <WdkSessionGate />
                 <RootStack />
+                <Toast />
               </CloudBackupProvider>
             </ThemeProvider>
           </SafeAreaProvider>
