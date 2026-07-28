@@ -54,7 +54,13 @@ export function Screen({ children, scroll, noPadding, edges = ['top', 'bottom'] 
       style={styles.flex}
       contentContainerStyle={[styles.grow, padding]}
       showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
+      // "always" rather than "handled" — a real bug on Send Amount
+      // specifically: Scan sits right next to an actively-focused text
+      // input, and on iOS the FIRST tap on a nearby button can get consumed
+      // by dismissing the keyboard instead of firing onPress, even with
+      // "handled" set. "always" removes that ambiguity entirely — every
+      // tap passes through to its target regardless of keyboard/focus state.
+      keyboardShouldPersistTaps="always"
     >
       {children}
     </ScrollView>

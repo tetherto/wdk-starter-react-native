@@ -1,94 +1,85 @@
 import { create } from 'zustand';
-import * as SecureStore from 'expo-secure-store';
 
 /**
  * Multi-account state — owned entirely by this app, not WDK.
  *
- * WDK itself has NO concept of "a list of accounts" — confirmed directly
- * against its source: accountIndex is just a plain number used for
- * on-demand HD derivation (useAccount({ network, accountIndex }) works for
- * ANY index, no persisted account list at the SDK level). This means the
- * app has to own: which account indices exist, what each is named, and
- * which one is currently active. "Adding an account" is therefore genuinely
- * instant and needs no WDK call at all — it's the SAME seed, just a new
- * derivation index; WDK derives real addresses/balances for it the moment
- * anything asks for that index.
+ * REWRITTEN: no disk persistence at all, per explicit direction after a
+ * real, confirmed bug. This USED to persist via expo-secure-store, which —
+ * per Expo's OWN documentation — is expected to survive app uninstallation
+ * on iOS ("data stored with expo-secure-store will persist across app
+ * uninstallations when the app is reinstalled with the same bundle ID...
+ * this is expected behavior of the iOS Keychain system"). That's exactly
+ * what caused a real bug: deleting the app and importing a DIFFERENT
+ * wallet still showed the OLD wallet's 8 accounts, because this store's
+ * data was never actually removed by the deletion at all.
  *
- * Persisted via expo-secure-store (reusing the same mechanism as
- * passwordVault.ts, rather than adding a new storage dependency for what's
- * genuinely small, non-secret data — just indices and display names).
+ * Now purely in-memory: which accounts exist, their names, and which is
+ * active all live only in JS memory and reset to just Account 1 on every
+ * cold app launch. Nothing here is WDK-derived data being "lost" — the
+ * actual addresses/balances for any account index still exist and are
+ * still derivable the moment anything asks for them (see
+ * useWalletData.ts) — this store only tracks which indices the person has
+ * chosen to surface in the UI, and that's exactly the kind of thing that
+ * should NOT survive a fresh install of a possibly-different wallet.
+ *
+ * Real UX trade-off, stated plainly rather than glossed over: if someone
+ * added a 2nd/3rd account, force-quits the app, and reopens it, they'll
+ * see just Account 1 again — they'd need to tap "Add account" again to
+ * bring the others back into view (the underlying funds/addresses at
+ * those indices are completely unaffected; only which ones this app
+ * currently displays resets).
  */
 
-const STORE_KEY = 'wdk_accounts_v1';
-
-interface PersistedAccountsState {
+interface AccountsState {
   indices: number[];
   activeIndex: number;
   names: Record<number, string>;
-}
-
-interface AccountsState extends PersistedAccountsState {
-  isHydrated: boolean;
-  hydrate: () => Promise<void>;
   setActive: (index: number) => void;
   addAccount: () => number; // returns the new index
   rename: (index: number, name: string) => void;
+  /** Called once by AccountDiscovery after checking a bounded set of
+   * indices for real on-chain activity — surfaces any that genuinely have
+   * a balance, since nothing about which accounts exist is persisted
+   * anymore (see this file's header comment). Merges with whatever's
+   * already known rather than blindly overwriting, so an account added
+   * manually mid-session isn't lost if discovery finishes afterward. */
+  mergeDiscovered: (discoveredIndices: number[]) => void;
 }
 
 function defaultName(index: number): string {
   return `Account ${index + 1}`;
 }
 
-async function persist(state: PersistedAccountsState): Promise<void> {
-  try {
-    await SecureStore.setItemAsync(STORE_KEY, JSON.stringify(state));
-  } catch {
-    // best-effort — losing a persistence write here just means the list
-    // resets to its last-saved state on next launch, not a crash
-  }
-}
-
 export const useAccounts = create<AccountsState>((set, get) => ({
   indices: [0],
   activeIndex: 0,
   names: { 0: defaultName(0) },
-  isHydrated: false,
 
-  hydrate: async () => {
-    if (get().isHydrated) return;
-    try {
-      const raw = await SecureStore.getItemAsync(STORE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as PersistedAccountsState;
-        set({ ...parsed, isHydrated: true });
-        return;
-      }
-    } catch {
-      // fall through to defaults below
-    }
-    set({ isHydrated: true });
-  },
-
-  setActive: (index) => {
-    set({ activeIndex: index });
-    const { indices, activeIndex, names } = get();
-    persist({ indices, activeIndex, names });
-  },
+  setActive: (index) => set({ activeIndex: index }),
 
   addAccount: () => {
     const { indices, names } = get();
     const newIndex = Math.max(...indices) + 1;
-    const nextIndices = [...indices, newIndex];
-    const nextNames = { ...names, [newIndex]: defaultName(newIndex) };
-    set({ indices: nextIndices, names: nextNames, activeIndex: newIndex });
-    persist({ indices: nextIndices, activeIndex: newIndex, names: nextNames });
+    set({
+      indices: [...indices, newIndex],
+      names: { ...names, [newIndex]: defaultName(newIndex) },
+      activeIndex: newIndex,
+    });
     return newIndex;
   },
 
   rename: (index, name) => {
-    const { names, indices, activeIndex } = get();
-    const nextNames = { ...names, [index]: name };
-    set({ names: nextNames });
-    persist({ indices, activeIndex, names: nextNames });
+    set((state) => ({ names: { ...state.names, [index]: name } }));
+  },
+
+  mergeDiscovered: (discoveredIndices) => {
+    set((state) => {
+      const merged = Array.from(new Set([...state.indices, ...discoveredIndices])).sort((a, b) => a - b);
+      const names = { ...state.names };
+      merged.forEach((i) => {
+        if (!(i in names)) names[i] = defaultName(i);
+      });
+      return { indices: merged, names };
+    });
   },
 }));

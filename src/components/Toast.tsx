@@ -13,16 +13,24 @@ const FADE_MS = 200; // matches the prototype's `transition: opacity 0.2s`
  * Global toast — matches the prototype's single #toast element: a dark
  * pill, centered horizontally, anchored above the bottom of the screen,
  * with a clock icon, fading in/out rather than a native Alert dialog.
- * Mount this ONCE at the root (_layout.tsx) — any screen triggers it via
- * useToast().show('message').
  *
- * Centering: CSS's `left:50%; transform:translateX(-50%)` (used by the
- * prototype) has no direct RN equivalent — RN transforms don't support
- * percentages, only fixed values, which would be wrong for messages of
- * different lengths. Instead: a full-width, absolutely-positioned wrapper
- * with `alignItems:'center'`, letting the pill size itself naturally and
- * center via flexbox — the standard RN pattern for this, not a fixed-value
- * approximation.
+ * Mounted in MULTIPLE places, by design: once at the app root (_layout.tsx,
+ * covers every regular screen), and again inside send/_layout.tsx and
+ * receive/_layout.tsx specifically. Those two are presented as native
+ * fullScreenModals (react-native-screens' own modal presentation), which is
+ * a genuinely separate native layer from the root — a toast mounted only at
+ * the root was silently invisible on iOS whenever send/receive were open,
+ * even though its state was updating correctly underneath. Mounting an
+ * additional instance INSIDE each modal's own nested Stack puts it in the
+ * same native presentation as that screen, no cross-layer rendering needed.
+ *
+ * NOT wrapped in React Native's own <Modal> (an earlier version of this
+ * file was) — that turned out to be the wrong fix for the above problem,
+ * and since useToast is one shared store, every mounted instance becomes
+ * visible at once; wrapping each in its own <Modal> would mean multiple
+ * simultaneous RN Modals open together, which isn't reliably well-defined.
+ * A plain absolutely-positioned View, mounted in the right place, is both
+ * simpler and safer.
  */
 export function Toast() {
   const theme = useTheme();

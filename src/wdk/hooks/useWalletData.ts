@@ -58,10 +58,22 @@ function formatUsd(value: BigNumber | null): string {
  * totals, not just the active one) build on.
  */
 export function useWdkBalancesForAccount(accountIndex: number) {
+  // staleTime: 0 — WDK's own default is 30 SECONDS (confirmed directly in
+  // its source: DEFAULT_QUERY_STALE_TIME_MS = 30 * 1000). During that
+  // window, a screen regaining focus (e.g. returning from a send, or
+  // switching accounts) won't refetch even though the underlying balance
+  // has genuinely changed — exactly the real bug reported: a completed
+  // send not showing up on Home for up to 30s, and a recipient account's
+  // balance staying stale even longer, only correcting itself on a full
+  // app restart (which clears the cache entirely). Explicit refetch calls
+  // (see wallet.tsx/accounts.tsx's useFocusEffect, and send/review.tsx's
+  // post-send refetch) are the other half of this fix — this staleTime
+  // change means those refetches actually take effect immediately instead
+  // of being skipped as "still fresh."
   const { data, isLoading, isRefetching, error, refetch } = useBalancesForWallet(
     accountIndex,
     ASSETS,
-    { enabled: true },
+    { enabled: true, staleTime: 0 },
   );
 
   const symbols = useMemo(
@@ -121,6 +133,7 @@ export function useWdkTotalUsdForAccount(accountIndex: number) {
   return {
     total: total ? formatUsd(total) : '—',
     isLoading: balances.isLoading,
+    refetch: balances.refetch,
   };
 }
 
