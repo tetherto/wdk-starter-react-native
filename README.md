@@ -25,30 +25,55 @@ If you're new here, **read the docs in this order**:
 
 ## What's actually built right now
 
-This PR completes the **onboarding flow** end to end, against a real WDK
-wallet (not mocked):
+This PR covers the full core wallet experience end to end, against real
+WDK + real external services — not mocked, not a design approximation of
+the prototype but a direct match against its actual markup/CSS:
 
-- Welcome → create or import a wallet
-- Recovery phrase generation/reveal, with a 12-or-24-word choice
-- Recovery phrase import (12 or 24 words), with paste-distribution across
-  the word grid
-- App password creation, backed by real encryption (not just a UI field)
+**Onboarding & security**
+- Welcome → create or import a wallet; recovery phrase generation/reveal
+  and import, both with a 12-or-24-word choice and paste-distribution
+  across the word grid
+- App password creation, backed by real envelope encryption (not just a
+  UI field)
 - Cloud backup: the person chooses **either** iCloud **or** Google Drive,
   on **either** platform — encrypted with their own app password, not a
   fixed passphrase
-- App lock/unlock, tested and fixed across both iOS and Android's different
+- App lock/unlock, tested and fixed across iOS/Android's different
   background-transition behavior
-- A fully responsive UI system — every screen scales correctly across
-  phone and tablet, verified on iPhone, iPad, and Android
 
-Everything above was built by extracting the exact markup/CSS from the
-project's own HTML prototype and matching it precisely — this is not an
-approximation of the design.
+**Wallet**
+- Real multi-network balances — Bitcoin, Ethereum (Sepolia testnet),
+  Arbitrum and Polygon (real mainnet) — with real USD totals and per-asset
+  fiat values (CoinGecko)
+- Multi-account support: switching between accounts on one wallet, with
+  bounded automatic discovery of previously-used accounts after a fresh
+  import (see `docs/ARCHITECTURE.md` for the real, stated limits of this —
+  it's not unlimited, and can't discover a genuinely zero-activity
+  account)
+- Receive: network/token picker, real QR code, copy/share
+- Send: pick a token → amount (crypto/fiat toggle) → review (real fee
+  quoting) → confirm — **executes a real, live send**, covering both
+  native assets and ERC-20 tokens (USDT/USDT0) → success, with a working
+  link to a real block explorer for the actual transaction
+- Activity: real transaction history via the WDK Indexer API, with
+  chain/token/type filters that only ever show combinations that actually
+  exist (no "Bitcoin + ETH" nonsense), grouped by Today/Yesterday/Earlier
+
+**Everywhere**
+- A fully responsive UI system — every screen scales correctly across
+  phone and tablet
 
 **Not yet built**, so you don't assume otherwise: restoring a wallet *from*
 a cloud backup (the download/decrypt side — upload works, download doesn't
-have a screen yet), and the wallet's main dashboard/send/receive/activity
-screens haven't had the same prototype-matching design pass as onboarding.
+have a screen yet), and Tron/GasFree support (on hold — see
+`docs/WDK_INTEGRATION.md`).
+
+**A known, currently unresolved issue** worth reading about before you
+assume it's something you broke: EVM balance fetches can begin timing out
+after an extended session, across all EVM networks simultaneously,
+regardless of RPC provider — traced directly to how WDK's own package
+manages its underlying provider connections, not something fixable from
+this app's code. See `docs/TROUBLESHOOTING.md`'s last entry.
 
 ## Quick start
 
@@ -78,7 +103,7 @@ npm run android
 | Framework | Expo SDK 55 (managed, with `expo prebuild`), React Native 0.83 |
 | Navigation | Expo Router (file-based) |
 | Wallet SDK | `@tetherto/wdk-react-native-core` + `@tetherto/wdk` (Bare-runtime worklet architecture — see [`ARCHITECTURE.md`](docs/ARCHITECTURE.md)) |
-| Data layer | TanStack Query, behind a DI seam so WDK/mock are interchangeable |
+| Data layer | TanStack Query — WDK hooks called directly from screens (an earlier mock/WDK DI seam exists in `src/data/` but is no longer used by any screen; see `docs/ARCHITECTURE.md`) |
 | State | Zustand (small, single-purpose stores — session, password session, lock suppression) |
 | Encryption | `@tetherto/wdk-utils` (AES-256-GCM + scrypt) |
 | Secure storage | `expo-secure-store` (iOS Keychain / Android Keystore) |

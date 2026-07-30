@@ -41,6 +41,12 @@ reintroduce a bug that already cost real debugging time:
 - **`expo-crypto`: `~55.0.16` override.** Belt-and-suspenders against the
   core-version issue above — even if something transitively asks for a
   56.x range, this forces it back to the SDK-55-compatible version.
+- **`@tetherto/wdk-indexer-http`: pinned to a specific GitHub commit, not a
+  version string.** Not yet on the public npm registry (confirmed
+  directly — `npm view` returns "Not Found") — same situation as
+  `wdk-worklet-bundler` above. No tagged releases exist yet, so a specific
+  commit hash is used rather than a floating branch reference that could
+  change unexpectedly underneath this project.
 
 If `npm install` ever suggests a newer version for any of these three,
 **don't take it** without first checking `docs/TROUBLESHOOTING.md` and the
@@ -68,11 +74,35 @@ npm run android   # or: npm run ios
 
 - **Android**: `minSdkVersion 29` is required (set via `expo-build-properties`
   in `app.json`) — some WDK chain packages need it.
+- **Android — Auto Backup vs. Keystore-encrypted secrets:** this app uses
+  `expo-secure-store` (Android-Keystore-backed) for genuinely sensitive
+  local data (the password vault). Android's Auto Backup can restore other
+  app data from Google Drive on reinstall, but Keystore-encrypted secrets
+  are non-exportable and can't be properly restored — a known failure mode
+  where an app appears to have a wallet but rejects the correct password
+  after a reinstall/restore cycle (see `TROUBLESHOOTING.md`). Expo's own
+  docs say `expo-secure-store` should already exclude itself from Auto
+  Backup by default, but this app makes it explicit rather than relying on
+  an unconfirmed default — `app.json`'s plugins array should include:
+  ```json
+  ["expo-secure-store", { "configureAndroidBackup": true }]
+  ```
+  If you ever see the "password rejected after reinstall" symptom, confirm
+  this config is still present and hasn't been silently overridden by
+  another plugin touching the same native manifest section, before
+  assuming it's a new bug.
 - **iOS**: the `modules/cloud-backup/withModularHeaders.js` config plugin is
   required for CocoaPods modular-headers issues caused by Google Sign-In's
   Firebase pods and Spark wallet's gRPC/SwiftNIO pods. It's already
   registered in `app.json` — you shouldn't need to touch it unless you add
   new native dependencies that reintroduce a similar pod conflict.
+- **iOS — Keychain survives app deletion.** This is documented, expected
+  Apple/Expo behavior, not a bug to try to fix at the storage layer — code
+  that needs data to genuinely reset on a fresh install (this app's
+  multi-account list, for example) needs to be designed around this
+  directly rather than assume deletion clears Keychain-backed storage. See
+  `ARCHITECTURE.md`'s "Multi-account architecture" section for a real case
+  where this was learned the hard way.
 
 ## When something breaks and you don't know why
 

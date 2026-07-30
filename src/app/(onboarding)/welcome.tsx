@@ -46,11 +46,6 @@ export default function Welcome() {
         variant="secondary"
         onPress={() => router.push('/(onboarding)/import')}
       />
-      <Button
-        label="Unlock wallet"
-        variant="secondary"
-        onPress={() => router.push('/unlock')}
-      />
     </Screen>
   );
 }

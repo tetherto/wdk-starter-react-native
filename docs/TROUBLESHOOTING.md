@@ -113,3 +113,248 @@ setting `textAlignVertical: 'center'` alongside `textAlign: 'center'`
 **Cause:** should not happen — `Screen.tsx` wraps all content in
 `KeyboardAvoidingView`. If you see this, check the screen isn't rendering
 its own container instead of using `<Screen>`.
+
+## Balances / multi-network / multi-account
+
+**Symptom:** `"Batch of more than 3 requests are not allowed on free plan"`
+from an RPC provider.
+**Cause:** `drpc.org`'s free tier rejects any batch of more than 3 combined
+JSON-RPC calls in one HTTP request. Making balance refetching more
+aggressive (see the next entry) pushed a network with several assets over
+this limit. Fixed for Ethereum/Sepolia by switching to
+`ethereum-sepolia-rpc.publicnode.com` (verified as actively serving real
+production traffic before switching) and for Arbitrum by switching to its
+own official public RPC (`arb1.arbitrum.io/rpc`). **Polygon is still on
+`drpc.org` as of this writing** — see `.env.example`'s note on this.
+
+**Symptom:** a completed send doesn't update Home's balance for up to ~30
+seconds, or a recipient account's balance stays stale even longer, only
+correcting itself after a full app restart.
+**Cause:** `useBalancesForWallet` defaults to a **30-second `staleTime`**
+internally, confirmed directly in WDK's own source — a screen regaining
+focus won't refetch if the existing data is still considered "fresh."
+Fixed with `staleTime: 0` on this app's balance queries, `useFocusEffect`-
+triggered refetches on Home/Accounts, and a short polling window
+(`state/pendingRefresh.ts`) after a send completes specifically — since a
+returned tx hash means *submitted*, not yet *mined*, a single refetch can
+easily land before the chain has actually caught up.
+
+**Symptom:** after import, discovered "extra" accounts with real balances
+don't show up automatically — visible only via manually tapping "Add
+account" enough times to reach the right index.
+**Cause:** two real, separate bugs, both in `AccountDiscovery.tsx`/
+`AccountDiscoveryProbe.tsx`:
+  1. Originally watched `useWalletManager().status === 'UNLOCKED'`
+     directly — the wrong readiness signal (see `WDK_INTEGRATION.md`'s
+     Step 2 note). Fixed by switching to `useWdkSession()`.
+  2. `useBalancesForWallet` passes `initialData` (a synchronous
+     local-store lookup) into its underlying query, making `isLoading`
+     false immediately — before any real fetch happens — and combined
+     with the 30s `staleTime`, a never-before-checked account index's
+     cached placeholder (empty) could be read as a confirmed result
+     without a real network check ever occurring. Confirmed directly
+     against real logs: every checked index reported a confident "empty"
+     with zero corresponding real fetch ever appearing for it. Fixed by
+     explicitly calling `refetch()` and gating on an *observed* fetch
+     cycle (`isFetching` actually going `true` then `false`), not a
+     point-in-time snapshot — a naive first attempt at this fix still had
+     a timing gap, since `refetch()` doesn't synchronously flip
+     `isFetching`.
+
+**Symptom, still unresolved as of this writing:** after an extended
+session, all EVM network balance fetches begin failing with `"Network
+{chain} timed out after 15000ms"` — simultaneously, across networks on
+*different* RPC providers, not just one. Quitting and relaunching the app
+fixes it temporarily.
+**Cause, confirmed directly in WDK's own source:** each EVM network's
+`WalletAccountReadOnlyEvm` creates a **single, long-lived
+`ethers.JsonRpcProvider` instance, once, reused for the lifetime of the
+app** — never recreated or health-checked. This matches a well-documented
+class of ethers.js/React Native issue where a long-lived JSON-RPC
+connection can go stale after device network state changes (backgrounding,
+WiFi/cellular handoff), with no built-in reconnection logic. All three EVM
+networks failing together, despite different providers, points at this
+shared connection-lifecycle pattern rather than any one provider's rate
+limit. **This lives inside WDK's own package** — not fixable from this
+app's code; worth reporting upstream. In the meantime, the balance UI
+should distinguish "fetch failed" from "genuinely zero" rather than show
+`$0.00` for both (not yet built as of this writing).
+
+## Sending
+
+**Symptom:** `"account.transfer is not a function (it is undefined)"` when
+confirming a token (USDT/USDT0) send.
+**Cause:** `.transfer()`/`.sendTransaction()` are chain-specific methods
+that only exist on the object `useAccount()`'s own `.extension()` returns
+— not on the hook's return value directly. `send`/`estimateFee` ARE
+directly on the hook's return value (generic, cross-chain), which is why
+Bitcoin's send path worked immediately while EVM token transfers didn't.
+See `WDK_INTEGRATION.md`'s "Accounts and addresses" section.
+
+**Symptom:** toggling an amount input between crypto and fiat display,
+then back, silently changes the entered amount (e.g. typing `10`, toggling
+twice with no other input, ends up showing something like `9.996438`).
+**Cause:** each toggle was re-deriving and overwriting the underlying
+amount from whatever was currently *displayed* — including an
+intermediate value already rounded to 2 decimal places for the fiat view.
+Round-tripping through that rounded intermediate silently lost precision.
+Fixed by keeping one canonical, full-precision value (always in crypto
+units) that only *typing* — never toggling — is allowed to change; toggling
+only changes what's displayed, derived fresh from the canonical value each
+time.
+
+**Symptom:** deleting an amount field down to empty, or typing a
+non-numeric character, crashes the screen.
+**Cause:** `BigNumber`'s constructor **throws** on invalid input (empty
+string, `"abc"`, a bare `"."`) rather than returning a gracefully-NaN
+value — confirmed by testing directly, not assumed. An `.isNaN()` check
+after construction never runs, since the exception happens on the
+construction line itself. Fixed with a try/catch around construction, plus
+input sanitization (stripping non-numeric characters as they're typed,
+regardless of source — paste, physical keyboard, not just the on-screen
+one) as a second layer.
+
+**Symptom:** a genuinely-fixed-precision send amount displays with
+unnecessary trailing zeros (`"1.000000 USDT"` instead of `"1 USDT"`), and
+separately, the same hero amount text visually clips top/bottom even for
+short values that don't need width-based shrinking at all.
+**Cause:** two separate things. Trailing zeros: the underlying value is
+correctly kept at full decimal precision for math, but was never
+reformatted for *display* to drop insignificant trailing zeros — fixed
+with a small `formatCryptoAmount()` utility. Clipping: same root cause as
+the Activity chain-badge issue below — an explicit `fontSize` without a
+sufficiently generous explicit `lineHeight`.
+
+## Activity / transaction history
+
+**Symptom:** every transaction shows as "just now" regardless of actual
+age, and everything lands in an "Earlier" group instead of Today/
+Yesterday.
+**Cause:** the indexer's timestamps were assumed (and incorrectly
+documented as "confirmed") to be Unix seconds, converted to milliseconds
+by multiplying by 1000. They're already milliseconds — the extra
+multiplication put every timestamp absurdly far in the future, making
+`now - timestamp` deeply negative, which both bugs share as a root cause.
+Fixed by removing the conversion. Worth noting: the original code comment
+overstated confidence in an assumption that was never actually checked
+against a live response — a good reminder to flag genuine uncertainty
+rather than round it up.
+
+**Symptom:** a real, human-confirmed $1 transfer displays as
+`0.000001 USDT`.
+**Cause:** off by exactly 10^6 — precisely USDT's own decimals value, too
+exact to be coincidence. The indexer appears to return `amount` already as
+a human-readable decimal string (not raw base units the way WDK's own
+balance hooks do), and this integration was additionally applying its own
+decimals shift on top — a double application. Fixed by removing the
+extra shift for indexer-sourced amounts specifically (WDK's own balance
+hooks, a different data source, correctly do need theirs — don't conflate
+the two).
+
+**Symptom:** selecting a chain filter (e.g. "Ethereum") still shows token
+options that don't exist on that chain (e.g. "BTC").
+**Cause:** the token filter's options were a static, hardcoded list,
+completely independent of which chain was selected. Fixed by deriving
+valid token options from the actual asset list, filtered by the currently-
+selected chain — and resetting the token filter automatically if it
+becomes invalid after a chain change, rather than silently keeping a dead
+combination.
+
+## UI
+
+**Symptom:** a screen header's title/step label isn't centered — it's
+pushed to one side.
+**Cause:** `ScreenHeader` must always render exactly 3 layout slots (back,
+middle, right) for `justify-content: space-between` to center the middle
+one.
+
+**Symptom:** an `Image` renders with unexpected empty padding around it, or
+doesn't match its container's intended aspect ratio.
+**Cause:** relying on the CSS `aspectRatio` style property to derive height
+from width doesn't reliably resolve in this RN/Yoga setup. Compute both
+`width` and `height` explicitly in JS instead.
+
+**Symptom:** small/bold text (a large hero amount, a tiny chain-badge
+letter) renders with its bottom visibly clipped, sitting high in its own
+box.
+**Cause:** an explicit `fontSize` without an explicit, sufficiently
+generous `lineHeight` — the default doesn't reliably match the font's
+actual rendered bounds in this RN/Yoga setup, especially noticeable at
+small sizes. Hit independently on the Send Review screen's hero amount and
+Activity's chain-badge letter — same root cause both times. Always pair a
+deliberate `fontSize` with an explicit `lineHeight` (~1.3–1.4x), not the
+default.
+
+**Symptom:** a chain-badge icon overlay looks disconnected/undersized on a
+larger icon (e.g. Review's larger hero icon vs. Home/Send/Receive's
+smaller row icons), despite looking correct at the smaller size.
+**Cause:** the badge's size and position offset were fixed pixel values,
+tuned to look right only at the one size they were built against. Fixed
+in `AssetIcon.tsx` by computing badge size/offset/border proportionally
+from whatever `size` is actually passed in, rather than a flat constant.
+
+**Symptom:** tapping a button (e.g. "Scan") on the Send Amount screen does
+nothing on iOS, while the identical interaction works fine elsewhere.
+**Cause:** NOT a touch-handling bug, despite looking like one — the
+button's `onPress` was firing correctly the whole time. `Toast` (mounted
+only at the app root) used React Native's own `<Modal>` at one point to
+try to guarantee it rendered above the current screen — but `send`/
+`receive` are presented as native `fullScreenModal`s via
+`react-native-screens`, a *different* native presentation mechanism than
+RN's own `Modal`, and the two don't reliably stack with each other. The
+toast's state was updating correctly the whole time; it was presenting in
+the wrong native layer, invisible behind the modal screen. Real fix:
+mount an additional `<Toast/>` instance inside `send/_layout.tsx` and
+`receive/_layout.tsx` themselves (same native presentation as those
+screens), and revert `Toast.tsx` back to a plain `View` (not wrapped in
+RN's `Modal`) — since multiple `Toast` instances share one Zustand store,
+mounting several is safe, and avoids the separate real risk of multiple
+simultaneous RN `Modal`s being open at once, which isn't reliably
+well-defined.
+
+**Symptom:** typing a word letter-by-letter into a recovery-phrase input
+box scatters one letter per box across the grid.
+**Cause:** an auto-advance-on-single-word condition that's true after
+*every* keystroke (since "t", "th", "thi" are all "one word, no
+whitespace"). Fixed by only advancing focus when the raw input has a
+trailing space (a deliberate "done with this word" signal), never on
+partial input.
+
+**Symptom:** on Android, an empty centered `TextInput`'s cursor appears
+right-aligned until the first character is typed.
+**Cause:** a known Android `TextInput` gravity-resolution quirk. Fixed by
+setting `textAlignVertical: 'center'` alongside `textAlign: 'center'`.
+
+**Symptom:** a `TextField` is hidden behind the keyboard when focused.
+**Cause:** should not happen — `Screen.tsx` wraps all content in
+`KeyboardAvoidingView`. If you see this, check the screen isn't rendering
+its own container instead of using `<Screen>`.
+
+## Persistence / Keychain
+
+**Symptom (Android):** after some time, the unlock screen rejects the
+correct password, even freshly re-entered.
+**Cause, well-documented, not fully confirmed as THE cause in this
+specific case:** Android's Auto Backup can restore some app data
+(files/SharedPreferences) from Google Drive on reinstall, but Android
+Keystore-encrypted secrets are non-exportable and can't be properly
+restored — a known "broken heart" failure mode for apps using
+Keystore-backed encryption (which `expo-secure-store` is, on Android).
+Expo's own docs state `expo-secure-store` should already protect against
+this by default (`configureAndroidBackup` defaults to `true`) — mitigation
+applied here was to make that config explicit in `app.json` rather than
+rely on an unconfirmed default. See `ENVIRONMENT.md`.
+
+**Symptom (iOS):** deleting the app entirely and importing a *different*
+wallet still shows the *previous* wallet's account list (e.g. 8 accounts
+from a wallet that was just deleted).
+**Cause:** confirmed directly in Expo's own documentation — "data stored
+with expo-secure-store will persist across app uninstallations when the
+app is reinstalled with the same bundle ID... this is expected behavior of
+the iOS Keychain system." The multi-account list was being persisted this
+way. Fixed by making account list/name/active-index state purely
+in-memory (see `ARCHITECTURE.md`'s "Multi-account architecture" section
+for the trade-off this creates) — genuinely sensitive data (the password
+vault, the wallet itself) correctly still uses Keychain; this was
+specifically about non-sensitive UI-preference-like metadata that
+shouldn't have been there in the first place.
