@@ -1,11 +1,13 @@
 import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import BigNumber from 'bignumber.js';
 import { useBalancesForWallet, useAccount, useWalletManager } from '@tetherto/wdk-react-native-core';
-import { ASSETS } from '../assets';
+import { ASSETS, ASSET_MAP } from '../assets';
 import { DEFAULT_WALLET_ID } from '../walletIdentity';
 import { usePrices } from '../pricing';
+import { fetchAllTransfers } from '../indexer';
 import { useAccounts } from '@/state/accounts';
-import type { Account, TokenBalance, ChainId } from '@/domain/models';
+import type { Account, TokenBalance, ChainId, Transaction } from '@/domain/models';
 
 /**
  * WDK-backed data hooks. Screens consume these; they never import WDK directly.
@@ -202,11 +204,100 @@ export function useWdkAddressForNetwork(network: string) {
 }
 
 /**
- * Transactions — per the Phase 1 PRD, should use the WDK public indexer
- * service (docs.wdk.tether.io/tools/indexer-api/get-started/) — not yet
- * built; still returns empty. Will also need to scope by active account
- * once built, same as everything else here.
+ * Transactions — real WDK Indexer API integration (see wdk/indexer.ts for
+ * the client/mapping details and two honest, real limitations: native ETH
+ * has no history via this API at all, and Ethereum currently means Sepolia
+ * for this query specifically, matching this app's actual current config).
+ *
+ * Direction ('in'/'out') is derived by comparing each transfer's from/to
+ * against the ACTIVE account's own address on that transfer's network —
+ * the API itself doesn't return a direction field, only raw from/to.
  */
 export function useWdkTransactions() {
-  return { data: [] as unknown[], isLoading: false, isError: false, refetch: () => {} };
+  const activeIndex = useAccounts((s) => s.activeIndex);
+  const bitcoin = useWdkAddressForAccountNetwork(activeIndex, 'bitcoin');
+  const ethereum = useWdkAddressForAccountNetwork(activeIndex, 'ethereum');
+  const arbitrum = useWdkAddressForAccountNetwork(activeIndex, 'arbitrum');
+  const polygon = useWdkAddressForAccountNetwork(activeIndex, 'polygon');
+
+  const addressesByNetwork: Record<string, string> = {
+    bitcoin: bitcoin.address,
+    ethereum: ethereum.address,
+    arbitrum: arbitrum.address,
+    polygon: polygon.address,
+  };
+  const addressesReady =
+    !!bitcoin.address && !!ethereum.address && !!arbitrum.address && !!polygon.address;
+
+  const symbols = useMemo(() => Array.from(new Set(ASSETS.map((a) => a.getSymbol()))), []);
+  const { prices } = usePrices(symbols);
+
+  const query = useQuery({
+    queryKey: ['indexer-transfers', activeIndex, bitcoin.address, ethereum.address, arbitrum.address, polygon.address],
+    queryFn: () => fetchAllTransfers(addressesByNetwork),
+    enabled: addressesReady,
+    staleTime: 30_000,
+  });
+
+  const data: Transaction[] = useMemo(() => {
+    if (!query.data) return [];
+    return query.data.map((t) => {
+      const asset = ASSET_MAP.get(t.assetId);
+      const myAddress = addressesByNetwork[asset?.getNetwork() ?? ''] ?? '';
+      const isOutgoing = !!t.from && t.from.toLowerCase() === myAddress.toLowerCase();
+      const direction: 'in' | 'out' = isOutgoing ? 'out' : 'in';
+      const counterparty = (isOutgoing ? t.to : t.from) ?? '';
+
+      // NOT shiftedBy(-decimals) here — real bug, confirmed against actual
+      // on-chain data: a genuine $1 USDT transfer was displaying as
+      // "0.000001", off by EXACTLY 10^6 — precisely USDT's own decimals
+      // value, too exact to be coincidence. This indexer API appears to
+      // return `amount` already as a human-readable decimal string (e.g.
+      // "1" meaning 1 USDT), NOT raw base units the way WDK's own balance
+      // hooks do (see toDisplay() above, which correctly DOES shift —
+      // that's a different, WDK-native data source, not this one).
+      // Applying our own decimals shift on TOP of an already-shifted value
+      // was the double-application causing this. Reformatted only for
+      // consistent display precision, no scaling.
+      const decimals = asset?.getDecimals() ?? 0;
+      const amount = new BigNumber(t.amount).toFixed(decimals);
+      const price = asset ? prices[asset.getSymbol()] : null;
+      const fiatValue = price != null ? `$${new BigNumber(amount).multipliedBy(price).toFixed(2)}` : '—';
+
+      return {
+        id: t.transactionHash,
+        direction,
+        token: {
+          id: asset?.getId() ?? t.assetId,
+          symbol: asset?.getSymbol() ?? '',
+          chain: (asset?.getNetwork() ?? 'bitcoin') as ChainId,
+        },
+        amount,
+        fiatValue,
+        address: counterparty,
+        // FIXED a real bug, and a real overconfident claim on my part: this
+        // previously said "confirmed" that indexer timestamps are Unix
+        // SECONDS, requiring *1000 for JS Date compatibility — that was
+        // actually just an assumption based on common blockchain API
+        // convention, never verified against a real response (no API key
+        // available to check directly). It was wrong: real transactions
+        // several days old were showing as "just now" and landing in
+        // "Earlier" regardless of actual age — exactly what happens when an
+        // already-millisecond timestamp gets multiplied by 1000 again,
+        // landing absurdly far in the future and making now-minus-timestamp
+        // deeply negative. Treating it as already-milliseconds instead.
+        timestamp: t.timestamp,
+        status: 'confirmed' as const,
+        blockNumber: t.blockNumber ?? undefined,
+      };
+    });
+  }, [query.data, prices]);
+
+  return {
+    data,
+    isLoading: query.isLoading || !addressesReady,
+    isError: query.isError,
+    error: query.error as Error | null,
+    refetch: query.refetch,
+  };
 }

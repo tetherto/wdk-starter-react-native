@@ -8,4 +8,10 @@ export type TxDirection = 'in' | 'out';
 export interface Transaction {
   id: string; direction: TxDirection; token: Token; amount: string; fiatValue: string;
   address: string; timestamp: number; status: 'pending' | 'confirmed' | 'failed';
+  /** From the indexer's real transfer data — used as an honest technical
+   * detail on the transaction detail screen (the prototype shows a
+   * blockchain "Nonce" there, which this app has no data source for; block
+   * number is real data we do have, shown instead of fabricating a nonce
+   * value). */
+  blockNumber?: number;
 }
