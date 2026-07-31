@@ -13,6 +13,7 @@ import { Screen, Text, LoadingState, ErrorState, AssetIcon } from '@/components'
 import { useTheme } from '@/theme';
 import { useResponsive } from '@/theme/responsive';
 import { useWdkBalances, useWdkAccount, useWdkTotalUsd } from '@/wdk/hooks/useWalletData';
+import { networkDisplayName } from '@/wdk/networks';
 import { useAccounts } from '@/state/accounts';
 import { useToast } from '@/state/toast';
 import { usePendingRefresh, POLL_DELAYS_MS } from '@/state/pendingRefresh';
@@ -113,9 +114,9 @@ export default function WalletHome() {
             <ChevronDown size={moderateScale(16)} color={theme.colors.textSecondary} />
           </Pressable>
 
-          {/* Matches the prototype exactly: Scan looks identical to any other
-              active control — the "coming soon" affordance is the toast on
-              tap, not a dimmed/disabled visual state. */}
+          {/* Visibly disabled — explicit product feedback: not-yet-built
+              actions should read as clearly inactive, not indistinguishable
+              from live controls. */}
           <Pressable
             onPress={() => comingSoon('Scan')}
             style={{
@@ -124,9 +125,10 @@ export default function WalletHome() {
               borderRadius: moderateScale(18),
               alignItems: 'center',
               justifyContent: 'center',
+              opacity: 0.6, // increased from 0.4 — was reading as too faint/dull
             }}
           >
-            <ScanLine size={moderateScale(20)} color={theme.colors.textPrimary} />
+            <ScanLine size={moderateScale(20)} color={theme.colors.textSecondary} />
           </Pressable>
         </View>
 
@@ -143,8 +145,8 @@ export default function WalletHome() {
         <View style={{ flexDirection: 'row', gap: 10, marginVertical: moderateScale(8) }}>
           <ActionButton icon={<ArrowUpRight size={moderateScale(20)} color={theme.colors.textPrimary} />} label="Send" onPress={() => router.push('/send')} />
           <ActionButton icon={<ArrowDownLeft size={moderateScale(20)} color={theme.colors.textPrimary} />} label="Receive" onPress={() => router.push('/receive')} />
-          <ActionButton icon={<ArrowLeftRight size={moderateScale(20)} color={theme.colors.textPrimary} />} label="Swap" onPress={() => comingSoon('Swap')} />
-          <ActionButton icon={<CreditCard size={moderateScale(20)} color={theme.colors.textPrimary} />} label="Buy" onPress={() => comingSoon('Buy')} />
+          <ActionButton icon={<ArrowLeftRight size={moderateScale(20)} color={theme.colors.textSecondary} />} label="Swap" onPress={() => comingSoon('Swap')} disabled />
+          <ActionButton icon={<CreditCard size={moderateScale(20)} color={theme.colors.textSecondary} />} label="Buy" onPress={() => comingSoon('Buy')} disabled />
         </View>
 
         {/* Tokens */}
@@ -172,10 +174,20 @@ export default function WalletHome() {
  * GasFree's "· gasless" label removed along with the Tron integration
  * itself (on hold — see wdk/config.ts). */
 function tokenSubtitle(_assetId: string, chain: string): string {
-  return chain[0].toUpperCase() + chain.slice(1);
+  return networkDisplayName(chain);
 }
 
-function ActionButton({ icon, label, onPress }: { icon: React.ReactNode; label: string; onPress: () => void }) {
+function ActionButton({
+  icon,
+  label,
+  onPress,
+  disabled,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
   const theme = useTheme();
   const { moderateScale } = useResponsive();
   return (
@@ -191,10 +203,11 @@ function ActionButton({ icon, label, onPress }: { icon: React.ReactNode; label: 
         alignItems: 'center',
         justifyContent: 'center',
         gap: 4,
+        opacity: disabled ? 0.6 : 1, // increased from 0.45 — was reading as too faint/dull
       }}
     >
       {icon}
-      <Text variant="small">{label}</Text>
+      <Text variant="small" color={disabled ? 'textSecondary' : 'textPrimary'}>{label}</Text>
     </Pressable>
   );
 }

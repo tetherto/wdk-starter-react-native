@@ -166,12 +166,16 @@ export default function SendAmount() {
       <Card style={{ marginBottom: 14 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Text variant="small" color="textSecondary">To</Text>
+          {/* Visibly disabled — consistent with every other "coming soon"
+              control in the app (Scan/Swap/Buy on Home). Was previously
+              full brand color/opacity, indistinguishable from a live
+              control. */}
           <Pressable
             onPress={() => {useToast.getState().show('Scan coming soon')}}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 6 , zIndex:100}}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, zIndex: 100, opacity: 0.6 }}
           >
-            <ScanLine size={moderateScale(14)} color={theme.colors.brand} />
-            <Text variant="body" color="brand" style={{ fontWeight: '500' }}>Scan</Text>
+            <ScanLine size={moderateScale(14)} color={theme.colors.textSecondary} />
+            <Text variant="body" color="textSecondary" style={{ fontWeight: '500' }}>Scan</Text>
           </Pressable>
         </View>
         <TextInput

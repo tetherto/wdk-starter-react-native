@@ -10,10 +10,8 @@ import { verifyAppPassword } from '@/wdk/passwordVault';
 import { usePasswordSession } from '@/state/passwordSession';
 
 // Must match welcome.tsx's LOGO_ASPECT_RATIO — same logo asset, smaller size.
-const LOGO_ASPECT_RATIO = 2.7;
-// Prototype's .wdk-logo-sm cap (170) vs Welcome's .wdk-logo cap (360 in your
-// current welcome.tsx) — same percentage-of-screen + cap pattern, smaller.
-const LOGO_MAX_WIDTH = 170;
+const LOGO_ASPECT_RATIO = 2.79;
+const LOGO_MAX_WIDTH = 360;
 
 /**
  * Unlock — matches the prototype's `unlock` screen: centered hero (logo,
@@ -60,7 +58,7 @@ export default function Unlock() {
     <Screen scroll>
       <View style={{ flex: 1, justifyContent: 'center', paddingVertical: 24 }}>
         <Image
-          source={require('@/../assets/images/android-icon-foreground.png')}
+          source={require('@/../assets/images/wdk-logo.png')}
           style={{ width: logoWidth, height: logoHeight, alignSelf: 'center', marginBottom: 20 }}
           resizeMode="contain"
         />

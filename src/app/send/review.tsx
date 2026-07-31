@@ -12,6 +12,7 @@ import { ASSETS } from '@/wdk/assets';
 import { sendAsset, quoteSendFee } from '@/wdk/useSend';
 import { useWdkBalances } from '@/wdk/hooks/useWalletData';
 import { usePendingRefresh } from '@/state/pendingRefresh';
+import { networkDisplayName } from '@/wdk/networks';
 
 /**
  * Formats a crypto amount WITHOUT unnecessary trailing zeros — "1.000000"
@@ -98,7 +99,7 @@ export default function SendReview() {
     );
   }
 
-  const networkName = asset.getNetwork()[0].toUpperCase() + asset.getNetwork().slice(1);
+  const networkName = networkDisplayName(asset.getNetwork());
   const shortRecipient = `${recipient.slice(0, 6)}...${recipient.slice(-4)}`;
   const fiatValue = price ? new BigNumber(amount).multipliedBy(price).toFixed(2) : null;
 

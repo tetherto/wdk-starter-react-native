@@ -1,12 +1,13 @@
 import React, { useState, useMemo } from 'react';
-import { View, Pressable } from 'react-native';
+import { View, Pressable, Image, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ChevronDown, Check, ArrowUpRight, ArrowDownLeft } from 'lucide-react-native';
-import { Screen, Text, EmptyState, LoadingState, ErrorState, AssetIcon } from '@/components';
+import { Screen, Text, EmptyState, LoadingState, ErrorState, AssetIcon, Card, Button } from '@/components';
 import { useTheme } from '@/theme';
 import { useResponsive } from '@/theme/responsive';
 import { useWdkTransactions } from '@/wdk/hooks/useWalletData';
 import { networkColor } from '@/wdk/hooks/useWalletData';
+import { networkDisplayName } from '@/wdk/networks';
 import { ASSETS } from '@/wdk/assets';
 import type { Transaction, ChainId } from '@/domain/models';
 
@@ -26,12 +27,20 @@ type ChainFilter = 'all' | 'ethereum' | 'arbitrum' | 'polygon' | 'bitcoin';
 type TokenFilter = 'all' | string; // lowercased symbol, e.g. 'usdt', 'usdt0', 'eth', 'btc'
 type TypeFilter = 'all' | 'sent' | 'received';
 
+// Same real logo asset used on Welcome/Unlock — not a fabricated "WDK"
+// text placeholder. Its actual aspect ratio is wide (2.7:1), not square —
+// same constant used on those screens, so this stays visually consistent
+// with how the logo is sized everywhere else it appears, rather than
+// forcing it into an arbitrary square box.
+const LOGO_ASPECT_RATIO = 2.7;
+const LOGO_MAX_WIDTH = 360;
+
 const CHAIN_OPTIONS: { key: ChainFilter; label: string }[] = [
   { key: 'all', label: 'All chains' },
-  { key: 'ethereum', label: 'Ethereum' },
-  { key: 'arbitrum', label: 'Arbitrum' },
-  { key: 'polygon', label: 'Polygon' },
-  { key: 'bitcoin', label: 'Bitcoin' },
+  { key: 'ethereum', label: networkDisplayName('ethereum') },
+  { key: 'arbitrum', label: networkDisplayName('arbitrum') },
+  { key: 'polygon', label: networkDisplayName('polygon') },
+  { key: 'bitcoin', label: networkDisplayName('bitcoin') },
 ];
 const TYPE_OPTIONS: { key: TypeFilter; label: string }[] = [
   { key: 'all', label: 'All types' },
@@ -87,9 +96,10 @@ function shortAddress(addr: string): string {
 export default function Activity() {
   const router = useRouter();
   const theme = useTheme();
-  const { moderateScale } = useResponsive();
+  const { wp, moderateScale } = useResponsive();
   const tx = useWdkTransactions();
-
+  const logoWidth = Math.min(wp(40), LOGO_MAX_WIDTH);
+  const logoHeight = logoWidth / LOGO_ASPECT_RATIO;
   const [openFilter, setOpenFilter] = useState<'chain' | 'token' | 'type' | null>(null);
   const [chainFilter, setChainFilter] = useState<ChainFilter>('all');
   const [tokenFilter, setTokenFilter] = useState<TokenFilter>('all');
@@ -180,10 +190,72 @@ export default function Activity() {
       {tx.isLoading ? (
         <LoadingState message="Loading activity" />
       ) : tx.isError ? (
-        <ErrorState
-          message={tx.error?.message ?? "Couldn't load activity. Please try again."}
-          onRetry={() => { tx.refetch(); }}
-        />
+        tx.error?.message?.includes('wdk-api.tether.io/register') ? (
+          // Uplifted per direct design feedback: the original version was
+          // plain text against an empty background, and worded like a
+          // genuine error ("Something went wrong") for something that's
+          // actually an expected, common state in a fresh checkout of this
+          // starter app — not a bug. Reassures first ("your wallet is
+          // working normally"), then explains what's missing, with the
+          // technical env var name isolated in its own card rather than
+          // run into the sentence, and real WDK branding per the explicit
+          // ask for this to "pop" more.
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 12 }}>
+            {/* No background box — just the real logo, matching how it
+                appears unadorned on Welcome/Unlock, per direct feedback. */}
+            <Image
+              source={require('@/../assets/images/wdk-logo.png')}
+              style={{ width: logoWidth, height: logoHeight, alignSelf: 'center', marginBottom: 24 }}
+              resizeMode="contain"
+            />
+
+            <Text variant="h1" style={{ textAlign: 'center', fontSize: moderateScale(22) }}>
+              Transaction history
+            </Text>
+            <Text
+              variant="body"
+              color="brand"
+              style={{ fontWeight: '600', marginTop: 6, fontSize: moderateScale(16), marginBottom: 20}}
+            >
+              Powered by the WDK Indexer Service
+            </Text>
+            <Text
+              variant="body"
+              color="textSecondary"
+              style={{ textAlign: 'center', marginTop: 14, paddingHorizontal: 8, fontSize: moderateScale(14), lineHeight: moderateScale(22), marginBottom: 10 }}
+            >
+              Your wallet is working normally. Transaction history is available once a
+              WDK Indexer API Key has been configured.
+            </Text>
+
+            <Card style={{ width: '100%', marginTop: 22 }}>
+              <Text variant="small" color="textSecondary" style={{ fontSize: moderateScale(14) }}>
+                Missing configuration
+              </Text>
+              <Text variant="mono" mono style={{ marginTop: 4, fontSize: moderateScale(14) }}>
+                EXPO_PUBLIC_WDK_INDEXER_API_KEY
+              </Text>
+            </Card>
+
+            <Text
+              variant="body"
+              color="brand"
+              style={{ fontWeight: '600', marginTop: 22, fontSize: moderateScale(16) }}
+              onPress={() => Linking.openURL('https://wdk-api.tether.io/register')}
+            >
+              Register for a free API key ↗
+            </Text>
+
+            <View style={{ width: '100%', marginTop: 26 }}>
+              <Button label="Try Again" onPress={() => { tx.refetch(); }} />
+            </View>
+          </View>
+        ) : (
+          <ErrorState
+            message={tx.error?.message ?? "Couldn't load activity. Please try again."}
+            onRetry={() => { tx.refetch(); }}
+          />
+        )
       ) : groups.length === 0 ? (
         <Text variant="body" color="textSecondary" style={{ textAlign: 'center', paddingVertical: 32 }}>
           {tx.data.length === 0 ? 'No activity yet' : 'No transactions match these filters'}
@@ -296,7 +368,7 @@ function TxRow({ tx, onPress }: { tx: Transaction; onPress: () => void }) {
   const { moderateScale } = useResponsive();
   const isOut = tx.direction === 'out';
   const verb = isOut ? 'Sent' : 'Received';
-  const chainName = tx.token.chain[0].toUpperCase() + tx.token.chain.slice(1);
+  const chainName = networkDisplayName(tx.token.chain);
   const chainColor = networkColor[tx.token.chain] ?? theme.colors.textSecondary;
 
   return (

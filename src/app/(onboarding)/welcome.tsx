@@ -6,7 +6,7 @@ import { useResponsive } from '@/theme/responsive';
 
 
 // using a proper cropped asset (e.g. measure it in an image editor: w / h).
-const LOGO_ASPECT_RATIO = 2.7;
+const LOGO_ASPECT_RATIO = 2.79;
 
 // Logo never exceeds this width, even on tablets — prevents it from
 // growing to dominate large screens just because wp(55) is a big number there.
@@ -23,7 +23,7 @@ export default function Welcome() {
     <Screen>
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 56 }}>
         <Image
-          source={require('@/../assets/images/android-icon-foreground.png')}
+          source={require('@/../assets/images/wdk-logo.png')}
           style={{ width: logoWidth, height: logoHeight}}
           resizeMode="contain"
         />
