@@ -1,13 +1,12 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { View, Pressable, TextInput } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import * as Clipboard from 'expo-clipboard';
-import { Search, ChevronDown, ChevronUp, Copy, EllipsisVertical, Plus, Hexagon, Triangle, Diamond, Circle } from 'lucide-react-native';
+import { Search, ChevronDown, ChevronUp, EllipsisVertical, Plus, Hexagon, Triangle, Diamond, Circle } from 'lucide-react-native';
 import { Screen, ScreenHeader, Text } from '@/components';
 import { useTheme } from '@/theme';
 import { useResponsive } from '@/theme/responsive';
 import { useAccounts } from '@/state/accounts';
-import { useWdkTotalUsdForAccount, useWdkAddressForAccountNetwork } from '@/wdk/hooks/useWalletData';
+import { useWdkTotalUsdForAccount } from '@/wdk/hooks/useWalletData';
 import { useToast } from '@/state/toast';
 import { usePendingRefresh, POLL_DELAYS_MS } from '@/state/pendingRefresh';
 
@@ -205,19 +204,7 @@ function AccountRow({
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [index, sendPending]),
   );
-  // Representative address: Ethereum's, since the same address works
-  // across every EVM network this app supports (Ethereum/Arbitrum/Polygon
-  // all share one address per account) — a more useful "primary identifier"
-  // than Bitcoin's, which is chain-specific.
-  const { address } = useWdkAddressForAccountNetwork(index, 'ethereum');
   const glyph = ACCOUNT_GLYPHS[index % ACCOUNT_GLYPHS.length];
-  const shortAddress = address ? `${address.slice(0, 6)}...${address.slice(-5)}` : '—';
-
-  const onCopy = async () => {
-    if (!address) return;
-    await Clipboard.setStringAsync(address);
-    useToast.getState().show('Address copied');
-  };
 
   return (
     <Pressable
@@ -255,31 +242,12 @@ function AccountRow({
 
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text variant="label" style={{ fontWeight: '500' }}>{name}</Text>
-        <Pressable
-          onPress={onCopy}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 6,
-            marginTop: 4,
-            alignSelf: 'flex-start',
-            paddingVertical: 4,
-            paddingHorizontal: 8,
-            borderRadius: theme.radii.lg,
-            backgroundColor: theme.colors.bgSecondary,
-            borderWidth: 1,
-            borderColor: theme.colors.border,
-          }}
-        >
-          <Text variant="small" mono color="textSecondary">{shortAddress}</Text>
-          <Copy size={moderateScale(12)} color={theme.colors.textSecondary} />
-        </Pressable>
       </View>
 
       <Text variant="label" style={{ fontWeight: '500' }}>{total}</Text>
 
       <Pressable
-        onPress={() => useToast.getState().show('Account options')}
+        onPress={() => useToast.getState().show('Account options coming soon')}
         style={{
           width: moderateScale(32),
           height: moderateScale(32),
@@ -289,6 +257,7 @@ function AccountRow({
           borderColor: theme.colors.border,
           alignItems: 'center',
           justifyContent: 'center',
+          opacity: 0.6,
         }}
       >
         <EllipsisVertical size={moderateScale(16)} color={theme.colors.textSecondary} />

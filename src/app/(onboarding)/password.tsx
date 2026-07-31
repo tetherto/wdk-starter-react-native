@@ -90,7 +90,12 @@ export default function Password() {
           label="Continue"
           onPress={onContinue}
           loading={busy}
-          disabled={!password || !confirm}
+          // Real bug fixed: was `!password || !confirm`, which fully
+          // disabled the button (never even calling onContinue) until
+          // BOTH fields had any text at all — meaning a too-short
+          // password with an empty Confirm field showed no error
+          // whatsoever, since the length check never got a chance to run.
+          disabled={!password}
         />
       </View>
     </Screen>

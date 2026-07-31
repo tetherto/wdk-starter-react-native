@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { View, Pressable, Share as RNShare } from 'react-native';
+import { View, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
-import { ChevronDown, Check, Copy, Share as ShareIcon, TriangleAlert } from 'lucide-react-native';
+import { ChevronDown, Check, Copy, TriangleAlert } from 'lucide-react-native';
 import { Screen, ScreenHeader, Text, Card, AssetIcon } from '@/components';
 import { useTheme } from '@/theme';
 import { useResponsive } from '@/theme/responsive';
 import { useWdkAddressForNetwork } from '@/wdk/hooks/useWalletData';
 import { ASSETS } from '@/wdk/assets';
+import { networkDisplayName } from '@/wdk/networks';
 
 /**
  * Receive — rebuilt to match the prototype's `receive` screen exactly (the
@@ -32,13 +33,20 @@ import { ASSETS } from '@/wdk/assets';
  * copying the prototype's one example literally.
  */
 
-const RECEIVE_SUBTITLE: Record<string, string> = {
-  'bitcoin-native': 'Bitcoin',
-  'ethereum-native': 'Ethereum · gasless',
-  'usdt-ethereum': 'Ethereum · ERC-20 · gasless',
-  'usdt0-arbitrum': 'Arbitrum · ERC-20 · gasless',
-  'usdt-polygon': 'Polygon · ERC-20 · gasless',
-};
+/**
+ * Real bug fixed: this used to be a static lookup table with the network
+ * label hardcoded directly into each string (e.g. "Ethereum (Sepolia)") —
+ * completely bypassing networkDisplayName(), which is why clearing
+ * EXPO_PUBLIC_EVM_ETHEREUM_NETWORK_LABEL correctly updated the address
+ * label and warning text elsewhere on this same screen, but NOT this
+ * dropdown subtitle. Rebuilt as a function that derives the label live,
+ * every time, from the same single source of truth everything else uses.
+ */
+function receiveSubtitle(assetId: string, network: string): string {
+  const base = networkDisplayName(network);
+  const isToken = assetId.startsWith('usdt');
+  return isToken ? `${base} · ERC-20` : base;
+}
 
 export default function Receive() {
   const router = useRouter();
@@ -63,15 +71,6 @@ export default function Receive() {
     setTimeout(() => setCopied(false), 1800);
   };
 
-  const onShare = async () => {
-    if (!address) return;
-    try {
-      await RNShare.share({ message: address });
-    } catch {
-      // person cancelled the share sheet — nothing to do
-    }
-  };
-
   return (
     <Screen scroll>
       <ScreenHeader title="Receive" onBack={() => router.back()} />
@@ -84,7 +83,7 @@ export default function Receive() {
           <AssetIcon symbol={selected.getSymbol()} network={selected.getNetwork()} showChainBadge={selected.getSymbol().startsWith('USDT')} />
           <View style={{ flex: 1 }}>
             <Text variant="tokenName">{selected.getSymbol()}</Text>
-            <Text variant="small" color="textSecondary">{RECEIVE_SUBTITLE[selected.getId()]}</Text>
+            <Text variant="small" color="textSecondary">{receiveSubtitle(selected.getId(), selected.getNetwork())}</Text>
           </View>
           <ChevronDown
             size={moderateScale(18)}
@@ -126,7 +125,7 @@ export default function Receive() {
                 <AssetIcon symbol={asset.getSymbol()} network={asset.getNetwork()} showChainBadge={asset.getSymbol().startsWith('USDT')} />
                 <View style={{ flex: 1 }}>
                   <Text variant="tokenName">{asset.getSymbol()}</Text>
-                  <Text variant="small" color="textSecondary">{RECEIVE_SUBTITLE[asset.getId()]}</Text>
+                  <Text variant="small" color="textSecondary">{receiveSubtitle(asset.getId(), asset.getNetwork())}</Text>
                 </View>
                 {isSelected && <Check size={moderateScale(18)} color={theme.colors.brand} />}
               </Pressable>
@@ -164,7 +163,7 @@ export default function Receive() {
       <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         <View style={{ flex: 1 }}>
           <Text variant="small" style={{ marginBottom: 3 }}>
-            Your {selected.getNetwork()[0].toUpperCase() + selected.getNetwork().slice(1)} address
+            Your {networkDisplayName(selected.getNetwork())} address
           </Text>
           <Text variant="mono" mono numberOfLines={1} ellipsizeMode="tail">
             {address || '—'}
@@ -173,9 +172,6 @@ export default function Receive() {
         <View style={{ flexDirection: 'row', gap: 6 }}>
           <ChipButton onPress={onCopy}>
             {copied ? <Check size={moderateScale(16)} color={theme.colors.brand} /> : <Copy size={moderateScale(16)} color={theme.colors.brand} />}
-          </ChipButton>
-          <ChipButton onPress={onShare}>
-            <ShareIcon size={moderateScale(16)} color={theme.colors.brand} />
           </ChipButton>
         </View>
       </Card>
@@ -194,7 +190,9 @@ export default function Receive() {
       >
         <TriangleAlert size={moderateScale(18)} color={theme.colors.brand} style={{ marginTop: 1 }} />
         <Text variant="small" color="textSecondary" style={{ flex: 1 }}>
-          Only send {selected.getSymbol()} on {selected.getNetwork()[0].toUpperCase() + selected.getNetwork().slice(1)} to this address. Sending other assets will result in loss.
+          {selected.getNetwork() === 'bitcoin'
+            ? `Only send BTC to this address. Sending other assets will result in loss.`
+            : `Only send assets on ${networkDisplayName(selected.getNetwork())} to this address. Sending assets from a different network will result in loss.`}
         </Text>
       </View>
     </Screen>

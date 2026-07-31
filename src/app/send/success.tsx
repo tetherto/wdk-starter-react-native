@@ -6,6 +6,7 @@ import { Screen, Text, Button } from '@/components';
 import { useTheme } from '@/theme';
 import { useResponsive } from '@/theme/responsive';
 import { ASSETS } from '@/wdk/assets';
+import { networkDisplayName } from '@/wdk/networks';
 
 /**
  * Send — success. Matches the prototype's `send-success` screen: a
@@ -50,7 +51,7 @@ export default function SendSuccess() {
   const asset = ASSETS.find((a) => a.getId() === tokenId);
   const network = asset?.getNetwork() ?? 'bitcoin';
   const explorer = EXPLORER[network];
-  const networkName = network[0].toUpperCase() + network.slice(1);
+  const networkName = networkDisplayName(network);
   const shortHash = txHash ? `${txHash.slice(0, 6)}...${txHash.slice(-4)}` : '';
 
   const done = () => {

@@ -5,6 +5,7 @@ import { Screen, ScreenHeader, Text, AssetIcon, LoadingState, EmptyState } from 
 import { useTheme } from '@/theme';
 import { useResponsive } from '@/theme/responsive';
 import { useWdkBalances } from '@/wdk/hooks/useWalletData';
+import { networkDisplayName } from '@/wdk/networks';
 
 /**
  * Send — pick token. Matches the prototype's `send-pick` screen exactly: a
@@ -86,7 +87,7 @@ export default function SendPick() {
               <View style={{ flex: 1 }}>
                 <Text variant="tokenName">{b.token.symbol}</Text>
                 <Text variant="small" color="textSecondary">
-                  {b.token.chain[0].toUpperCase() + b.token.chain.slice(1)}
+                  {networkDisplayName(b.token.chain)}
                 </Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
