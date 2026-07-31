@@ -40,7 +40,7 @@
     "browserify-zlib": "^0.2.0",
     "decimal.js": "^10.6.0",
     "events": "^3.3.0",
-    "expo": "~54.0.8",
+    "expo": "~57.0.9",
     "expo-build-properties": "~1.0.9",
     "expo-camera": "~17.0.8",
     "expo-clipboard": "~8.0.7",
