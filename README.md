@@ -119,6 +119,17 @@ npm run android
   and `android.package` — several native setup steps (Google OAuth clients,
   Apple's CloudKit container) are tied to these identifiers.
 
+## Releasing
+
+Signed builds and store submission run through the
+[Build and Publish](.github/workflows/build-and-publish.yaml) GitHub Actions
+workflow — `eas build --local`, then `eas submit` to TestFlight and the Play
+internal track.
+
+See [`docs/RELEASE.md`](docs/RELEASE.md) for how the pipeline works, the secret
+inventory, and the one-time setup still outstanding — the workflow has never
+been run.
+
 ## License
 
 Apache-2.0 — see [`LICENSE`](LICENSE).
