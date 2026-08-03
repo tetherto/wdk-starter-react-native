@@ -1,0 +1,290 @@
+# Build and Publish — local EAS builds plus store submission for TestFlight and
+# the Play internal track.
+#
+# Staging-only: both build jobs use the "staging" GitHub Environment, which is
+# where every secret below lives. Distribution never goes to a production store
+# listing — iOS uploads land in TestFlight and Android submits to the Play
+# "internal" track (configured in eas.json).
+#
+# No credential cleanup step is needed: the decoded keystore, certs and
+# credentials.json are all untracked, so checkout's default `git clean -ffdx`
+# removes them at the start of the next run.
+#
+# See docs/RELEASE.md for the secret inventory and one-time setup.
+name: Build and Publish
+run-name: 🟡 Build for ${{ inputs.buildTarget }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      buildTarget:
+        description: "Build target: stores = Android + iOS, or a single platform"
+        required: true
+        default: stores
+        type: choice
+        options:
+          - stores
+          - android
+          - ios
+      pushTag:
+        description: Push a dated git tag after successful builds
+        required: false
+        default: true
+        type: boolean
+
+# Queue rather than cancel: a cancelled run can leave a half-finished store
+# submission behind.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  EXPO_NO_TELEMETRY: "1"
+
+jobs:
+  android:
+    name: Android → Play internal
+    if: ${{ inputs.buildTarget == 'android' || inputs.buildTarget == 'stores' }}
+    runs-on: app-build-linux-x64
+    environment: staging
+    # Job-level rather than step-level: a composite action's inner steps do not
+    # reliably see `env:` set on the `uses:` step that calls it, but they do
+    # inherit the job environment. Consumed by ./.github/actions/write-dotenv.
+    env:
+      EXPO_PUBLIC_BTC_PROVIDER: ${{ secrets.EXPO_PUBLIC_BTC_PROVIDER }}
+      EXPO_PUBLIC_BTC_NETWORK_LABEL: ${{ secrets.EXPO_PUBLIC_BTC_NETWORK_LABEL }}
+      EXPO_PUBLIC_EVM_ETHEREUM_PROVIDER: ${{ secrets.EXPO_PUBLIC_EVM_ETHEREUM_PROVIDER }}
+      EXPO_PUBLIC_EVM_ETHEREUM_BUNDLER_URL: ${{ secrets.EXPO_PUBLIC_EVM_ETHEREUM_BUNDLER_URL }}
+      EXPO_PUBLIC_EVM_ETHEREUM_PAYMASTER_URL: ${{ secrets.EXPO_PUBLIC_EVM_ETHEREUM_PAYMASTER_URL }}
+      EXPO_PUBLIC_EVM_ETHEREUM_NETWORK_LABEL: ${{ secrets.EXPO_PUBLIC_EVM_ETHEREUM_NETWORK_LABEL }}
+      EXPO_PUBLIC_EVM_ARBITRUM_PROVIDER: ${{ secrets.EXPO_PUBLIC_EVM_ARBITRUM_PROVIDER }}
+      EXPO_PUBLIC_EVM_ARBITRUM_BUNDLER_URL: ${{ secrets.EXPO_PUBLIC_EVM_ARBITRUM_BUNDLER_URL }}
+      EXPO_PUBLIC_EVM_ARBITRUM_PAYMASTER_URL: ${{ secrets.EXPO_PUBLIC_EVM_ARBITRUM_PAYMASTER_URL }}
+      EXPO_PUBLIC_EVM_POLYGON_PROVIDER: ${{ secrets.EXPO_PUBLIC_EVM_POLYGON_PROVIDER }}
+      EXPO_PUBLIC_EVM_POLYGON_BUNDLER_URL: ${{ secrets.EXPO_PUBLIC_EVM_POLYGON_BUNDLER_URL }}
+      EXPO_PUBLIC_EVM_POLYGON_PAYMASTER_URL: ${{ secrets.EXPO_PUBLIC_EVM_POLYGON_PAYMASTER_URL }}
+      EXPO_PUBLIC_EVM_DELEGATION_ADDRESS: ${{ secrets.EXPO_PUBLIC_EVM_DELEGATION_ADDRESS }}
+      EXPO_PUBLIC_COINGECKO_API_KEY: ${{ secrets.EXPO_PUBLIC_COINGECKO_API_KEY }}
+      EXPO_PUBLIC_WDK_INDEXER_API_KEY: ${{ secrets.EXPO_PUBLIC_WDK_INDEXER_API_KEY }}
+      EXPO_PUBLIC_CLOUDKIT_CONTAINER_ID: ${{ secrets.EXPO_PUBLIC_CLOUDKIT_CONTAINER_ID }}
+      EXPO_PUBLIC_CLOUDKIT_API_TOKEN: ${{ secrets.EXPO_PUBLIC_CLOUDKIT_API_TOKEN }}
+      EXPO_PUBLIC_CLOUDKIT_CALLBACK_URL: ${{ secrets.EXPO_PUBLIC_CLOUDKIT_CALLBACK_URL }}
+      EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
+      EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID }}
+    steps:
+      # The self-hosted image ships several toolchains this build never uses and
+      # a release AAB build needs the headroom.
+      - name: Cleanup disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet || true
+          sudo rm -rf /usr/share/swift || true
+          sudo rm -rf /usr/local/.ghcup || true
+          sudo rm -rf /usr/local/julia* || true
+          sudo rm -rf /opt/microsoft /opt/google || true
+          sudo rm -rf /opt/az || true
+          sudo rm -rf /usr/local/share/powershell || true
+          docker system prune -af || true
+          docker builder prune -af || true
+          df -h
+
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-eas
+
+      - name: Install dependencies
+        # Also runs `postinstall` → `wdk-worklet-bundler generate`, which writes
+        # .wdk-bundle/wdk-worklet.bundle.js. Needed on the host so the EAS CLI
+        # can evaluate app.config.js before starting the build.
+        run: npm ci
+
+      - name: Setup Java 17
+        # docs/ENVIRONMENT.md: JDK 21/24 break Android codegen for this project.
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - uses: ./.github/actions/write-dotenv
+
+      - name: Decode Android signing credentials
+        env:
+          GOOGLE_PLAY_KEYSTORE: ${{ secrets.GOOGLE_PLAY_KEYSTORE }}
+          CREDENTIALS_JSON: ${{ secrets.CREDENTIALS_JSON }}
+        run: |
+          set -euo pipefail
+          # Written before `eas build`, which runs prebuild *without* --clean, so
+          # these survive into the generated android/ directory.
+          mkdir -p android/keystores
+          echo "$GOOGLE_PLAY_KEYSTORE" | base64 -d > android/keystores/release.keystore
+          echo "$CREDENTIALS_JSON" | base64 -d > credentials.json
+
+      - name: Build AAB
+        id: build
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EAS_PROJECT_ID: ${{ secrets.EAS_PROJECT_ID }}
+          EAS_PROJECT_SLUG: ${{ secrets.EAS_PROJECT_SLUG }}
+        run: |
+          set -euo pipefail
+          export NODE_OPTIONS="--max-old-space-size=4096"
+          mkdir -p artifacts
+          ARTIFACT="$GITHUB_WORKSPACE/artifacts/app-release.aab"
+          eas build \
+            --platform android \
+            --profile production \
+            --local \
+            --non-interactive \
+            --output "$ARTIFACT"
+          test -f "$ARTIFACT"
+          echo "artifact=$ARTIFACT" >> "$GITHUB_OUTPUT"
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-app-release.aab
+          path: ${{ steps.build.outputs.artifact }}
+          if-no-files-found: error
+
+      - name: Submit to Google Play
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EAS_PROJECT_ID: ${{ secrets.EAS_PROJECT_ID }}
+          EAS_PROJECT_SLUG: ${{ secrets.EAS_PROJECT_SLUG }}
+          # Raw JSON, not base64 — this is the one credential that is not encoded.
+          GOOGLE_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY_JSON }}
+        run: |
+          set -euo pipefail
+          # Path must match submit.production.android.serviceAccountKeyPath in eas.json.
+          printf '%s' "$GOOGLE_SERVICE_ACCOUNT_KEY_JSON" > google-service-account.json
+          eas submit \
+            --platform android \
+            --profile production \
+            --path "${{ steps.build.outputs.artifact }}" \
+            --non-interactive
+
+  ios:
+    name: iOS → TestFlight
+    if: ${{ inputs.buildTarget == 'ios' || inputs.buildTarget == 'stores' }}
+    runs-on: macos-26-xlarge
+    environment: staging
+    # See the note on the android job — job-level so the write-dotenv composite
+    # action's inner steps inherit these.
+    env:
+      EXPO_PUBLIC_BTC_PROVIDER: ${{ secrets.EXPO_PUBLIC_BTC_PROVIDER }}
+      EXPO_PUBLIC_BTC_NETWORK_LABEL: ${{ secrets.EXPO_PUBLIC_BTC_NETWORK_LABEL }}
+      EXPO_PUBLIC_EVM_ETHEREUM_PROVIDER: ${{ secrets.EXPO_PUBLIC_EVM_ETHEREUM_PROVIDER }}
+      EXPO_PUBLIC_EVM_ETHEREUM_BUNDLER_URL: ${{ secrets.EXPO_PUBLIC_EVM_ETHEREUM_BUNDLER_URL }}
+      EXPO_PUBLIC_EVM_ETHEREUM_PAYMASTER_URL: ${{ secrets.EXPO_PUBLIC_EVM_ETHEREUM_PAYMASTER_URL }}
+      EXPO_PUBLIC_EVM_ETHEREUM_NETWORK_LABEL: ${{ secrets.EXPO_PUBLIC_EVM_ETHEREUM_NETWORK_LABEL }}
+      EXPO_PUBLIC_EVM_ARBITRUM_PROVIDER: ${{ secrets.EXPO_PUBLIC_EVM_ARBITRUM_PROVIDER }}
+      EXPO_PUBLIC_EVM_ARBITRUM_BUNDLER_URL: ${{ secrets.EXPO_PUBLIC_EVM_ARBITRUM_BUNDLER_URL }}
+      EXPO_PUBLIC_EVM_ARBITRUM_PAYMASTER_URL: ${{ secrets.EXPO_PUBLIC_EVM_ARBITRUM_PAYMASTER_URL }}
+      EXPO_PUBLIC_EVM_POLYGON_PROVIDER: ${{ secrets.EXPO_PUBLIC_EVM_POLYGON_PROVIDER }}
+      EXPO_PUBLIC_EVM_POLYGON_BUNDLER_URL: ${{ secrets.EXPO_PUBLIC_EVM_POLYGON_BUNDLER_URL }}
+      EXPO_PUBLIC_EVM_POLYGON_PAYMASTER_URL: ${{ secrets.EXPO_PUBLIC_EVM_POLYGON_PAYMASTER_URL }}
+      EXPO_PUBLIC_EVM_DELEGATION_ADDRESS: ${{ secrets.EXPO_PUBLIC_EVM_DELEGATION_ADDRESS }}
+      EXPO_PUBLIC_COINGECKO_API_KEY: ${{ secrets.EXPO_PUBLIC_COINGECKO_API_KEY }}
+      EXPO_PUBLIC_WDK_INDEXER_API_KEY: ${{ secrets.EXPO_PUBLIC_WDK_INDEXER_API_KEY }}
+      EXPO_PUBLIC_CLOUDKIT_CONTAINER_ID: ${{ secrets.EXPO_PUBLIC_CLOUDKIT_CONTAINER_ID }}
+      EXPO_PUBLIC_CLOUDKIT_API_TOKEN: ${{ secrets.EXPO_PUBLIC_CLOUDKIT_API_TOKEN }}
+      EXPO_PUBLIC_CLOUDKIT_CALLBACK_URL: ${{ secrets.EXPO_PUBLIC_CLOUDKIT_CALLBACK_URL }}
+      EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
+      EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID }}
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+
+      - uses: ./.github/actions/select-xcode
+
+      - uses: ./.github/actions/setup-eas
+
+      - name: Install dependencies
+        run: npm ci
+
+      - uses: ./.github/actions/write-dotenv
+
+      - name: Decode iOS signing credentials
+        env:
+          APPLE_PROVISIONING_PROFILE: ${{ secrets.APPLE_PROVISIONING_PROFILE }}
+          APPLE_DISTRIBUTION_CERTIFICATE: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE }}
+          CREDENTIALS_JSON: ${{ secrets.CREDENTIALS_JSON }}
+        run: |
+          set -euo pipefail
+          mkdir -p ios/certs
+          echo "$APPLE_PROVISIONING_PROFILE" | base64 -d > ios/certs/profile.mobileprovision
+          echo "$APPLE_DISTRIBUTION_CERTIFICATE" | base64 -d > ios/certs/dist-cert.p12
+          echo "$CREDENTIALS_JSON" | base64 -d > credentials.json
+
+      - name: Build IPA
+        id: build
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EAS_PROJECT_ID: ${{ secrets.EAS_PROJECT_ID }}
+          EAS_PROJECT_SLUG: ${{ secrets.EAS_PROJECT_SLUG }}
+        run: |
+          set -euo pipefail
+          export NODE_OPTIONS="--max-old-space-size=4096"
+          mkdir -p artifacts
+          ARTIFACT="$GITHUB_WORKSPACE/artifacts/app-release.ipa"
+          eas build \
+            --platform ios \
+            --profile production \
+            --local \
+            --non-interactive \
+            --output "$ARTIFACT"
+          test -f "$ARTIFACT"
+          echo "artifact=$ARTIFACT" >> "$GITHUB_OUTPUT"
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-app-release.ipa
+          path: ${{ steps.build.outputs.artifact }}
+          if-no-files-found: error
+
+      - name: Submit to TestFlight
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EAS_PROJECT_ID: ${{ secrets.EAS_PROJECT_ID }}
+          EAS_PROJECT_SLUG: ${{ secrets.EAS_PROJECT_SLUG }}
+          APPLE_APIKEY: ${{ secrets.APPLE_APIKEY }}
+          # Path must match submit.production.ios.ascApiKeyPath in eas.json.
+          EXPO_ASC_API_KEY_PATH: apple-asc-api-key.p8
+          EXPO_ASC_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          EXPO_ASC_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          EXPO_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          EXPO_APPLE_TEAM_TYPE: COMPANY_OR_ORGANIZATION
+        run: |
+          set -euo pipefail
+          echo "$APPLE_APIKEY" | base64 -d > apple-asc-api-key.p8
+          eas submit \
+            --platform ios \
+            --profile production \
+            --path "${{ steps.build.outputs.artifact }}" \
+            --non-interactive
+
+  push-tag:
+    name: Push dated tag
+    needs: [android, ios]
+    # `!cancelled()` plus the explicit != 'failure' checks so a single-platform
+    # dispatch (where the other job is skipped) still tags.
+    if: ${{ !cancelled() && inputs.pushTag && needs.android.result != 'failure' && needs.ios.result != 'failure' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+
+      - name: Push dated tag
+        run: |
+          set -euo pipefail
+          TAG="build-$(date +%Y.%m.%d)-${{ github.run_number }}"
+          git tag "$TAG"
+          git push origin "$TAG"
+          echo "Pushed tag $TAG"
