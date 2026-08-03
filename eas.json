@@ -1,0 +1,39 @@
+{
+  "cli": {
+    "version": ">= 13.2.0",
+    "appVersionSource": "remote",
+    "promptToConfigurePushNotifications": false
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "ios": {
+        "simulator": false
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "credentialsSource": "local",
+      "android": {
+        "buildType": "app-bundle",
+        "gradleCommand": ":app:bundleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "track": "internal",
+        "releaseStatus": "completed",
+        "serviceAccountKeyPath": "google-service-account.json"
+      },
+      "ios": {
+        "ascAppId": "REPLACE_WITH_ASC_APP_ID",
+        "ascApiKeyPath": "apple-asc-api-key.p8",
+        "ascApiKeyId": "REPLACE_WITH_ASC_API_KEY_ID",
+        "ascApiKeyIssuerId": "REPLACE_WITH_ASC_API_ISSUER_ID",
+        "appleTeamId": "REPLACE_WITH_APPLE_TEAM_ID"
+      }
+    }
+  }
+}

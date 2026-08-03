@@ -83,6 +83,7 @@
         }
       ],
       "./modules/cloud-backup/withModularHeaders.js",
+      "./modules/build/withCiBuildHardening.js",
       "expo-secure-store",
       [
         "@react-native-google-signin/google-signin",
