@@ -87,6 +87,9 @@ src/
 │
 └── wdk/                              # WDK integration layer
     ├── config.ts                      # wdkConfigs — networks compiled into the worklet
+    ├── networks.ts                    # Single source of truth for how each network
+    │                                    # is DISPLAYED — see ARCHITECTURE.md's
+    │                                    # "Network identity" section
     ├── assets.ts / AppAsset.ts        # Asset registry — see the file's own header
     │                                    # comments for verified contract addresses
     │                                    # and the Arbitrum "USDT0" naming note

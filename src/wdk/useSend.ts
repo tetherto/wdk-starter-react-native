@@ -1,6 +1,38 @@
 import BigNumber from 'bignumber.js';
 import { ASSET_MAP } from './assets';
 
+/**
+ * Real bug fixed: a failed send with a missing/invalid Pimlico
+ * bundler/paymaster API key was surfacing as the raw, unhelpful blob
+ * {"code":"UNKNOWN","message":"","error":""} directly in the UI. The old
+ * catch block did `e?.message ?? 'Transfer failed'` — but an empty string
+ * isn't null/undefined, so `??` never falls through to the friendly
+ * message; the empty-but-present `.message` (or the whole error object,
+ * stringified) got shown as-is.
+ *
+ * This specific "code: UNKNOWN, empty message" shape is a known, common
+ * pattern for bundler/paymaster auth failures generally — many bundler
+ * services deliberately return a generic, uninformative error for
+ * invalid/missing API keys rather than confirming which, for security
+ * reasons. Flagging this as an inference from the observed pattern, not
+ * something confirmed against Pimlico's own docs directly — if this
+ * heuristic ever produces a false positive for a genuinely different
+ * error, it's this function that needs revisiting.
+ */
+function isLikelyBundlerAuthFailure(e: any): boolean {
+  if (e?.code === 'UNKNOWN') return true;
+  const raw = typeof e?.message === 'string' ? e.message : '';
+  return raw.includes('"code":"UNKNOWN"') || raw.includes("'code':'UNKNOWN'");
+}
+
+function friendlySendError(e: any, network: string): string {
+  if (isLikelyBundlerAuthFailure(e)) {
+    return `Send failed — this usually means your bundler/paymaster API key for ${network} is missing or invalid. Check EXPO_PUBLIC_EVM_${network.toUpperCase()}_BUNDLER_URL and _PAYMASTER_URL in your .env.`;
+  }
+  const raw = typeof e?.message === 'string' ? e.message.trim() : '';
+  return raw || 'Transfer failed';
+}
+
 export interface SendParams {
   assetId: string;
   to: string;
@@ -79,7 +111,7 @@ export async function sendAsset(account: any, { assetId, to, amount }: SendParam
     });
     return { hash: result?.hash ?? null, fee: result?.fee != null ? String(result.fee) : '0', error: null };
   } catch (e: any) {
-    return { hash: null, fee: null, error: e?.message ?? 'Transfer failed' };
+    return { hash: null, fee: null, error: friendlySendError(e, asset.getNetwork()) };
   }
 }
 

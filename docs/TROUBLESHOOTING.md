@@ -52,6 +52,15 @@ screen mid-flow, then eventually still completes the backup.
 app, registering as a false backgrounding signal. See `SECURITY.md` bug #4
 — `lockSuppression.ts` exists for exactly this.
 
+**Symptom:** typing a too-short password and leaving Confirm empty shows
+no error at all — the length requirement only seems to "kick in" once
+Confirm has something typed into it too.
+**Cause:** the Continue button's `disabled` condition was `!password ||
+!confirm` — fully disabling the button, and therefore never calling the
+validation function at all, until BOTH fields had any text. Fixed by
+gating only on `!password`, so the length check can run and show its
+error immediately, without needing Confirm touched first.
+
 ## Cloud backup
 
 **Symptom:** `RNGoogleSignin: failed to determine clientID —
@@ -79,40 +88,6 @@ actually failed.
 **Cause:** the screen wasn't surfacing `CloudBackupContext`'s `lastError` —
 just showing a hardcoded generic string regardless of what actually broke.
 Fixed in `cloud-provider.tsx` to display `lastError` when available.
-
-## UI
-
-**Symptom:** a screen header's title/step label isn't centered — it's
-pushed to one side.
-**Cause:** `ScreenHeader` must always render exactly 3 layout slots (back,
-middle, right) for `justify-content: space-between` to center the middle
-one. A version that dropped to 2 slots when there was no `step`/`right`
-content broke this. See `PROJECT_STRUCTURE.md`.
-
-**Symptom:** an `Image` renders with unexpected empty padding around it, or
-doesn't match its container's intended aspect ratio.
-**Cause:** relying on the CSS `aspectRatio` style property to derive height
-from width doesn't reliably resolve in this RN/Yoga setup. Compute both
-`width` and `height` explicitly in JS instead.
-
-**Symptom:** typing a word letter-by-letter into a recovery-phrase input
-box scatters one letter per box across the grid.
-**Cause:** an auto-advance-on-single-word condition that's true after
-*every* keystroke (since "t", "th", "thi" are all "one word, no
-whitespace"). Fixed by only advancing focus when the raw input has a
-trailing space (a deliberate "done with this word" signal), never on
-partial input. See `SeedWordInputGrid.tsx`'s own comments.
-
-**Symptom:** on Android, an empty centered `TextInput`'s cursor appears
-right-aligned until the first character is typed.
-**Cause:** a known Android `TextInput` gravity-resolution quirk. Fixed by
-setting `textAlignVertical: 'center'` alongside `textAlign: 'center'`
-(Android-only property; harmless on iOS).
-
-**Symptom:** a `TextField` is hidden behind the keyboard when focused.
-**Cause:** should not happen — `Screen.tsx` wraps all content in
-`KeyboardAvoidingView`. If you see this, check the screen isn't rendering
-its own container instead of using `<Screen>`.
 
 ## Balances / multi-network / multi-account
 
@@ -175,12 +150,58 @@ connection can go stale after device network state changes (backgrounding,
 WiFi/cellular handoff), with no built-in reconnection logic. All three EVM
 networks failing together, despite different providers, points at this
 shared connection-lifecycle pattern rather than any one provider's rate
-limit. **This lives inside WDK's own package** — not fixable from this
-app's code; worth reporting upstream. In the meantime, the balance UI
-should distinguish "fetch failed" from "genuinely zero" rather than show
-`$0.00` for both (not yet built as of this writing).
+limit. **The exact package responsible: `@tetherto/wdk-wallet-evm-7702-gasless`**
+— this is where the fix needs to happen if reported upstream.
+`@tetherto/wdk-react-native-core`'s `balanceService.ts` (visible in the
+stack trace) only detects and logs the resulting timeout — it isn't where
+the underlying issue lives, and isn't the package to file this against.
+**This lives inside WDK's own package** — not fixable from this app's
+code. The balance UI now distinguishes "fetch failed" from "genuinely
+zero" (see `ARCHITECTURE.md`'s "Distinguishing a failed fetch from a
+genuine zero balance" section) rather than showing `$0.00` for both — this
+doesn't fix the underlying stale connection, but it stops the failure from
+silently lying about the wallet's real balance.
+
+**Symptom:** Bitcoin's balance shows a real `429 Too Many Requests — rate
+limit exceeded` error from `tbtc1.trezor.io` (Blockbook), correctly
+surfaced as "Couldn't load" rather than a misleading `$0`.
+**Cause, confirmed directly from the error, not inferred:** a genuine
+server-side rate limit — different from the EVM timeout entry above,
+which has no clear signal at all. `staleTime: 0` (see
+`WDK_INTEGRATION.md`) meant every focus event on every screen refetched
+unconditionally, generating more request volume than this free, public
+provider tolerates. Mitigated by raising `staleTime` to 15 seconds —
+reduces the risk significantly but doesn't guarantee it never recurs,
+since we don't control this provider's exact rate-limit threshold. A
+dedicated, non-public Blockbook-compatible provider would be the more
+durable long-term fix if this keeps recurring under real usage.
+
+**Symptom:** clearing `EXPO_PUBLIC_BTC_NETWORK_LABEL` (or the Ethereum
+equivalent) correctly updates the label on Home/Send, but Receive's
+token/network dropdown still shows the old testnet label.
+**Cause:** Receive's dropdown subtitle was a static lookup table with the
+label hardcoded directly as a string (e.g. `'bitcoin-native': 'Bitcoin
+(Testnet)'`) — completely bypassing `networkDisplayName()`, unlike every
+other label on the same screen, which is why only this one spot didn't
+update. Fixed by rebuilding it as a function that derives the label live,
+the same way everything else on the screen already did. See
+`ARCHITECTURE.md`'s "Network identity" section.
 
 ## Sending
+
+**Symptom:** a failed send shows a raw, unhelpful blob like
+`{"code":"UNKNOWN","message":"","error":""}` directly in the UI.
+**Cause:** this specific "code: UNKNOWN, empty message" shape is a known,
+common pattern for bundler/paymaster auth failures — many bundler
+services deliberately return a generic, uninformative error for
+invalid/missing API keys rather than confirming which, for security
+reasons (an inference from the observed pattern, not confirmed against
+Pimlico's own docs directly). The old error handling did
+`e?.message ?? 'Transfer failed'` — but an empty string isn't
+null/undefined, so `??` never fell through to a friendly message. Fixed
+in `useSend.ts` by detecting this pattern specifically and replacing it
+with an actionable message naming the exact env vars to check
+(`EXPO_PUBLIC_EVM_{NETWORK}_BUNDLER_URL` / `_PAYMASTER_URL`).
 
 **Symptom:** `"account.transfer is not a function (it is undefined)"` when
 confirming a token (USDT/USDT0) send.
@@ -266,7 +287,8 @@ combination.
 pushed to one side.
 **Cause:** `ScreenHeader` must always render exactly 3 layout slots (back,
 middle, right) for `justify-content: space-between` to center the middle
-one.
+one. A version that dropped to 2 slots when there was no `step`/`right`
+content broke this. See `PROJECT_STRUCTURE.md`.
 
 **Symptom:** an `Image` renders with unexpected empty padding around it, or
 doesn't match its container's intended aspect ratio.
@@ -318,12 +340,13 @@ box scatters one letter per box across the grid.
 *every* keystroke (since "t", "th", "thi" are all "one word, no
 whitespace"). Fixed by only advancing focus when the raw input has a
 trailing space (a deliberate "done with this word" signal), never on
-partial input.
+partial input. See `SeedWordInputGrid.tsx`'s own comments.
 
 **Symptom:** on Android, an empty centered `TextInput`'s cursor appears
 right-aligned until the first character is typed.
 **Cause:** a known Android `TextInput` gravity-resolution quirk. Fixed by
-setting `textAlignVertical: 'center'` alongside `textAlign: 'center'`.
+setting `textAlignVertical: 'center'` alongside `textAlign: 'center'`
+(Android-only property; harmless on iOS).
 
 **Symptom:** a `TextField` is hidden behind the keyboard when focused.
 **Cause:** should not happen — `Screen.tsx` wraps all content in
