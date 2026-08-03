@@ -26,14 +26,41 @@ import type { Evm7702GaslessWalletConfig } from '@tetherto/wdk-wallet-evm-7702-g
 const EVM_DELEGATION_ADDRESS =
   process.env.EXPO_PUBLIC_EVM_DELEGATION_ADDRESS || '0xe6Cae83BdE06E4c305530e199D7217f42808555B';
 
-function buildEvmConfig(prefix: string): Evm7702GaslessWalletConfig {
-  const provider = process.env[`EXPO_PUBLIC_EVM_${prefix}_PROVIDER`] as string;
-  const bundlerUrl = process.env[`EXPO_PUBLIC_EVM_${prefix}_BUNDLER_URL`] as string;
-  const paymasterUrl = process.env[`EXPO_PUBLIC_EVM_${prefix}_PAYMASTER_URL`] as string | undefined;
+/**
+ * ⚠️ DO NOT refactor the call sites below back into `process.env[...]` with an
+ * interpolated key. `babel-preset-expo` inlines a `process.env` read at bundle
+ * time only when the key is a **compile-time constant**; an interpolated key
+ * (`process.env[`EXPO_PUBLIC_EVM_${prefix}_PROVIDER`]`) cannot be inlined, so
+ * every value silently resolved to `undefined` in release builds and Ethereum,
+ * Arbitrum and Polygon all shipped with `provider: ''` — no balances, no sends.
+ * It worked in development only because the dev server supplies these at
+ * runtime, so the bug was invisible until an installed release build.
+ *
+ * Bracket vs. dot notation is irrelevant — `process.env['LITERAL_NAME']` is
+ * fine. Only interpolation breaks it. Each variable is therefore read by its
+ * literal name at the call site and passed in.
+ *
+ * Verify after any change here: `npx expo export --platform android`, then grep
+ * the emitted Hermes bundle's string table for the configured URLs. See
+ * docs/RELEASE_SETUP.md.
+ */
+type EvmEnvConfig = {
+  /** Env-var infix, e.g. 'ETHEREUM' — used only for the warning message. */
+  network: string;
+  provider: string | undefined;
+  bundlerUrl: string | undefined;
+  paymasterUrl: string | undefined;
+};
 
+function buildEvmConfig({
+  network,
+  provider,
+  bundlerUrl,
+  paymasterUrl,
+}: EvmEnvConfig): Evm7702GaslessWalletConfig {
   if (!provider || !bundlerUrl) {
     console.warn(
-      `[wdk/config] EXPO_PUBLIC_EVM_${prefix}_PROVIDER / EXPO_PUBLIC_EVM_${prefix}_BUNDLER_URL ` +
+      `[wdk/config] EXPO_PUBLIC_EVM_${network}_PROVIDER / EXPO_PUBLIC_EVM_${network}_BUNDLER_URL ` +
       `not set — this network's balances/sends will not work until configured in .env.`
     );
   }
@@ -59,13 +86,28 @@ const bitcoinConfig: BtcWalletConfig = {
 };
 
 // ── Ethereum (Sepolia testnet — the only Ethereum-family testnet in scope) ──
-const ethereumConfig = buildEvmConfig('ETHEREUM');
+const ethereumConfig = buildEvmConfig({
+  network: 'ETHEREUM',
+  provider: process.env.EXPO_PUBLIC_EVM_ETHEREUM_PROVIDER,
+  bundlerUrl: process.env.EXPO_PUBLIC_EVM_ETHEREUM_BUNDLER_URL,
+  paymasterUrl: process.env.EXPO_PUBLIC_EVM_ETHEREUM_PAYMASTER_URL,
+});
 
 // ── Arbitrum (MAINNET — real funds, real Pimlico sponsorship cost) ─────────
-const arbitrumConfig = buildEvmConfig('ARBITRUM');
+const arbitrumConfig = buildEvmConfig({
+  network: 'ARBITRUM',
+  provider: process.env.EXPO_PUBLIC_EVM_ARBITRUM_PROVIDER,
+  bundlerUrl: process.env.EXPO_PUBLIC_EVM_ARBITRUM_BUNDLER_URL,
+  paymasterUrl: process.env.EXPO_PUBLIC_EVM_ARBITRUM_PAYMASTER_URL,
+});
 
 // ── Polygon (MAINNET — real funds, real Pimlico sponsorship cost) ──────────
-const polygonConfig = buildEvmConfig('POLYGON');
+const polygonConfig = buildEvmConfig({
+  network: 'POLYGON',
+  provider: process.env.EXPO_PUBLIC_EVM_POLYGON_PROVIDER,
+  bundlerUrl: process.env.EXPO_PUBLIC_EVM_POLYGON_BUNDLER_URL,
+  paymasterUrl: process.env.EXPO_PUBLIC_EVM_POLYGON_PAYMASTER_URL,
+});
 
 export const wdkConfigs: WdkConfigs<BtcWalletConfig | Evm7702GaslessWalletConfig> = {
   networks: {
