@@ -85,7 +85,7 @@ time — expected, not a bug.
 
 ```bash
 # iOS — CloudKit
-EXPO_PUBLIC_CLOUDKIT_CONTAINER_ID=iCloud.io.tether.wdkstarterreactnative
+EXPO_PUBLIC_CLOUDKIT_CONTAINER_ID=iCloud.io.tether.wdkshowcase
 EXPO_PUBLIC_CLOUDKIT_API_TOKEN=
 EXPO_PUBLIC_CLOUDKIT_CALLBACK_URL=
 
@@ -108,13 +108,17 @@ passphrase variable — see above.
    **Certificates, Identifiers & Profiles**
 2. **Identifiers** → **+**
 3. **App IDs** → **App** → Continue
-4. Description: `WDK Starter Wallet`, Bundle ID: `io.tether.wdkstarterreactnative`
+4. Description: `WDK Starter Wallet`, Bundle ID: `io.tether.wdk.starter.react.native`
    (must exactly match `expo.ios.bundleIdentifier` in `app.json` — if
    you've forked this app under your own bundle ID, use that instead)
 5. Under **Capabilities**, check **iCloud** → **Edit**
 6. Check **CloudKit**
 7. Under **Containers**, click **+**, enter:
-   `iCloud.io.tether.wdkstarterreactnative`
+   `iCloud.io.tether.wdkshowcase`
+   (this is the value in `app.json`'s
+   `ios.entitlements.com.apple.developer.icloud-container-identifiers`; it does
+   not have to mirror the bundle ID, but it must match exactly — including in
+   any provisioning profile used for release builds)
 8. **Continue** → **Register**
 
 ### Step 2 — CloudKit Console: create the schema
@@ -167,7 +171,7 @@ passphrase variable — see above.
 ### Step 4 — add to `.env`
 
 ```bash
-EXPO_PUBLIC_CLOUDKIT_CONTAINER_ID=iCloud.io.tether.wdkstarterreactnative
+EXPO_PUBLIC_CLOUDKIT_CONTAINER_ID=iCloud.io.tether.wdkshowcase
 EXPO_PUBLIC_CLOUDKIT_API_TOKEN=your_token_here
 EXPO_PUBLIC_CLOUDKIT_CALLBACK_URL=https://your-chosen-domain.example/cloudkit-callback
 ```
@@ -202,10 +206,13 @@ keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -sto
 ```
 
 **Remember:** this is your *debug* SHA-1 only. Before shipping a real
-build, you'll also need to register the SHA-1 your release signing (e.g.
-EAS Build) uses — get it via `eas credentials`. Registering only the
-debug SHA-1 means sign-in works locally but fails for anyone testing a
-release build.
+build you also need to register the SHA-1 of the **release** keystore.
+CI signs with a keystore supplied as a secret (see
+[`RELEASE.md`](RELEASE.md)) — get its SHA-1 with `keytool -list -v
+-keystore <release.keystore>`, or `cd android && ./gradlew signingReport`
+once the keystore is in place. Registering only the debug SHA-1 means
+sign-in works locally but fails with `DEVELOPER_ERROR (10)` for anyone
+testing a release build.
 
 ### Step 2 — Google Cloud Console: create the Android OAuth client
 
@@ -213,7 +220,7 @@ release build.
    **New Project** → name it → Create
 2. **APIs & Services → Credentials → + Create Credentials → OAuth Client ID**
 3. Application type: **Android**
-4. Package name: `io.tether.wdkstarterreactnative` (must exactly match
+4. Package name: `io.tether.wdk.starter.react.native` (must exactly match
    `expo.android.package` in `app.json`)
 5. SHA-1: paste from Step 1
 6. **Create**
@@ -271,7 +278,7 @@ Back in Google Cloud Console, same project as above:
 
 1. **+ Create Credentials → OAuth Client ID**
 2. Application type: **iOS**
-3. Bundle ID: `io.tether.wdkstarterreactnative` (your iOS bundle
+3. Bundle ID: `io.tether.wdk.starter.react.native` (your iOS bundle
    identifier — note this is a **bundle ID**, not a SHA-1; iOS clients
    work differently from Android ones)
 4. **Create**
@@ -398,18 +405,14 @@ npx expo prebuild --clean
 npx expo run:android --variant release
 ```
 
-For App Store / Play Store submission, use EAS Build:
+For TestFlight / Play submission, run the **Build and Publish** GitHub
+Actions workflow rather than building by hand — see
+[`RELEASE.md`](RELEASE.md).
 
-```bash
-npm install -g eas-cli
-eas build --platform ios
-eas build --platform android
-```
-
-Remember: EAS Build signs with its own credentials, separate from your
-local debug keystore — register that build's SHA-1 (Android) too, via
-`eas credentials`, or Google Sign-In will work locally but fail for
-anyone testing a release build.
+Remember: release builds are signed with a release keystore, separate
+from your local debug keystore — register that keystore's SHA-1 (Android)
+too, or Google Sign-In will work locally but fail for anyone testing a
+release build.
 
 ---
 

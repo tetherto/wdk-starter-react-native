@@ -42,7 +42,7 @@ const EVM_DELEGATION_ADDRESS =
  *
  * Verify after any change here: `npx expo export --platform android`, then grep
  * the emitted Hermes bundle's string table for the configured URLs. See
- * docs/RELEASE_SETUP.md.
+ * docs/RELEASE.md.
  */
 type EvmEnvConfig = {
   /** Env-var infix, e.g. 'ETHEREUM' — used only for the warning message. */

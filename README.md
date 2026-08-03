@@ -112,7 +112,9 @@ npm run android
 
 ## Project name and identifiers
 
-- Bundle ID / package name: `io.tether.wdkstarterreactnative`
+- Bundle ID / package name: `io.tether.wdk.starter.react.native`
+- CloudKit container: `iCloud.io.tether.wdkshowcase` (intentionally not derived
+  from the bundle ID — Apple permits this)
 - If you fork this for your own app, update `app.json`'s `ios.bundleIdentifier`
   and `android.package` — several native setup steps (Google OAuth clients,
   Apple's CloudKit container) are tied to these identifiers.
