@@ -47,8 +47,11 @@ function toIndexerParams(assetId: string): { blockchain: Blockchain; token: Toke
   switch (assetId) {
     case 'bitcoin-native':
       return { blockchain: 'bitcoin', token: 'btc' };
-    case 'ethereum-native':
-      return null; // no 'eth' token type in this API — see file header
+    // 'ethereum-native' case removed — the asset itself no longer exists
+    // in assets.ts (removed for exactly this reason: no 'eth' token type
+    // in this API, so its transaction history could never work at all).
+    // Left as a comment, not silently deleted, so the reasoning stays
+    // visible here even though the dead case is gone.
     case 'usdt-ethereum':
       return { blockchain: 'sepolia', token: 'usdt' }; // NOT 'ethereum' — see file header
     case 'usdt0-arbitrum':

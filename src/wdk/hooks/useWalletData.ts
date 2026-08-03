@@ -89,10 +89,17 @@ export function useWdkBalancesForAccount(accountIndex: number) {
       const row = data?.find(
         (b) => b.assetId === asset.getId() && b.network === asset.getNetwork(),
       );
-      const amount = toDisplay(row?.balance, asset.getDecimals());
+      // Real bug fixed: a row that EXISTS but has success:false (e.g. an
+      // RPC timeout on that specific network) has balance:null — and
+      // toDisplay(null, decimals) produces "0", identical to a genuinely
+      // empty wallet. Distinguishing "fetch failed" here is what makes it
+      // possible to show an honest, actionable state instead of a
+      // silently misleading $0 balance.
+      const fetchFailed = row != null && row.success === false;
+      const amount = fetchFailed ? '—' : toDisplay(row?.balance, asset.getDecimals());
       const price = prices[asset.getSymbol()];
       const fiatValue =
-        price != null ? formatUsd(new BigNumber(amount).multipliedBy(price)) : '—';
+        fetchFailed || price == null ? '—' : formatUsd(new BigNumber(amount).multipliedBy(price));
 
       return {
         token: {
@@ -102,6 +109,7 @@ export function useWdkBalancesForAccount(accountIndex: number) {
         },
         amount,
         fiatValue,
+        fetchFailed,
       };
     });
   }, [data, prices]);

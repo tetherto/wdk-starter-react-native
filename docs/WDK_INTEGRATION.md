@@ -123,8 +123,14 @@ across assets, not one hook per asset. Real, non-obvious details:
   source. Left at the default, a screen regaining focus (returning from a
   send, switching accounts) won't refetch even though the underlying
   balance has genuinely changed, since React Query considers the existing
-  data "still fresh." This app passes `staleTime: 0` explicitly for this
-  reason, combined with `useFocusEffect`-triggered refetches on Home and
+  data "still fresh." This app passes `staleTime: 15_000` (raised from an
+  earlier `0` after a real, confirmed 429 "rate limit exceeded" error from
+  Bitcoin's Blockbook provider — `staleTime: 0` meant every focus event,
+  on every screen, refetched unconditionally, which was more request
+  volume than that free, public provider tolerates. 15s still avoids the
+  original stale-balance complaint, which was about a 30-second wait, not
+  a 15-second one, while meaningfully cutting redundant refetch volume),
+  combined with `useFocusEffect`-triggered refetches on Home and
   Accounts.
 - Passes `initialData` internally — a synchronous local-store lookup, not
   a live fetch. This makes `isLoading` become `false` immediately on
@@ -148,15 +154,18 @@ across assets, not one hook per asset. Real, non-obvious details:
 error, account, getBalance, send, sign, verify, estimateFee, extension }`
 — confirmed directly against the hook's real return shape, not assumed.
 **`send` and `estimateFee` are generic, cross-chain methods** — they work
-for *any native* asset uniformly (Bitcoin or native ETH alike), both
-taking `{ to, asset, amount }`. **`.transfer()` and `.sendTransaction()`
-are chain-specific and only exist on whatever `.extension()` returns** —
-calling them directly on the hook's own return value throws `"...is not a
-function"`. This was a real, shipped bug here before being caught and
-fixed (see `TROUBLESHOOTING.md`).
+for *any native* asset uniformly, both taking `{ to, asset, amount }`.
+Bitcoin is currently this app's only native asset (native ETH was removed
+— see the "Networks currently in scope" note below on why — so this
+generic path only has one concrete example in the app today, though the
+mechanism itself isn't Bitcoin-specific). **`.transfer()` and
+`.sendTransaction()` are chain-specific and only exist on whatever
+`.extension()` returns** — calling them directly on the hook's own return
+value throws `"...is not a function"`. This was a real, shipped bug here
+before being caught and fixed (see `TROUBLESHOOTING.md`).
 
 So sending in this app is really just two paths, not three:
-- **Native** (BTC or ETH): `account.send({ to, asset, amount })` — generic.
+- **Native** (currently just BTC): `account.send({ to, asset, amount })` — generic.
 - **Token** (USDT/USDT0): `account.extension().transfer({ token,
   recipient, amount })`.
 
@@ -200,10 +209,14 @@ a real, registered API key (`EXPO_PUBLIC_WDK_INDEXER_API_KEY` — see
 
 Two real, structural API limitations, not gaps in this integration:
 
-- **No native ETH history at all.** The indexer's own `Token` type is
-  exactly `"usdt" | "xaut" | "btc"` — there's no `"eth"`. ETH transfers
-  are excluded from Activity results entirely, not silently shown as
-  empty.
+- **No native ETH history support at all** was the actual reason native
+  ETH is no longer an asset in this app in the first place. The indexer's
+  own `Token` type is exactly `"usdt" | "xaut" | "btc"` — there's no
+  `"eth"`. Someone depositing ETH would see their balance update but their
+  transaction never appear in Activity, which reads as a real bug rather
+  than an API limitation — so rather than ship an asset whose history
+  could never work, it was removed from `wdk/assets.ts` entirely. If a
+  future indexer version adds ETH support, this can be reintroduced.
 - **`"sepolia"` is a distinct `Blockchain` value from `"ethereum"`** in
   this API's own type system — since this app's `ethereum` network
   actually points at Sepolia (see the network table above), querying
@@ -255,8 +268,9 @@ issue. `@tetherto/wdk-indexer-http` is pinned to a specific GitHub commit
 ## What's covered vs. not, honestly
 
 Built and verified end to end, against real WDK/real external services (not
-mocked): wallet creation, import, multi-network balances (BTC/ETH/USDT
-across Bitcoin/Ethereum/Arbitrum/Polygon), multi-account switching and
+mocked): wallet creation, import, multi-network balances (BTC/USDT
+across Bitcoin/Ethereum/Arbitrum/Polygon — native ETH intentionally not
+included, see the Indexer API limitation above), multi-account switching and
 bounded automatic discovery, receive addresses + QR, a full send flow
 (pick token → amount → review → confirm → success) covering both native
 and ERC-20 token transfers, real transaction history via the Indexer API,

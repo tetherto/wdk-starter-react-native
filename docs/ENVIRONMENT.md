@@ -104,6 +104,29 @@ npm run android   # or: npm run ios
   `ARCHITECTURE.md`'s "Multi-account architecture" section for a real case
   where this was learned the hard way.
 
+## Network display labels — EXPO_PUBLIC_BTC_NETWORK_LABEL / EXPO_PUBLIC_EVM_ETHEREUM_NETWORK_LABEL
+
+Real bug fixed by these two vars: Bitcoin and Ethereum are each
+configurable per-deployment (either can point at mainnet OR a testnet —
+see the provider vars in `.env.example`), but the app previously showed a
+fixed, hardcoded network name ("Ethereum") regardless of which was
+actually configured. Someone testing against Sepolia saw an unlabeled
+"Ethereum" balance — which reasonably reads as mainnet by default, a
+genuine risk in a wallet app.
+
+Rather than splitting into fully separate network slots for each
+mainnet/testnet pair (a much larger structural change — see
+`ARCHITECTURE.md`'s "Network identity" section for the full reasoning on
+why that wasn't the right call here), these two vars let the SAME network
+slot carry an accurate, current label. Set to the testnet's real name
+when testing (`Sepolia`, `Testnet`), and leave blank the moment you
+repoint either provider to real mainnet — the label updates automatically
+everywhere it's shown, no code change needed.
+
+Arbitrum and Polygon have no equivalent var — they're mainnet-only by
+explicit team decision (see `WDK_INTEGRATION.md`), so there's no
+mainnet/testnet ambiguity to resolve for them.
+
 ## When something breaks and you don't know why
 
 1. Confirm `npm --version` and `java --version` first — they cause the most

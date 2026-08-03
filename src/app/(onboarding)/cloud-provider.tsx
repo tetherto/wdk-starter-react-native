@@ -114,19 +114,24 @@ export default function CloudProvider() {
         Choose where to store your encrypted wallet backup.
       </Text>
 
-      <CloudOptionRow
-        icon={<Apple size={moderateScale(22)} color={theme.colors.brand} />}
-        title="iCloud"
-        subtitle="Back up to Apple iCloud"
-        disabled={busyProvider !== null}
-        onPress={() => backupTo('icloud')}
-      />
+      {/* Google Drive listed first — iCloud requires a CloudKit container
+          setup (see docs/CLOUD_BACKUP.md), so it's a heavier prerequisite
+          for whoever's testing/forking this than Google Drive's simpler
+          OAuth-client setup. Ordering, not functionality, changed — both
+          still work identically either way. */}
       <CloudOptionRow
         icon={<HardDrive size={moderateScale(22)} color={theme.colors.brand} />}
         title="Google Drive"
         subtitle="Back up to Google Drive"
         disabled={busyProvider !== null}
         onPress={() => backupTo('gdrive')}
+      />
+      <CloudOptionRow
+        icon={<Apple size={moderateScale(22)} color={theme.colors.brand} />}
+        title="iCloud"
+        subtitle="Back up to Apple iCloud"
+        disabled={busyProvider !== null}
+        onPress={() => backupTo('icloud')}
       />
 
       {busyProvider && stage ? (

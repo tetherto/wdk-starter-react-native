@@ -30,16 +30,17 @@ export const assetConfigs: AppAssetConfig[] = [
     decimals: 8,
     color: '#F7931A',
   },
-  {
-    id: 'ethereum-native',
-    network: 'ethereum',
-    isNative: true,
-    address: null,
-    symbol: 'ETH',
-    name: 'Ethereum',
-    decimals: 18,
-    color: '#627EEA',
-  },
+  // Native ETH (ethereum-native) intentionally removed — real, confirmed
+  // product decision, not an oversight: the WDK Indexer API this app uses
+  // for transaction history has NO transaction-history support for native
+  // ETH at all (its Token type is exactly "usdt" | "xaut" | "btc" — no
+  // "eth"). Someone genuinely depositing ETH would see their balance
+  // update but their transaction never appear in Activity, which reads as
+  // a real bug, not an API limitation. Rather than ship an asset whose
+  // history silently and permanently can't work, it's removed from this
+  // app entirely. If a future indexer version adds ETH support, this can
+  // be reintroduced — see wdk/indexer.ts's own header comment for the
+  // same limitation, still relevant to USDT et al. on this network.
   {
     id: 'usdt-ethereum',
     network: 'ethereum',

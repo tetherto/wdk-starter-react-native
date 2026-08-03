@@ -8,6 +8,7 @@ import {
   ArrowDownLeft,
   ArrowLeftRight,
   CreditCard,
+  RefreshCw,
 } from 'lucide-react-native';
 import { Screen, Text, LoadingState, ErrorState, AssetIcon } from '@/components';
 import { useTheme } from '@/theme';
@@ -161,6 +162,8 @@ export default function WalletHome() {
               fiatValue={b.fiatValue}
               network={b.token.chain}
               isLast={i === balances.data.length - 1}
+              fetchFailed={b.fetchFailed}
+              onRetryRow={() => balances.refetch()}
             />
           ))}
         </View>
@@ -219,6 +222,8 @@ function TokenRow({
   fiatValue,
   network,
   isLast,
+  fetchFailed,
+  onRetryRow,
 }: {
   symbol: string;
   subtitle: string;
@@ -226,6 +231,8 @@ function TokenRow({
   fiatValue: string;
   network: string;
   isLast: boolean;
+  fetchFailed?: boolean;
+  onRetryRow?: () => void;
 }) {
   const theme = useTheme();
   const { moderateScale } = useResponsive();
@@ -247,10 +254,25 @@ function TokenRow({
         <Text variant="tokenName">{symbol}</Text>
         <Text variant="small" color="textSecondary">{subtitle}</Text>
       </View>
-      <View style={{ alignItems: 'flex-end' }}>
-        <Text variant="tokenName">{amount}</Text>
-        <Text variant="small" color="textSecondary">{fiatValue}</Text>
-      </View>
+      {fetchFailed ? (
+        // Real bug fixed here: a failed per-asset fetch (e.g. an RPC
+        // timeout) used to silently render as "0" — identical to a
+        // genuinely empty balance. This is the honest alternative:
+        // visibly distinct, and directly actionable via retry, rather
+        // than misleadingly implying the wallet is actually empty.
+        <Pressable
+          onPress={onRetryRow}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+        >
+          <Text variant="small" color="error">Couldn't load</Text>
+          <RefreshCw size={moderateScale(13)} color={theme.colors.error} />
+        </Pressable>
+      ) : (
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text variant="tokenName">{amount}</Text>
+          <Text variant="small" color="textSecondary">{fiatValue}</Text>
+        </View>
+      )}
     </View>
   );
 }

@@ -138,6 +138,63 @@ discovery itself (a wrong readiness signal, and a stale-cache timing issue
 in WDK's own balance hook) — both fixed, but worth reading if you touch
 `AccountDiscovery.tsx`/`AccountDiscoveryProbe.tsx` again.
 
+## Network identity — `src/wdk/networks.ts`
+
+A single, small function (`networkDisplayName()`) is the one place that
+decides how a network is SHOWN to a person, separate from its internal
+config key. Every screen that displays a network name (Home, Receive,
+Send, Activity, transaction detail) calls through this one function
+rather than capitalizing the raw key itself — a real, confirmed bug
+earlier had several screens each doing their own ad-hoc capitalization,
+which is exactly how one screen was found to have missed a labeling fix
+the others already had.
+
+Bitcoin and Ethereum's labels are NOT hardcoded — they read from
+`EXPO_PUBLIC_BTC_NETWORK_LABEL` / `EXPO_PUBLIC_EVM_ETHEREUM_NETWORK_LABEL`
+at runtime (see `ENVIRONMENT.md`), since either can point at mainnet or a
+testnet depending on `.env`. A hardcoded "(Sepolia)" would silently keep
+showing that label even after someone repoints the provider to real
+mainnet — exactly the kind of drift this function exists to prevent.
+Arbitrum/Polygon stay fixed strings, since they're mainnet-only by
+explicit team decision with no equivalent ambiguity to resolve.
+
+**Why this is one env-configurable label, not two separate network
+slots:** this app never runs both an Ethereum-mainnet AND an
+Ethereum-Sepolia connection at the same time — at any moment, the
+`ethereum` slot is pointed at exactly one of them. Splitting into two
+independent, parallel network slots (the way Arbitrum and Polygon are
+each their own slot) would mean touching `wdk.config.js`, `config.ts`,
+`assets.ts`, the indexer mapping, and every screen that iterates over
+networks — a real structural commitment, not a label fix, and one that's
+much harder to walk back later than the smaller change actually made
+here. If a future requirement genuinely needs both networks visible
+simultaneously (not just "correctly labeled, one at a time"), that would
+be the point to revisit this as a real second network slot — this
+function's design doesn't preclude that later, it just doesn't
+over-build for a need that doesn't exist yet.
+
+This is also a first, deliberately small step toward the more general
+"one place for chain identity" registry raised as follow-up work (not a
+blocker) — this covers just the specific labeling bug reported; a fuller
+registry unifying asset config/indexer mapping/icon lookup into one
+structure is tracked separately, not attempted here.
+
+## Distinguishing a failed fetch from a genuine zero balance
+
+`TokenBalance` (`src/domain/models/index.ts`) has an optional
+`fetchFailed` flag — real bug this exists to prevent: a per-asset balance
+fetch that fails (an RPC timeout, a rate limit) returns `balance: null`,
+and formatting `null` produces `"0"` — visually identical to a wallet
+that's actually empty. `useWdkBalancesForAccount`
+(`wdk/hooks/useWalletData.ts`) checks each row's own `success` field
+explicitly rather than blindly formatting whatever balance comes back,
+and Home's `TokenRow` shows a distinct, tappable-to-retry "Couldn't load"
+state instead of a number when this flag is set.
+
+This same distinction is what correctly caught a real, confirmed 429
+rate-limit error from Bitcoin's provider that would otherwise have shown
+as a plain, misleading `$0` — see `TROUBLESHOOTING.md`.
+
 ## Session / lock architecture
 
 See [`SECURITY.md`](SECURITY.md) for the full password-vault and
