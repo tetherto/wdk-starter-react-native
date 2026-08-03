@@ -8,7 +8,7 @@
     "scheme": "wdkstarterreactnative",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "io.tether.wdkstarterreactnative",
+      "bundleIdentifier": "io.tether.wdk.starter.react.native",
       "entitlements": {
         "com.apple.developer.icloud-services": [
           "CloudKit"
@@ -33,7 +33,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "io.tether.wdkstarterreactnative",
+      "package": "io.tether.wdk.starter.react.native",
       "statusBar": {
         "style": "light",
         "backgroundColor": "#000000"
@@ -83,6 +83,7 @@
         }
       ],
       "./modules/cloud-backup/withModularHeaders.js",
+      "./modules/build/withCiBuildHardening.js",
       "expo-secure-store",
       [
         "@react-native-google-signin/google-signin",

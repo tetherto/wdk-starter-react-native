@@ -1,0 +1,19 @@
+name: Select Xcode
+description: Switch to a specific Xcode version and print it
+
+inputs:
+  xcode-version:
+    description: Xcode app version
+    required: false
+    default: "26.3"
+
+runs:
+  using: composite
+  steps:
+    - name: Select Xcode ${{ inputs.xcode-version }}
+      shell: bash
+      run: sudo xcode-select -s "/Applications/Xcode_${{ inputs.xcode-version }}.app"
+
+    - name: Show Xcode version
+      shell: bash
+      run: xcodebuild -version
