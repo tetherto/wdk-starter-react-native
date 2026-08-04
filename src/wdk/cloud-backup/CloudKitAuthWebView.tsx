@@ -40,8 +40,8 @@ import {
   WebView,
   type WebViewMessageEvent,
   type WebViewNavigation,
-  type ShouldStartLoadRequest,
 } from 'react-native-webview';
+import type { ShouldStartLoadRequest } from 'react-native-webview/lib/WebViewTypes';
 import { useTheme } from '@/theme';
 import { Text } from '@/components';
 import { buildCloudKitAuthHtml } from './cloudkitAuthHtml';

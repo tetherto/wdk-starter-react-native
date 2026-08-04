@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text as RNText, TextProps as RNTextProps } from 'react-native';
+import { Text as RNText, TextProps as RNTextProps, TextStyle } from 'react-native';
 import { useTheme } from '@/theme';
 import { useResponsive } from '@/theme/responsive';
 import type { TypographyVariant, Palette } from '@/theme';
@@ -23,9 +23,18 @@ export function Text({ variant = 'body', color = 'textPrimary', center, mono, st
   const theme = useTheme();
   const { moderateScale } = useResponsive();
 
+  // Real bug fixed: fontWeight was typed as a plain `string` here, but
+  // React Native's actual TextStyle['fontWeight'] is a narrow union of
+  // specific literals ('normal' | 'bold' | '100' | ... | 900 | ...) —
+  // confirmed directly against the installed react-native version's own
+  // type definitions, not assumed. A plain `string` can't satisfy that
+  // narrow type, which is what caused `{ ...base, fontSize, lineHeight }`
+  // to fail matching TextStyle's shape when spread into the style array
+  // below — surfacing as a confusing "not assignable to type 'undefined'"
+  // error, rather than a clear fontWeight mismatch.
   const base = theme.typography[variant] as {
     fontSize: number;
-    fontWeight: string;
+    fontWeight: TextStyle['fontWeight'];
     lineHeight?: number;
     letterSpacing?: number;
   };
