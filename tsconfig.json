@@ -3,7 +3,7 @@
   "compilerOptions": {
     "strict": true,
     "esModuleInterop": true,
-    "ignoreDeprecations": "6.0",
+    "ignoreDeprecations": "5.0",
     "baseUrl": ".",
     "jsx": "react-native",
     "paths": {

@@ -25,9 +25,10 @@ If you're new here, **read the docs in this order**:
 
 ## What's actually built right now
 
-This PR covers the full core wallet experience end to end, against real
-WDK + real external services — not mocked, not a design approximation of
-the prototype but a direct match against its actual markup/CSS:
+This app implements the full core wallet experience end to end, against
+real WDK + real external services — not mocked, not a design
+approximation of the prototype but a direct match against its actual
+markup/CSS:
 
 **Onboarding & security**
 - Welcome → create or import a wallet; recovery phrase generation/reveal
@@ -75,18 +76,12 @@ regardless of RPC provider — traced directly to how WDK's own package
 manages its underlying provider connections, not something fixable from
 this app's code. See `docs/TROUBLESHOOTING.md`'s last entry.
 
-## Fork & run checklist
-
-Two tiers below — get it running first, then come back for "making it your
-own" only once you actually need to. Don't do the second tier just to look
-at the app for the first time; nothing in it is required to boot.
-
-### Tier 1 — just run it (5 minutes, no accounts/registrations needed)
+## Getting started
 
 > **Check `npm --version` before anything else.** npm 10 silently drops
 > packages from git-dependency trees — no error, just a missing package
 > later on, for a reason that looks completely unrelated. This project has
-> three (see the callout right below Tier 1's steps). npm 11+ is required —
+> three (see the note right after these steps). npm 11+ is required —
 > see `docs/ENVIRONMENT.md` for the exact version and how to check/upgrade.
 
 ```bash
@@ -97,8 +92,10 @@ at the app for the first time; nothing in it is required to boot.
 #    see the `postinstall` script in package.json)
 npm install
 
-# 3. Copy the env template. You can genuinely leave every value blank for
-#    this tier — the app boots fine with nothing configured.
+# 3. Copy the env template and fill in what you need — see the table
+#    below for what's actually required vs. optional. You can genuinely
+#    leave everything blank and still boot the app; balances, sending,
+#    and Activity just won't work until their specific keys are set.
 cp .env.example .env
 
 # 4. Generate native projects
@@ -109,8 +106,15 @@ npm run ios       # or
 npm run android
 ```
 
-At this point: onboarding, wallet creation/import, and the app's UI all
-work. Balances, sending, and Activity will not — those need Tier 2.
+The values already sitting in `.env.example` for Bitcoin (Testnet3) and
+Ethereum (Sepolia) are real, working, free public endpoints — not
+placeholders you need to replace — so filling those in gets you real
+balances and sending on two networks with no signups at all.
+`EXPO_PUBLIC_WDK_INDEXER_API_KEY` needs its own free registration (link in
+`.env.example`) before the Activity tab shows anything. Arbitrum/Polygon
+and cloud backup are real mainnet / real external accounts — see "Making
+it your own" below and `docs/CLOUD_BACKUP.md` — skip both if you just
+want to see the app work end to end on testnets.
 
 **A known, stated risk worth knowing about up front, not discovering the
 hard way:** three dependencies in `package.json` point at specific GitHub
@@ -125,22 +129,6 @@ reachable and those specific commits staying available. If one of these
 starts failing to resolve, that's almost certainly why — check whether
 the upstream package has since published a real, fixed release you could
 switch to instead of the pinned fork.
-
-### Tier 2 — real functionality (test networks, no signups required)
-
-Fill in `.env` with the values already provided as defaults in
-`.env.example` for testnet usage — these are real, working, free
-public endpoints, not placeholders you need to replace:
-
-- `EXPO_PUBLIC_BTC_PROVIDER` (Bitcoin Testnet3)
-- `EXPO_PUBLIC_EVM_ETHEREUM_PROVIDER` + `_BUNDLER_URL` + `_PAYMASTER_URL`
-  (Sepolia — genuinely free to test, no real funds involved)
-- `EXPO_PUBLIC_WDK_INDEXER_API_KEY` — **required** for the Activity tab to
-  show anything at all; free registration, link is in `.env.example`
-
-Arbitrum/Polygon and cloud backup are real mainnet / real external accounts
-— see "Making it your own" below and `docs/CLOUD_BACKUP.md`; skip both for
-now if you just want to see the app work end to end on testnets.
 
 ### Which `.env` keys are required vs. optional — the short version
 

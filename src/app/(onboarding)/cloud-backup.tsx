@@ -30,7 +30,7 @@ export default function CloudBackup() {
     <Screen scroll>
       <ScreenHeader backStyle="plain" step="Step 4 of 4" onBack={() => router.back()} />
 
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center'}}>
         <View
           style={{
             width: moderateScale(88),

@@ -8,7 +8,7 @@
     "scheme": "wdkstarterreactnative",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "io.tether.wdk.starter.react.native",
+      "bundleIdentifier": "io.tether.wdk.starter.reactnative",
       "entitlements": {
         "com.apple.developer.icloud-services": [
           "CloudKit"
@@ -33,7 +33,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "io.tether.wdk.starter.react.native",
+      "package": "io.tether.wdk.starter.reactnative",
       "statusBar": {
         "style": "light",
         "backgroundColor": "#000000"
