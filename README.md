@@ -75,17 +75,30 @@ regardless of RPC provider — traced directly to how WDK's own package
 manages its underlying provider connections, not something fixable from
 this app's code. See `docs/TROUBLESHOOTING.md`'s last entry.
 
-## Quick start
+## Fork & run checklist
+
+Two tiers below — get it running first, then come back for "making it your
+own" only once you actually need to. Don't do the second tier just to look
+at the app for the first time; nothing in it is required to boot.
+
+### Tier 1 — just run it (5 minutes, no accounts/registrations needed)
+
+> **Check `npm --version` before anything else.** npm 10 silently drops
+> packages from git-dependency trees — no error, just a missing package
+> later on, for a reason that looks completely unrelated. This project has
+> three (see the callout right below Tier 1's steps). npm 11+ is required —
+> see `docs/ENVIRONMENT.md` for the exact version and how to check/upgrade.
 
 ```bash
 # 1. Read docs/ENVIRONMENT.md first — Node/npm/JDK version mismatches
 #    cause confusing native build failures, not clean errors.
 
-# 2. Install
+# 2. Install (also regenerates the WDK worklet bundle automatically —
+#    see the `postinstall` script in package.json)
 npm install
 
-# 3. Copy env template and fill in what you need (see docs/CLOUD_BACKUP.md
-#    if you want cloud backup working; the rest of the app works without it)
+# 3. Copy the env template. You can genuinely leave every value blank for
+#    this tier — the app boots fine with nothing configured.
 cp .env.example .env
 
 # 4. Generate native projects
@@ -95,6 +108,54 @@ npx expo prebuild --clean
 npm run ios       # or
 npm run android
 ```
+
+At this point: onboarding, wallet creation/import, and the app's UI all
+work. Balances, sending, and Activity will not — those need Tier 2.
+
+**A known, stated risk worth knowing about up front, not discovering the
+hard way:** three dependencies in `package.json` point at specific GitHub
+forks/commits, not published npm releases —
+`@tetherto/wdk-backup-cloud`, `@tetherto/wdk-indexer-http`, and
+`@tetherto/wdk-worklet-bundler`. Each exists because the official
+published version had a real, confirmed bug at the time (the worklet
+bundler's official beta, for example, shipped with no `dist/` at all —
+completely unusable). Running `npm install` on this project means
+implicitly depending on three third-party GitHub accounts staying
+reachable and those specific commits staying available. If one of these
+starts failing to resolve, that's almost certainly why — check whether
+the upstream package has since published a real, fixed release you could
+switch to instead of the pinned fork.
+
+### Tier 2 — real functionality (test networks, no signups required)
+
+Fill in `.env` with the values already provided as defaults in
+`.env.example` for testnet usage — these are real, working, free
+public endpoints, not placeholders you need to replace:
+
+- `EXPO_PUBLIC_BTC_PROVIDER` (Bitcoin Testnet3)
+- `EXPO_PUBLIC_EVM_ETHEREUM_PROVIDER` + `_BUNDLER_URL` + `_PAYMASTER_URL`
+  (Sepolia — genuinely free to test, no real funds involved)
+- `EXPO_PUBLIC_WDK_INDEXER_API_KEY` — **required** for the Activity tab to
+  show anything at all; free registration, link is in `.env.example`
+
+Arbitrum/Polygon and cloud backup are real mainnet / real external accounts
+— see "Making it your own" below and `docs/CLOUD_BACKUP.md`; skip both for
+now if you just want to see the app work end to end on testnets.
+
+### Which `.env` keys are required vs. optional — the short version
+
+| Required for... | Keys |
+|---|---|
+| App to boot at all | None |
+| Activity tab to show anything | `EXPO_PUBLIC_WDK_INDEXER_API_KEY` |
+| Real balances (any one network) | That network's `_PROVIDER` (+ `_BUNDLER_URL`/`_PAYMASTER_URL` for EVM chains) |
+| Cloud backup | See `docs/CLOUD_BACKUP.md` — several accounts/credentials, not a quick add |
+| Shipping your own build | See "Making it your own" below |
+
+Every key's own comment in `.env.example` explains what breaks without it —
+nothing fails silently or produces a confusing error for a key you simply
+haven't set yet, with the one exception of cloud backup's provider-specific
+sign-in errors (see `docs/CLOUD_BACKUP.md`'s troubleshooting section).
 
 ## Tech stack
 
@@ -110,14 +171,53 @@ npm run android
 | Cloud backup | `@tetherto/wdk-backup-cloud` — CloudKit (via WebView) + Google Drive |
 | Language | TypeScript, strict mode |
 
-## Project name and identifiers
+## Making it your own
 
-- Bundle ID / package name: `io.tether.wdk.starter.react.native`
-- CloudKit container: `iCloud.io.tether.wdkshowcase` (intentionally not derived
-  from the bundle ID — Apple permits this)
-- If you fork this for your own app, update `app.json`'s `ios.bundleIdentifier`
-  and `android.package` — several native setup steps (Google OAuth clients,
-  Apple's CloudKit container) are tied to these identifiers.
+Everything below is about forking this to ship a *different* app under
+your own identity — none of it is needed just to run/test the starter as
+it is (see the checklist above).
+
+**Update these via `.env`, not by editing `app.json` directly** —
+`app.config.js` reads each one and wires it into the native config for
+you (regenerating the entitlement, the Google Sign-In URL scheme, etc.),
+so there's exactly one place to change each value, not several kept in
+sync by hand:
+
+| What | `.env` key | Notes |
+|---|---|---|
+| iOS bundle identifier | `IOS_BUNDLE_IDENTIFIER` | Build-time only — changing this needs `npx expo prebuild --clean`, not just a reload |
+| Android package name | `ANDROID_PACKAGE_NAME` | Same as above |
+| CloudKit container | `EXPO_PUBLIC_CLOUDKIT_CONTAINER_ID` | Also drives `ios.entitlements` automatically. Container must actually exist in the Apple Developer portal — see `docs/CLOUD_BACKUP.md` |
+| Google Sign-In iOS URL scheme | *(nothing to set — derived automatically)* | Computed from `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`, which you do need to set — see `docs/CLOUD_BACKUP.md` |
+| App name / EAS project | `EAS_PROJECT_SLUG`, `EAS_PROJECT_ID` | Only needed if you're using EAS Build — see `docs/RELEASE.md` |
+| Deep-link / OAuth-redirect scheme | *(edit `app.json`'s `scheme` directly — not yet env-driven)* | If you have this app *and* an unmodified clone of it both installed on the same device, an unchanged scheme makes deep links ambiguous between them — real, not theoretical, if you're actively developing against your own fork alongside a reference install |
+
+Current default identity, if you want to know what you're replacing:
+bundle ID / package name `io.tether.wdk.starter.react.native`, CloudKit
+container `iCloud.io.tether.wdkshowcase` (intentionally *not* derived from
+the bundle ID — Apple permits this, and this app deliberately keeps an
+older container name; see `docs/ARCHITECTURE.md`).
+
+**If you're building via the CI pipeline (`docs/RELEASE.md`), not just
+locally:** `IOS_BUNDLE_IDENTIFIER` and `ANDROID_PACKAGE_NAME` are new as of
+this change and aren't yet wired into that pipeline — per `RELEASE.md`'s
+own note that adding a variable means updating both the workflow's
+job-level `env:` blocks and the `put` list in
+`.github/actions/write-dotenv/action.yaml`. Setting them locally in `.env`
+is enough for `npm run ios`/`android`; a CI-produced build won't see them
+until those two files are updated too.
+
+**Everything else that's identity-shaped, not covered by the table above:**
+- App name, icon, splash screen — plain fields/asset paths in `app.json`,
+  no env indirection needed for these.
+- Google OAuth clients (Web + iOS), CloudKit API token — real external
+  accounts you create yourself; see `docs/CLOUD_BACKUP.md` for the full
+  walkthrough of both.
+- **Shipping to the actual App Store / Play Store** — a substantially
+  bigger checklist than anything above (signing credentials, store
+  listings, provisioning profiles with the right entitlements). See
+  [`docs/RELEASE.md`](docs/RELEASE.md)'s "One-time setup" section — it's
+  written as a literal, sequential checklist for exactly this.
 
 ## Releasing
 

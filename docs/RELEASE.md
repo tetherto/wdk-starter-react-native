@@ -94,26 +94,39 @@ Encode a file for a secret with `base64 -i <file> | pbcopy` (macOS).
 
 ### App configuration
 
-Twenty build-time values, one secret each, documented in [`.env.example`](../.env.example):
+Twenty-two build-time values, one secret each, documented in [`.env.example`](../.env.example):
 
 ```
-EXPO_PUBLIC_BTC_PROVIDER                    EXPO_PUBLIC_EVM_ARBITRUM_PROVIDER
-EXPO_PUBLIC_BTC_NETWORK_LABEL               EXPO_PUBLIC_EVM_ARBITRUM_BUNDLER_URL
-EXPO_PUBLIC_EVM_ETHEREUM_PROVIDER           EXPO_PUBLIC_EVM_ARBITRUM_PAYMASTER_URL
-EXPO_PUBLIC_EVM_ETHEREUM_BUNDLER_URL        EXPO_PUBLIC_EVM_POLYGON_PROVIDER
-EXPO_PUBLIC_EVM_ETHEREUM_PAYMASTER_URL      EXPO_PUBLIC_EVM_POLYGON_BUNDLER_URL
-EXPO_PUBLIC_EVM_ETHEREUM_NETWORK_LABEL      EXPO_PUBLIC_EVM_POLYGON_PAYMASTER_URL
-EXPO_PUBLIC_EVM_DELEGATION_ADDRESS          EXPO_PUBLIC_CLOUDKIT_CONTAINER_ID
-EXPO_PUBLIC_COINGECKO_API_KEY               EXPO_PUBLIC_CLOUDKIT_API_TOKEN
-EXPO_PUBLIC_WDK_INDEXER_API_KEY             EXPO_PUBLIC_CLOUDKIT_CALLBACK_URL
-EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID            EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID
+IOS_BUNDLE_IDENTIFIER                       EXPO_PUBLIC_EVM_ARBITRUM_PROVIDER
+ANDROID_PACKAGE_NAME                        EXPO_PUBLIC_EVM_ARBITRUM_BUNDLER_URL
+EXPO_PUBLIC_BTC_PROVIDER                    EXPO_PUBLIC_EVM_ARBITRUM_PAYMASTER_URL
+EXPO_PUBLIC_BTC_NETWORK_LABEL               EXPO_PUBLIC_EVM_POLYGON_PROVIDER
+EXPO_PUBLIC_EVM_ETHEREUM_PROVIDER           EXPO_PUBLIC_EVM_POLYGON_BUNDLER_URL
+EXPO_PUBLIC_EVM_ETHEREUM_BUNDLER_URL        EXPO_PUBLIC_EVM_POLYGON_PAYMASTER_URL
+EXPO_PUBLIC_EVM_ETHEREUM_PAYMASTER_URL      EXPO_PUBLIC_CLOUDKIT_CONTAINER_ID
+EXPO_PUBLIC_EVM_ETHEREUM_NETWORK_LABEL      EXPO_PUBLIC_CLOUDKIT_API_TOKEN
+EXPO_PUBLIC_EVM_DELEGATION_ADDRESS          EXPO_PUBLIC_CLOUDKIT_CALLBACK_URL
+EXPO_PUBLIC_COINGECKO_API_KEY               EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
+EXPO_PUBLIC_WDK_INDEXER_API_KEY             EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID
 ```
+
+Two of these — `IOS_BUNDLE_IDENTIFIER` and `ANDROID_PACKAGE_NAME` — are a different case from the
+other twenty: not inlined into the JS bundle by babel at all, since no runtime code reads them. They're
+read directly by `app.config.js` at prebuild time (see that file's own comments), but still need to
+be a real secret here for the same underlying reason as everything else on this list: `write-dotenv`
+has to put them on disk before `eas build --local` runs prebuild in a copy of the project, where
+nothing outside that file is guaranteed visible. Deliberately without the `EXPO_PUBLIC_` prefix,
+matching `.env.example`'s own convention for build-time-only identity values.
 
 Any that are unset are logged as a warning and omitted from `.env`, rather than inlined as an empty
-string. Two of these are **intentionally blank** in some configurations:
-`EXPO_PUBLIC_BTC_NETWORK_LABEL` and `EXPO_PUBLIC_EVM_ETHEREUM_NETWORK_LABEL` should be empty whenever
-that network's provider points at real mainnet (see `ENVIRONMENT.md`), so a warning for either is not
-necessarily a missing secret. Adding a new variable means editing two places: the job-level `env:` blocks in the workflow
+string. `IOS_BUNDLE_IDENTIFIER` and `ANDROID_PACKAGE_NAME` being unset is a valid, expected state, not
+necessarily a missing secret — `app.config.js` falls back to this repo's own default identifiers when
+either is blank, same as running locally with nothing set (only relevant if you actually want your own
+build identity rather than this repo's own — see the README's "Making it your own" section). Two more
+are **intentionally blank** in some configurations: `EXPO_PUBLIC_BTC_NETWORK_LABEL` and
+`EXPO_PUBLIC_EVM_ETHEREUM_NETWORK_LABEL` should be empty whenever that network's provider points at
+real mainnet (see `ENVIRONMENT.md`), so a warning for either is not necessarily a missing secret
+either. Adding a new variable means editing two places: the job-level `env:` blocks in the workflow
 (job-level, not step-level — a composite action's inner steps don't reliably see step `env`) and the
 `put` list in `.github/actions/write-dotenv/action.yaml`.
 
@@ -130,20 +143,27 @@ Not yet done — the workflow will not go green until these are complete.
    - `app.config.js` → `EAS_PROJECT_ID` fallback (currently `REPLACE_WITH_EAS_PROJECT_ID`).
    - `eas.json` → `submit.production.ios`: `ascAppId`, `ascApiKeyId`, `ascApiKeyIssuerId`,
      `appleTeamId`.
-2. **Create the store records.** App id is `io.tether.wdk.starter.react.native` on both platforms.
-   Store identifiers are immutable once created, so do this after the rename, not before.
+   - If you're shipping this under your own identity rather than this repo's own — set the
+     `IOS_BUNDLE_IDENTIFIER` / `ANDROID_PACKAGE_NAME` secrets now, before item 2 below. Leaving
+     both unset builds this repo's own default identifiers
+     (`io.tether.wdk.starter.react.native`), which is correct if you're just testing the pipeline
+     itself and not actually shipping a rebrand.
+2. **Create the store records.** App id is `io.tether.wdk.starter.react.native` on both platforms
+   unless you set the two secrets above to something else. Store identifiers are immutable once
+   created, so do this after the rename, not before.
    - App Store Connect app → gives you `ascAppId`.
    - Play Console app, **plus one manual AAB upload**. The Play Developer API rejects the first
      upload for a track, so `eas submit` cannot bootstrap a brand-new app.
 3. **Provisioning profile must include iCloud.** `app.json` declares
-   `com.apple.developer.icloud-services: [CloudKit]` with container
-   `iCloud.io.tether.wdkshowcase` — deliberately different from the bundle id, which Apple allows.
-   The App Store distribution profile must carry the iCloud entitlement with **that exact
-   container**, or signing fails. `EXPO_PUBLIC_CLOUDKIT_CONTAINER_ID` must be set to the same value.
+   `com.apple.developer.icloud-services: [CloudKit]`, and `app.config.js` sets the container
+   identifier from `EXPO_PUBLIC_CLOUDKIT_CONTAINER_ID` (default `iCloud.io.tether.wdkshowcase` —
+   deliberately different from the bundle id, which Apple allows). The App Store distribution
+   profile must carry the iCloud entitlement with **that exact container**, or signing fails.
 4. **Register the release keystore SHA-1 with Google.** After wiring the keystore, run
    `cd android && ./gradlew signingReport` and add the release SHA-1 to the Google Cloud Console
-   OAuth client, against package name `io.tether.wdk.starter.react.native`. Without it Google
-   Sign-In fails with `DEVELOPER_ERROR (10)` in release builds only — debug builds keep working. See
+   OAuth client, against your actual package name (`ANDROID_PACKAGE_NAME` if set, otherwise
+   `io.tether.wdk.starter.react.native`). Without it Google Sign-In fails with
+   `DEVELOPER_ERROR (10)` in release builds only — debug builds keep working. See
    [CLOUD_BACKUP.md](CLOUD_BACKUP.md).
 5. **Confirm runner access.** The Android job targets the self-hosted `app-build-linux-x64` label and
    iOS targets `macos-26-xlarge`. This repository is public, so confirm with whoever owns the runner
@@ -153,9 +173,17 @@ Not yet done — the workflow will not go green until these are complete.
 ## Verifying a release
 
 1. `buildTarget: android`, `pushTag: false`. Check the log for `> Task :app:bundleRelease` and that
-   the `versionCode` came from the EAS counter, not the template's `1`.
+   the `versionCode` came from the EAS counter, not the template's `1`. If `IOS_BUNDLE_IDENTIFIER`/
+   `ANDROID_PACKAGE_NAME` are set to something other than this repo's own default, this is also the
+   point to confirm prebuild actually picked them up — the log's own `applicationId` line for the
+   Gradle build should show your value, not the default. This isn't verified by the bundle-inlining
+   script further below, since these two are never inlined into the JS bundle at all — they only
+   ever affect the native project prebuild generates, so a build log check is the right verification
+   for these specifically, not a bundle grep.
 2. `buildTarget: ios`, `pushTag: false`. Watch for signing errors naming the iCloud container —
-   that is item 3 above.
+   that is item 3 above. If you set `IOS_BUNDLE_IDENTIFIER`, the signing step should reference that
+   identifier too — a mismatch here usually means the provisioning profile wasn't reissued for the
+   new bundle ID yet.
 3. Install the TestFlight build and smoke-test the paths that prove the env made it into the bundle:
    wallet creation, the **Activity** tab (`EXPO_PUBLIC_WDK_INDEXER_API_KEY`), an EVM balance load,
    Google Sign-In and iCloud backup.

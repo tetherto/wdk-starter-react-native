@@ -1,13 +1,23 @@
 name: Write .env
 description: >
-  Materialise the build-time EXPO_PUBLIC_* configuration into a .env file at the
-  project root. Every value is read from the job environment, so the calling job
-  is responsible for mapping each secret in its own `env:` block.
+  Materialise the build-time EXPO_PUBLIC_* configuration, plus a couple of
+  non-prefixed app-identity values app.config.js also needs on disk, into a
+  .env file at the project root. Every value is read from the job
+  environment, so the calling job is responsible for mapping each secret in
+  its own `env:` block.
 
 # Why a file and not just process env: babel-preset-expo inlines
 # `process.env.EXPO_PUBLIC_*` at bundle time, and `eas build --local` runs the
 # bundler in a copy of the project, so the values have to be on disk before the
 # build starts. See docs/RELEASE.md.
+#
+# IOS_BUNDLE_IDENTIFIER and ANDROID_PACKAGE_NAME below are a different case,
+# not inlined into the JS bundle by babel at all — they're read directly by
+# app.config.js at prebuild time (see that file's own comments). They still
+# need to be on disk here for the same underlying reason: app.config.js's
+# own `dotenv.config()` call reads from a real .env file, and `eas build
+# --local` runs prebuild in a copy of the project where nothing outside
+# this file is guaranteed to be visible.
 
 runs:
   using: composite
@@ -21,7 +31,8 @@ runs:
 
         # Emit `KEY='value'` only when the value is non-empty. An empty secret
         # would otherwise be inlined as "" rather than left undefined, which
-        # defeats the optional-value fallbacks in src/wdk/config.ts.
+        # defeats the optional-value fallbacks in src/wdk/config.ts (and, for
+        # the two app-identity values below, in app.config.js).
         #
         # Quoting matters, and both halves are load-bearing. Expo parses .env
         # with node:util.parseEnv and then runs dotenv-expand-style
@@ -56,6 +67,15 @@ runs:
 
           printf "%s='%s'\n" "$key" "${value//\$/\\\$}" >> .env
         }
+
+        # App identity — read by app.config.js, not by any runtime JS code
+        # (no EXPO_PUBLIC_ prefix, deliberately: never inlined into the
+        # client bundle, never needed at runtime). Empty is a valid,
+        # expected state — app.config.js falls back to this repo's own
+        # default identifiers when either is unset, same as running
+        # locally with nothing in .env.
+        put IOS_BUNDLE_IDENTIFIER "${IOS_BUNDLE_IDENTIFIER-}"
+        put ANDROID_PACKAGE_NAME "${ANDROID_PACKAGE_NAME-}"
 
         # Bitcoin
         put EXPO_PUBLIC_BTC_PROVIDER "${EXPO_PUBLIC_BTC_PROVIDER-}"

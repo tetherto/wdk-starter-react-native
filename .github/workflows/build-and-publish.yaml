@@ -54,6 +54,13 @@ jobs:
     # reliably see `env:` set on the `uses:` step that calls it, but they do
     # inherit the job environment. Consumed by ./.github/actions/write-dotenv.
     env:
+      # App identity — read by app.config.js at prebuild time, not inlined
+      # into the JS bundle by babel like the EXPO_PUBLIC_* values below.
+      # Still needs to be a real secret here: write-dotenv writes it to
+      # disk the same way, since `eas build --local` runs in a copy of the
+      # project where nothing outside that file is guaranteed visible.
+      IOS_BUNDLE_IDENTIFIER: ${{ secrets.IOS_BUNDLE_IDENTIFIER }}
+      ANDROID_PACKAGE_NAME: ${{ secrets.ANDROID_PACKAGE_NAME }}
       EXPO_PUBLIC_BTC_PROVIDER: ${{ secrets.EXPO_PUBLIC_BTC_PROVIDER }}
       EXPO_PUBLIC_BTC_NETWORK_LABEL: ${{ secrets.EXPO_PUBLIC_BTC_NETWORK_LABEL }}
       EXPO_PUBLIC_EVM_ETHEREUM_PROVIDER: ${{ secrets.EXPO_PUBLIC_EVM_ETHEREUM_PROVIDER }}
@@ -177,6 +184,13 @@ jobs:
     # See the note on the android job — job-level so the write-dotenv composite
     # action's inner steps inherit these.
     env:
+      # App identity — read by app.config.js at prebuild time, not inlined
+      # into the JS bundle by babel like the EXPO_PUBLIC_* values below.
+      # Still needs to be a real secret here: write-dotenv writes it to
+      # disk the same way, since `eas build --local` runs in a copy of the
+      # project where nothing outside that file is guaranteed visible.
+      IOS_BUNDLE_IDENTIFIER: ${{ secrets.IOS_BUNDLE_IDENTIFIER }}
+      ANDROID_PACKAGE_NAME: ${{ secrets.ANDROID_PACKAGE_NAME }}
       EXPO_PUBLIC_BTC_PROVIDER: ${{ secrets.EXPO_PUBLIC_BTC_PROVIDER }}
       EXPO_PUBLIC_BTC_NETWORK_LABEL: ${{ secrets.EXPO_PUBLIC_BTC_NETWORK_LABEL }}
       EXPO_PUBLIC_EVM_ETHEREUM_PROVIDER: ${{ secrets.EXPO_PUBLIC_EVM_ETHEREUM_PROVIDER }}
