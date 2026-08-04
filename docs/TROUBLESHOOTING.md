@@ -25,6 +25,38 @@ version — see `ENVIRONMENT.md`.
 `_layout.tsx` (`src/wdk/cryptoPolyfill.ts`). If this ever crashes again,
 check that import is still first — order matters here.
 
+**Symptom:** `npm ci` fails before installation even starts, with something
+like:
+```
+Invalid: lock file's @noble/curves@1.9.7 does not satisfy @noble/curves@2.2.0
+Invalid: lock file's @noble/hashes@1.8.0 does not satisfy @noble/hashes@2.2.0
+```
+**Cause, confirmed directly (not a broken dependency tree):**
+`@tetherto/wdk-wallet-btc` depends on `@noble/hashes@^1.8.0`, while
+`@tetherto/wdk-utils` depends on `@noble/hashes@^2.2.0` and
+`@noble/curves@^2.2.0` — both are our own direct dependencies, and both
+are still beta packages (`^1.0.0-beta.X` ranges), so a newer beta of
+either can get published under a version string that still satisfies our
+existing range. The committed `package-lock.json` reflects whatever was
+actually resolved at the time it was last generated — if `wdk-utils`
+publishes a new beta requiring the newer `@noble/*` line after that, the
+lockfile falls behind, and `npm ci`'s strict check (correctly) refuses to
+proceed rather than silently resolving around the mismatch. This is not
+a code bug and not an unresolvable conflict — npm 7+ handles two packages
+needing different major versions of the same sub-dependency routinely, by
+nesting a separate copy of each; the fix is just bringing the lockfile
+back in sync:
+```bash
+npm install      # NOT npm ci — this is the step that re-resolves
+npm ci           # confirms the fix; should now pass cleanly
+git add package-lock.json && git commit
+```
+Confirmed working with npm 11.18.0 (matching this project's documented
+minimum). Since both packages are actively-evolving betas, this specific
+class of failure — lockfile behind a beta republish — could recur; it's
+a property of depending on beta packages, not something fixable in code,
+similar to the GitHub-pinned dependencies risk noted in the README.
+
 ## Wallet lifecycle
 
 **Symptom:** `"A wallet with the ID 'primary' already exists"` on a device
