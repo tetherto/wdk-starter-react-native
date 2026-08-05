@@ -31,31 +31,45 @@ like:
 Invalid: lock file's @noble/curves@1.9.7 does not satisfy @noble/curves@2.2.0
 Invalid: lock file's @noble/hashes@1.8.0 does not satisfy @noble/hashes@2.2.0
 ```
-**Cause, confirmed directly (not a broken dependency tree):**
-`@tetherto/wdk-wallet-btc` depends on `@noble/hashes@^1.8.0`, while
-`@tetherto/wdk-utils` depends on `@noble/hashes@^2.2.0` and
-`@noble/curves@^2.2.0` — both are our own direct dependencies, and both
-are still beta packages (`^1.0.0-beta.X` ranges), so a newer beta of
-either can get published under a version string that still satisfies our
-existing range. The committed `package-lock.json` reflects whatever was
-actually resolved at the time it was last generated — if `wdk-utils`
-publishes a new beta requiring the newer `@noble/*` line after that, the
-lockfile falls behind, and `npm ci`'s strict check (correctly) refuses to
-proceed rather than silently resolving around the mismatch. This is not
-a code bug and not an unresolvable conflict — npm 7+ handles two packages
-needing different major versions of the same sub-dependency routinely, by
-nesting a separate copy of each; the fix is just bringing the lockfile
-back in sync:
+**Cause — two layers, both real, and worth understanding separately:**
+
+*Our own contribution to the ambiguity:* `@tetherto/wdk-wallet-btc`
+depends on `@noble/hashes@^1.8.0`, while `@tetherto/wdk-utils` depends on
+`@noble/hashes@^2.2.0` and `@noble/curves@^2.2.0` — both our own direct
+dependencies, both still beta packages, so either can publish a new beta
+under a version string that still satisfies our existing range.
+
+*The deeper, actual root cause:* this specific failure mode — `npm ci`
+rejecting a lockfile that `npm install` just generated — matches a real,
+confirmed, longstanding npm CLI bug:
+[npm/cli#8726](https://github.com/npm/cli/issues/8726), a regression open
+since 2021 (v7.0.9), reported across npm 9.x, 10.x, and 11.x alike, still
+unresolved. It happens specifically when a dependency's semver range
+*could* resolve to more than one valid version — exactly the situation our
+own `@noble/*` ranges create. This is genuinely not our bug to fix; it's
+outside anything a project's own config can control.
+
+An earlier version of this entry attributed this purely to "the lockfile
+fell behind a beta republish" and stated it was confirmed fixed by
+upgrading to npm 11.18.0 — that was an incomplete diagnosis. Given the
+bug is reported across multiple npm majors, that specific version working
+was very plausibly coincidental timing (no dependency happened to
+republish between install and ci that time), not that version being
+genuinely immune to npm/cli#8726. Correcting that here rather than leaving
+an overstated claim standing.
+
+**What to actually do about it:**
 ```bash
 npm install      # NOT npm ci — this is the step that re-resolves
-npm ci           # confirms the fix; should now pass cleanly
+npm ci           # confirms the fix; usually passes after this
 git add package-lock.json && git commit
 ```
-Confirmed working with npm 11.18.0 (matching this project's documented
-minimum). Since both packages are actively-evolving betas, this specific
-class of failure — lockfile behind a beta republish — could recur; it's
-a property of depending on beta packages, not something fixable in code,
-similar to the GitHub-pinned dependencies risk noted in the README.
+This works often enough to be the practical first step, but per the npm
+issue itself, "run install then ci" is explicitly called an insufficient
+workaround, not a real fix — it can still fail intermittently depending on
+timing. `npm >= 11.10.1` is required project-wide (see `ENVIRONMENT.md`)
+as a practical baseline, not a version confirmed to eliminate this bug
+entirely.
 
 ## Wallet lifecycle
 

@@ -81,8 +81,12 @@ this app's code. See `docs/TROUBLESHOOTING.md`'s last entry.
 > **Check `npm --version` before anything else.** npm 10 silently drops
 > packages from git-dependency trees — no error, just a missing package
 > later on, for a reason that looks completely unrelated. This project has
-> three (see the note right after these steps). npm 11+ is required —
-> see `docs/ENVIRONMENT.md` for the exact version and how to check/upgrade.
+> three (see the note right after these steps). **`npm >= 11.10.1` is
+> required** — a real, confirmed npm CLI bug
+> ([npm/cli#8726](https://github.com/npm/cli/issues/8726)) can otherwise
+> make `npm ci` reject a lockfile `npm install` just generated; see
+> `docs/TROUBLESHOOTING.md` for the full explanation and what to do if it
+> still happens. See `docs/ENVIRONMENT.md` for how to check/upgrade.
 
 ```bash
 # 1. Read docs/ENVIRONMENT.md first — Node/npm/JDK version mismatches
