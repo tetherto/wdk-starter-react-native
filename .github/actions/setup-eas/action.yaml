@@ -1,0 +1,40 @@
+name: Setup EAS
+description: Set up Node with the npm version this project requires, plus the EAS CLI
+
+inputs:
+  node-version:
+    description: Node.js version to use (should track .nvmrc)
+    required: false
+    default: "22"
+  eas-cli-version:
+    description: EAS CLI version to install globally
+    required: false
+    default: "16.20.0"
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js ${{ inputs.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    # docs/ENVIRONMENT.md: npm 10 silently drops packages (including `expo`
+    # itself) from git-dependency trees with no error. This project has three
+    # git dependencies, so npm >= 11 is a hard requirement. Node 22 ships
+    # npm 10.x, hence the explicit upgrade.
+    - name: Upgrade npm
+      shell: bash
+      run: |
+        npm install --global npm@^11
+        npm --version
+
+    # docs/ENVIRONMENT.md warns against a global `expo`/`expo-cli` because it
+    # shadows the project-local one. A global `eas-cli` is a different package
+    # and is required to run `eas build --local`; it still delegates to the
+    # project's own `expo`.
+    - name: Install EAS CLI
+      shell: bash
+      run: |
+        npm install --global eas-cli@${{ inputs.eas-cli-version }}
+        eas --version

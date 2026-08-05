@@ -1,0 +1,4 @@
+# Custom self-hosted runner labels, so `actionlint` doesn't flag them as unknown.
+self-hosted-runner:
+  labels:
+    - app-build-linux-x64

@@ -1,86 +1,68 @@
-import { DarkTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
-import { WalletProvider, WDKService } from '@tetherto/wdk-react-native-provider';
-import { ThemeProvider } from '@tetherto/wdk-uikit-react-native';
-import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import { View } from 'react-native';
+import React, { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import 'react-native-reanimated';
-import getChainsConfig from '@/config/get-chains-config';
-import { Toaster } from 'sonner-native';
-import { colors } from '@/constants/colors';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { Stack } from 'expo-router';
+import * as NavigationBar from 'expo-navigation-bar';
+import { WdkAppProvider } from '@tetherto/wdk-react-native-core';
+import { ThemeProvider, useTheme } from '@/theme';
+import { wdkConfigs } from '@/wdk/config';
+// Generated worklet bundle (produced by `wdk-worklet-bundler generate`).
+import wdkBundle from '../../.wdk-bundle/wdk-worklet.bundle.js';
+import AutoLockOnBackground from '@/wdk/hooks/AutoLockOnBackground';
+import { WdkSessionGate } from '@/wdk/hooks/WdkSessionGate';
+import 'react-native-get-random-values';
+import { CloudBackupProvider } from '@/wdk/cloud-backup/CloudBackupContext';
+import { Toast } from '@/components';
+import { AccountDiscovery } from '@/wdk/hooks/AccountDiscovery';
 
-SplashScreen.preventAutoHideAsync();
+function useEdgeToEdge() {
+  const theme = useTheme();
+  useEffect(() => {
+    (async () => {
+      try {
+        await NavigationBar.setStyle(theme.mode === 'dark' ? 'light' : 'dark');
+      } catch {}
+    })();
+  }, [theme.mode]);
+}
 
-const CustomDarkTheme = {
-  ...DarkTheme,
-  colors: {
-    ...DarkTheme.colors,
-    background: colors.background,
-    card: colors.background,
-  },
-};
+function RootStack() {
+  const theme = useTheme();
+  useEdgeToEdge();
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: theme.colors.bgPrimary },
+      }}
+    >
+      <Stack.Screen name="(onboarding)" />
+      <Stack.Screen name="(app)" />
+      <Stack.Screen name="unlock" />
+      <Stack.Screen name="send" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="receive" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="accounts" />
+      <Stack.Screen name="tx" />
+    </Stack>
+  );
+}
 
 export default function RootLayout() {
-  useEffect(() => {
-    const initApp = async () => {
-      try {
-        await WDKService.initialize();
-      } catch (error) {
-        console.error('Failed to initialize services in app layout:', error);
-      } finally {
-        SplashScreen.hideAsync();
-      }
-    };
-
-    initApp();
-  }, []);
-
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider
-        defaultMode="dark"
-        brandConfig={{
-          primaryColor: colors.primary,
-        }}
-      >
-        <WalletProvider
-          config={{
-            indexer: {
-              apiKey: process.env.EXPO_PUBLIC_WDK_INDEXER_API_KEY!,
-              url: process.env.EXPO_PUBLIC_WDK_INDEXER_BASE_URL!,
-            },
-            chains: getChainsConfig(),
-            enableCaching: true,
-          }}
-        >
-          <NavigationThemeProvider value={CustomDarkTheme}>
-            <View style={{ flex: 1, backgroundColor: colors.background }}>
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: { backgroundColor: colors.background },
-                }}
-              />
-              <StatusBar style="light" />
-            </View>
-          </NavigationThemeProvider>
-        </WalletProvider>
-        <Toaster
-          offset={90}
-          toastOptions={{
-            style: {
-              backgroundColor: colors.background,
-              borderWidth: 1,
-              borderColor: colors.border,
-            },
-            titleStyle: { color: colors.text },
-            descriptionStyle: { color: colors.text },
-          }}
-        />
-      </ThemeProvider>
-    </GestureHandlerRootView>
+    <WdkAppProvider wdkConfigs={wdkConfigs} bundle={{ bundle: wdkBundle as string }}>
+      <AutoLockOnBackground />
+        <AccountDiscovery />
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <SafeAreaProvider>
+            <ThemeProvider>
+              <CloudBackupProvider>
+                <WdkSessionGate />
+                <RootStack />
+                <Toast />
+              </CloudBackupProvider>
+            </ThemeProvider>
+          </SafeAreaProvider>
+        </GestureHandlerRootView>
+    </WdkAppProvider>
   );
 }

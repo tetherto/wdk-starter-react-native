@@ -1,0 +1,278 @@
+import React, { useCallback } from 'react';
+import { View, ScrollView, Pressable } from 'react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
+import {
+  ChevronDown,
+  ScanLine,
+  ArrowUpRight,
+  ArrowDownLeft,
+  ArrowLeftRight,
+  CreditCard,
+  RefreshCw,
+} from 'lucide-react-native';
+import { Screen, Text, LoadingState, ErrorState, AssetIcon } from '@/components';
+import { useTheme } from '@/theme';
+import { useResponsive } from '@/theme/responsive';
+import { useWdkBalances, useWdkAccount, useWdkTotalUsd } from '@/wdk/hooks/useWalletData';
+import { networkDisplayName } from '@/wdk/networks';
+import { useAccounts } from '@/state/accounts';
+import { useToast } from '@/state/toast';
+import { usePendingRefresh, POLL_DELAYS_MS } from '@/state/pendingRefresh';
+
+/**
+ * Home (Wallet) — matches the prototype's `home` screen exactly: account
+ * selector + scan button header, total balance, a 4-button action row
+ * (Send/Receive real; Swap/Buy are "coming soon" placeholders, same as the
+ * prototype), a Tokens list, and a bottom Wallet/Activity tab bar.
+ *
+ * Balances come from useWdkBalances(), which already generically iterates
+ * whatever's in the asset registry (src/wdk/assets.ts) — this screen needed
+ * NO changes to work with 3 networks instead of 1, which is the whole point
+ * of that hook being asset-list-driven rather than hardcoded per-chain.
+ *
+ * KNOWN GAP, stated plainly: there's no fiat price feed integrated yet, so
+ * "Total balance" and each row's fiat sub-amount show '—' instead of a real
+ * dollar figure. The prototype's "$2,847.32" is illustrative mockup data,
+ * not something this screen can compute honestly yet.
+ */
+export default function WalletHome() {
+  const theme = useTheme();
+  const router = useRouter();
+  const { moderateScale } = useResponsive();
+  const account = useWdkAccount();
+  const balances = useWdkBalances();
+  const { total } = useWdkTotalUsd();
+  const activeIndex = useAccounts((s) => s.activeIndex);
+
+  // Force a fresh fetch every time Home regains focus — returning from a
+  // send, or from switching accounts — rather than trusting whatever the
+  // query's own staleTime timer happens to allow at that moment. See
+  // useWalletData.ts's comment for the full explanation of the underlying
+  // bug this fixes.
+  const sendPending = usePendingRefresh((s) => s.pending);
+  const clearSendPending = usePendingRefresh((s) => s.clear);
+
+  useFocusEffect(
+    useCallback(() => {
+      balances.refetch();
+
+      if (!sendPending) return;
+
+      // A send just completed — keep polling for a short window to catch
+      // the balance update whenever the transaction actually confirms,
+      // rather than trusting a single refetch's timing.
+      const timers = POLL_DELAYS_MS.map((delay) => setTimeout(() => balances.refetch(), delay));
+      const clearTimer = setTimeout(clearSendPending, POLL_DELAYS_MS[POLL_DELAYS_MS.length - 1] + 2000);
+
+      return () => {
+        timers.forEach(clearTimeout);
+        clearTimeout(clearTimer);
+      };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeIndex, sendPending]),
+  );
+
+  if (account.isLoading || balances.isLoading) return <LoadingState message="Loading wallet" />;
+  if (balances.isError) return <ErrorState message="Couldn't load balances." onRetry={() => balances.refetch()} />;
+
+  // Matches the prototype's actual behavior exactly: a bottom toast that
+  // auto-hides, not a native Alert dialog.
+  const comingSoon = (feature: string) => useToast.getState().show(`${feature} coming soon`);
+
+  return (
+    <Screen noPadding edges={['top']}>
+      <ScrollView
+        contentContainerStyle={{
+          padding: theme.layout.screenPaddingH,
+          paddingTop: theme.layout.screenPaddingTop,
+          flexGrow: 1,
+        }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header: account selector + scan */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Pressable
+            onPress={() => router.push('/accounts')}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+          >
+            <View
+              style={{
+                width: moderateScale(32),
+                height: moderateScale(32),
+                borderRadius: moderateScale(16),
+                backgroundColor: theme.colors.brand,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {/* Was hardcoded to always show "1" — now reflects whichever
+                  account is actually active (see src/state/accounts.ts). */}
+              <Text variant="label" color="white" style={{ fontWeight: '700', fontSize: moderateScale(13) }}>
+                {activeIndex + 1}
+              </Text>
+            </View>
+            <Text variant="body">{account.data?.name ?? 'Account 1'}</Text>
+            <ChevronDown size={moderateScale(16)} color={theme.colors.textSecondary} />
+          </Pressable>
+
+          {/* Visibly disabled — explicit product feedback: not-yet-built
+              actions should read as clearly inactive, not indistinguishable
+              from live controls. */}
+          <Pressable
+            onPress={() => comingSoon('Scan')}
+            style={{
+              width: moderateScale(36),
+              height: moderateScale(36),
+              borderRadius: moderateScale(18),
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: 0.6, // increased from 0.4 — was reading as too faint/dull
+            }}
+          >
+            <ScanLine size={moderateScale(20)} color={theme.colors.textSecondary} />
+          </Pressable>
+        </View>
+
+        {/* Total balance */}
+        <View style={{ alignItems: 'center', paddingVertical: moderateScale(14) }}>
+          <Text variant="label" color="textSecondary">Total balance</Text>
+          {/* Real USD total via CoinGecko pricing (see wdk/pricing.ts) —
+              was a hardcoded '—' before; this is the Phase 1 PRD's
+              "one total amount in USD across all tokens + chains". */}
+          <Text variant="balance" style={{ marginTop: 6 }}>{total}</Text>
+        </View>
+
+        {/* Action row: Send / Receive / Swap / Buy */}
+        <View style={{ flexDirection: 'row', gap: 10, marginVertical: moderateScale(8) }}>
+          <ActionButton icon={<ArrowUpRight size={moderateScale(20)} color={theme.colors.textPrimary} />} label="Send" onPress={() => router.push('/send')} />
+          <ActionButton icon={<ArrowDownLeft size={moderateScale(20)} color={theme.colors.textPrimary} />} label="Receive" onPress={() => router.push('/receive')} />
+          <ActionButton icon={<ArrowLeftRight size={moderateScale(20)} color={theme.colors.textSecondary} />} label="Swap" onPress={() => comingSoon('Swap')} disabled />
+          <ActionButton icon={<CreditCard size={moderateScale(20)} color={theme.colors.textSecondary} />} label="Buy" onPress={() => comingSoon('Buy')} disabled />
+        </View>
+
+        {/* Tokens */}
+        <Text variant="label" style={{ marginBottom: 4, fontWeight:'bold', marginTop:10 }}>Tokens</Text>
+        <View>
+          {balances.data.map((b, i) => (
+            <TokenRow
+              key={b.token.id}
+              symbol={b.token.symbol}
+              subtitle={tokenSubtitle(b.token.id, b.token.chain)}
+              amount={b.amount}
+              fiatValue={b.fiatValue}
+              network={b.token.chain}
+              isLast={i === balances.data.length - 1}
+              fetchFailed={b.fetchFailed}
+              onRetryRow={() => balances.refetch()}
+            />
+          ))}
+        </View>
+      </ScrollView>
+    </Screen>
+  );
+}
+
+/** Chain name for the row subtitle (e.g. "Ethereum", "Arbitrum", "Polygon",
+ * "Sepolia") — matches the prototype's per-row subtitle pattern. Tron/
+ * GasFree's "· gasless" label removed along with the Tron integration
+ * itself (on hold — see wdk/config.ts). */
+function tokenSubtitle(_assetId: string, chain: string): string {
+  return networkDisplayName(chain);
+}
+
+function ActionButton({
+  icon,
+  label,
+  onPress,
+  disabled,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
+  const theme = useTheme();
+  const { moderateScale } = useResponsive();
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        flex: 1,
+        height: moderateScale(62),
+        borderRadius: theme.radii.md,
+        backgroundColor: theme.colors.bgSecondary,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 4,
+        opacity: disabled ? 0.6 : 1, // increased from 0.45 — was reading as too faint/dull
+      }}
+    >
+      {icon}
+      <Text variant="small" color={disabled ? 'textSecondary' : 'textPrimary'}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function TokenRow({
+  symbol,
+  subtitle,
+  amount,
+  fiatValue,
+  network,
+  isLast,
+  fetchFailed,
+  onRetryRow,
+}: {
+  symbol: string;
+  subtitle: string;
+  amount: string;
+  fiatValue: string;
+  network: string;
+  isLast: boolean;
+  fetchFailed?: boolean;
+  onRetryRow?: () => void;
+}) {
+  const theme = useTheme();
+  const { moderateScale } = useResponsive();
+  const iconSize = moderateScale(38);
+
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        paddingVertical: moderateScale(12),
+        borderBottomWidth: isLast ? 0 : 1,
+        borderBottomColor: theme.colors.border,
+      }}
+    >
+      <AssetIcon symbol={symbol} network={network} size={iconSize} showChainBadge={symbol.startsWith('USDT')} />
+      <View style={{ flex: 1 }}>
+        <Text variant="tokenName">{symbol}</Text>
+        <Text variant="small" color="textSecondary">{subtitle}</Text>
+      </View>
+      {fetchFailed ? (
+        // Real bug fixed here: a failed per-asset fetch (e.g. an RPC
+        // timeout) used to silently render as "0" — identical to a
+        // genuinely empty balance. This is the honest alternative:
+        // visibly distinct, and directly actionable via retry, rather
+        // than misleadingly implying the wallet is actually empty.
+        <Pressable
+          onPress={onRetryRow}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+        >
+          <Text variant="small" color="error">Couldn't load</Text>
+          <RefreshCw size={moderateScale(13)} color={theme.colors.error} />
+        </Pressable>
+      ) : (
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text variant="tokenName">{amount}</Text>
+          <Text variant="small" color="textSecondary">{fiatValue}</Text>
+        </View>
+      )}
+    </View>
+  );
+}

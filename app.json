@@ -4,13 +4,19 @@
     "slug": "wdk-starter-react-native",
     "version": "1.0.0",
     "orientation": "portrait",
-    "developmentClient": false,
     "icon": "./assets/images/icon.png",
     "scheme": "wdkstarterreactnative",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.wdkstarterreactnative",
+      "bundleIdentifier": "io.tether.wdk.starter.reactnative",
+      "entitlements": {
+        "com.apple.developer.icloud-services": [
+          "CloudKit"
+        ],
+        "com.apple.developer.icloud-container-identifiers": [
+          "iCloud.io.tether.wdkshowcase"
+        ]
+      },
       "infoPlist": {
         "UIStatusBarStyle": "UIStatusBarStyleLightContent",
         "UIViewControllerBasedStatusBarAppearance": false,
@@ -27,7 +33,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.wdkstarterreactnative",
+      "package": "io.tether.wdk.starter.reactnative",
       "statusBar": {
         "style": "light",
         "backgroundColor": "#000000"
@@ -49,18 +55,19 @@
     "plugins": [
       "expo-router",
       [
+        "expo-navigation-bar",
+        {
+          "visibility": "hidden",
+          "behavior": "overlay-swipe"
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-logo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#FF6501"
-        }
-      ],
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera"
         }
       ],
       [
@@ -75,11 +82,19 @@
           }
         }
       ],
-      "./plugins/withAndroidSubprojects.js"
-    ],
-    "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
-    }
+      "./modules/cloud-backup/withModularHeaders.js",
+      "./modules/build/withCiBuildHardening.js",
+      "expo-secure-store",
+      [
+        "@react-native-google-signin/google-signin",
+        { "iosUrlScheme": "com.googleusercontent.apps.518914426511-c46v1j9olhu5trra830bfo13cdj3ge4h" }
+      ],
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true
+        }
+      ]
+    ]
   }
 }

@@ -1,440 +1,232 @@
-# @tetherto/wdk-starter-react-native
+# WDK Starter Wallet (React Native)
 
-> [!WARNING]
-> **Alpha Software**
-> 
-> This starter template is currently in **alpha** stage and under active development. It may contain bugs, incomplete features, and breaking changes. **Do not use in production environments or with real funds.** 
-> 
-> For production use, please wait for the stable release or use at your own risk in development/testing environments only.
+> ⚠️ **Alpha software.** Under active development. Do not use with real funds
+> until a stable release is tagged.
 
-An Expo + React Native starter demonstrating how to build a secure, multi-chain, non-custodial wallet using the WDK (Wallet Development Kit). Features BareKit worklets for cryptographic operations, secure secret management, and a complete wallet implementation with onboarding, transactions, and asset management.
+A reference **non-custodial wallet** built with Expo + React Native on
+Tether's [WDK (Wallet Development Kit)](https://wallet.tether.io/). This
+repo exists to teach other developers, end to end, how to integrate WDK into
+a real app — every architectural decision, and every hard-won bug fix along
+the way, is documented rather than hidden.
 
-Click below to see the wallet in action:
+If you're new here, **read the docs in this order**:
 
-[![Demo Video](assets/docs/demo-thumbnail.png)](assets/docs/demo.mp4)
+1. [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md) — toolchain versions that
+   actually work. Read this *before* running `npm install`.
+2. [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — how the app is put
+   together and why.
+3. [`docs/WDK_INTEGRATION.md`](docs/WDK_INTEGRATION.md) — the WDK
+   integration itself, step by step.
+4. [`docs/SECURITY.md`](docs/SECURITY.md) — the password/lock architecture.
+5. [`docs/CLOUD_BACKUP.md`](docs/CLOUD_BACKUP.md) — iCloud/Google Drive
+   backup, including the external account setup you'll need to do yourself.
+6. [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) — a running list of
+   real bugs we hit and how they were fixed, so you don't rediscover them.
 
-## 🔍 About WDK
+## What's actually built right now
 
-This repository is part of the [**WDK (Wallet Development Kit)**](https://wallet.tether.io/) project, which empowers developers to build secure, non-custodial wallets with unified blockchain access, stateless architecture, and complete user control. 
+This app implements the full core wallet experience end to end, against
+real WDK + real external services — not mocked, not a design
+approximation of the prototype but a direct match against its actual
+markup/CSS:
 
-For detailed documentation about the complete WDK ecosystem, visit [docs.wallet.tether.io](https://docs.wallet.tether.io).
+**Onboarding & security**
+- Welcome → create or import a wallet; recovery phrase generation/reveal
+  and import, both with a 12-or-24-word choice and paste-distribution
+  across the word grid
+- App password creation, backed by real envelope encryption (not just a
+  UI field)
+- Cloud backup: the person chooses **either** iCloud **or** Google Drive,
+  on **either** platform — encrypted with their own app password, not a
+  fixed passphrase
+- App lock/unlock, tested and fixed across iOS/Android's different
+  background-transition behavior
 
-## 🌟 Features
+**Wallet**
+- Real multi-network balances — Bitcoin, Ethereum (Sepolia testnet),
+  Arbitrum and Polygon (real mainnet) — with real USD totals and per-asset
+  fiat values (CoinGecko)
+- Multi-account support: switching between accounts on one wallet, with
+  bounded automatic discovery of previously-used accounts after a fresh
+  import (see `docs/ARCHITECTURE.md` for the real, stated limits of this —
+  it's not unlimited, and can't discover a genuinely zero-activity
+  account)
+- Receive: network/token picker, real QR code, copy/share
+- Send: pick a token → amount (crypto/fiat toggle) → review (real fee
+  quoting) → confirm — **executes a real, live send**, covering both
+  native assets and ERC-20 tokens (USDT/USDT0) → success, with a working
+  link to a real block explorer for the actual transaction
+- Activity: real transaction history via the WDK Indexer API, with
+  chain/token/type filters that only ever show combinations that actually
+  exist (no "Bitcoin + ETH" nonsense), grouped by Today/Yesterday/Earlier
 
-### Multi-Chain Support
-- **Bitcoin (SegWit)**: Native bitcoin transfers with SegWit addresses
-- **Ethereum**: EVM transactions with gas sponsorship support
-- **Polygon**: Low-cost EVM transactions with gas sponsorship
-- **Arbitrum**: Layer 2 scaling with gas sponsorship support
-- **TON**: Native TON blockchain transfers
-- **Tron**: TRC-20 token support with low fees
-- **Solana**: High-performance blockchain support
+**Everywhere**
+- A fully responsive UI system — every screen scales correctly across
+  phone and tablet
 
-### Multi-Token Support
-- **BTC**: Native Bitcoin on SegWit and Lightning networks
-- **USD₮ (Tether USD)**: Multi-chain USD₮ support (Ethereum, Polygon, Arbitrum, TON, Tron, Solana)
-- **XAU₮ (Tether Gold)**: Gold-backed stablecoin on Ethereum
+**Not yet built**, so you don't assume otherwise: restoring a wallet *from*
+a cloud backup (the download/decrypt side — upload works, download doesn't
+have a screen yet), and Tron/GasFree support (on hold — see
+`docs/WDK_INTEGRATION.md`).
 
-### Wallet Management
-- **Secure Seed Generation**: Cryptographically secure 12-word mnemonic generation
-- **Seed Import**: Import existing BIP39-compatible mnemonic phrases
-- **Encrypted Storage**: Secure key storage via native secure storage (iOS Keychain, Android KeyStore)
-- **Biometric Authentication**: Face ID/Touch ID for wallet unlock
-- **Wallet Naming**: Custom wallet names for better organization
+**A known, currently unresolved issue** worth reading about before you
+assume it's something you broke: EVM balance fetches can begin timing out
+after an extended session, across all EVM networks simultaneously,
+regardless of RPC provider — traced directly to how WDK's own package
+manages its underlying provider connections, not something fixable from
+this app's code. See `docs/TROUBLESHOOTING.md`'s last entry.
 
-### Asset Management
-- **Real-Time Balances**: Live balance updates via [WDK Indexer](https://docs.wallet.tether.io/)
-- **Transaction History**: Complete transaction tracking and history
-- **Price Conversion**: Real-time fiat pricing via Bitfinex integration
-- **Multi-Asset View**: Aggregate portfolio view across all tokens and chains
-- **Asset Details**: Detailed views for individual tokens with transaction history
+## Getting started
 
-### User Experience
-- **QR Code Scanner**: Scan wallet addresses and payment requests via camera
-- **Send Flows**: Complete send flow with network and token selection
-- **Receive Flows**: Generate QR codes for receiving payments
-- **Activity Feed**: Real-time transaction monitoring with status updates
-- **Settings**: Wallet management, security, and app preferences
-- **Dark Mode**: Modern dark theme optimized for readability
-
-## 🧱 Platform Prerequisites
-
-- Node.js 22+
-- iOS: Xcode toolchain
-- Android: SDK (see `app.json` build properties for version requirements)
-
-## ⬇️ Installation
-
-Clone this repository and install dependencies:
+> **Check `npm --version` before anything else.** npm 10 silently drops
+> packages from git-dependency trees — no error, just a missing package
+> later on, for a reason that looks completely unrelated. This project has
+> three (see the note right after these steps). **`npm >= 11.10.1` is
+> required** — a real, confirmed npm CLI bug
+> ([npm/cli#8726](https://github.com/npm/cli/issues/8726)) can otherwise
+> make `npm ci` reject a lockfile `npm install` just generated; see
+> `docs/TROUBLESHOOTING.md` for the full explanation and what to do if it
+> still happens. See `docs/ENVIRONMENT.md` for how to check/upgrade.
 
 ```bash
+# 1. Read docs/ENVIRONMENT.md first — Node/npm/JDK version mismatches
+#    cause confusing native build failures, not clean errors.
+
+# 2. Install (also regenerates the WDK worklet bundle automatically —
+#    see the `postinstall` script in package.json)
 npm install
-```
 
-## 🔑 Environment Setup
-
-**Optional but Recommended:** Configure API keys for balance, transaction data, and Tron network support:
-
-```bash
-# Copy the example environment file
+# 3. Copy the env template and fill in what you need — see the table
+#    below for what's actually required vs. optional. You can genuinely
+#    leave everything blank and still boot the app; balances, sending,
+#    and Activity just won't work until their specific keys are set.
 cp .env.example .env
 
-# Edit .env and configure the following:
-# EXPO_PUBLIC_WDK_INDEXER_BASE_URL=https://wdk-api.tether.io
-# EXPO_PUBLIC_WDK_INDEXER_API_KEY=your_wdk_api_key_here
-# EXPO_PUBLIC_TRON_API_KEY=your_tron_api_key_here (optional, for Tron network)
-# EXPO_PUBLIC_TRON_API_SECRET=your_tron_api_secret_here (optional, for Tron network)
-```
+# 4. Generate native projects
+npx expo prebuild --clean
 
-**Note:** The WDK Indexer API key is used for balance and transaction API requests. While not mandatory for development, it enables full functionality. Tron API keys are optional and only needed if you want to use the Tron network. Get your free WDK Indexer API key in the [WDK docs](https://docs.wallet.tether.io/).
-
-## 🔧 Provider Configuration (Recommended)
-
-**For Better Performance:** The app uses public RPC endpoints by default, which may have rate limits and variable performance. For a better experience, customize provider URLs in `src/config/get-chains-config.ts`:
-
-### Customizable Endpoints
-
-Edit `src/config/get-chains-config.ts` to update these provider URLs:
-
-**Ethereum**
-```typescript
-ethereum: {
-  provider: 'https://eth.merkle.io',  // Replace with your Ethereum RPC URL
-  bundlerUrl: 'https://api.candide.dev/public/v3/ethereum',
-  paymasterUrl: 'https://api.candide.dev/public/v3/ethereum',
-}
-```
-
-**Arbitrum**
-```typescript
-arbitrum: {
-  provider: 'https://arb1.arbitrum.io/rpc',  // Replace with your Arbitrum RPC URL
-  bundlerUrl: 'https://api.candide.dev/public/v3/arbitrum',
-  paymasterUrl: 'https://api.candide.dev/public/v3/arbitrum',
-}
-```
-
-Do the same for other chains.
-
-
-## 🚀 Run
-
-Then start the app:
-
-```bash
-# iOS simulator
-npm run ios
-
-# Android emulator/device
+# 5. Run
+npm run ios       # or
 npm run android
 ```
 
-## 📁 Project Structure
+The values already sitting in `.env.example` for Bitcoin (Testnet3) and
+Ethereum (Sepolia) are real, working, free public endpoints — not
+placeholders you need to replace — so filling those in gets you real
+balances and sending on two networks with no signups at all.
+`EXPO_PUBLIC_WDK_INDEXER_API_KEY` needs its own free registration (link in
+`.env.example`) before the Activity tab shows anything. Arbitrum/Polygon
+and cloud backup are real mainnet / real external accounts — see "Making
+it your own" below and `docs/CLOUD_BACKUP.md` — skip both if you just
+want to see the app work end to end on testnets.
 
-```
-src/
-├── app/                         # App screens (Expo Router file-based routing)
-│   ├── _layout.tsx              # Root layout with providers
-│   ├── index.tsx                # Entry point & routing logic
-│   ├── onboarding/              # Onboarding flow screens
-│   ├── wallet-setup/            # Wallet creation/import flows
-│   ├── wallet.tsx               # Main wallet dashboard
-│   ├── assets.tsx               # Asset list screen
-│   ├── activity.tsx             # Transaction history
-│   ├── send/                    # Send flow screens
-│   ├── receive/                 # Receive flow screens
-│   ├── authorize.tsx            # Biometric authentication
-│   ├── settings.tsx             # App settings
-│   ├── scan-qr.tsx              # QR code scanner
-│   └── token-details.tsx        # Individual token details
-├── components/                  # Reusable UI components
-│   ├── onboarding/              # Onboarding components
-│   ├── ui/                      # Base UI components
-│   └── *.tsx                    # Shared components
-├── config/                      # Configuration files
-│   ├── assets.ts                # Token/asset configurations
-│   ├── avatar-options.ts        # Wallet avatar configurations
-│   ├── networks.ts              # Network configurations
-│   └── get-chains-config.ts     # Chain-specific settings & provider URLs
-├── services/                    # Business logic & external services
-│   └── pricing-service.ts       # Fiat pricing via Bitfinex
-├── hooks/                       # Custom React hooks
-│   ├── use-debounced-navigation.ts  # Debounced navigation to prevent rapid taps
-│   ├── use-keyboard.ts          # Keyboard visibility detection
-│   └── use-wallet-avatar.ts     # Wallet avatar management
-└── utils/                       # Utility functions
-    ├── gas-fee-calculator.ts    # Gas fee estimation & network utilities
-    ├── format-amount.ts         # Amount formatting helpers
-    ├── format-token-amount.ts   # Token-specific amount formatting
-    ├── format-usd-value.ts      # USD value formatting
-    ├── get-display-symbol.ts    # Token symbol display utilities
-    ├── get-denomination-value.ts # Token denomination utilities
-    ├── parse-worklet-error.ts   # Worklet error parsing for better UX
-    └── recent-tokens.ts         # Recent token tracking
-```
+**A known, stated risk worth knowing about up front, not discovering the
+hard way:** three dependencies in `package.json` point at specific GitHub
+forks/commits, not published npm releases —
+`@tetherto/wdk-backup-cloud`, `@tetherto/wdk-indexer-http`, and
+`@tetherto/wdk-worklet-bundler`. Each exists because the official
+published version had a real, confirmed bug at the time (the worklet
+bundler's official beta, for example, shipped with no `dist/` at all —
+completely unusable). Running `npm install` on this project means
+implicitly depending on three third-party GitHub accounts staying
+reachable and those specific commits staying available. If one of these
+starts failing to resolve, that's almost certainly why — check whether
+the upstream package has since published a real, fixed release you could
+switch to instead of the pinned fork.
 
-## 🏗️ Architecture & Key Flows
+### Which `.env` keys are required vs. optional — the short version
 
-### App Architecture
-The app follows a clean architecture pattern with clear separation of concerns:
+| Required for... | Keys |
+|---|---|
+| App to boot at all | None |
+| Activity tab to show anything | `EXPO_PUBLIC_WDK_INDEXER_API_KEY` |
+| Real balances (any one network) | That network's `_PROVIDER` (+ `_BUNDLER_URL`/`_PAYMASTER_URL` for EVM chains) |
+| Cloud backup | See `docs/CLOUD_BACKUP.md` — several accounts/credentials, not a quick add |
+| Shipping your own build | See "Making it your own" below |
 
-1. **Providers Layer** (`_layout.tsx`)
-   - `WalletProvider`: Manages wallet state, blockchain interactions, and WDK service
-   - `ThemeProvider`: Handles dark mode and custom theming
-   - `NavigationThemeProvider`: React Navigation theme configuration
+Every key's own comment in `.env.example` explains what breaks without it —
+nothing fails silently or produces a confusing error for a key you simply
+haven't set yet, with the one exception of cloud backup's provider-specific
+sign-in errors (see `docs/CLOUD_BACKUP.md`'s troubleshooting section).
 
-2. **Screen Layer** (`app/` directory)
-   - File-based routing via Expo Router
-   - Each screen is a self-contained React component
-   - Navigation handled automatically based on file structure
+## Tech stack
 
-3. **Business Logic** (`services/` directory)
-   - Pricing service for real-time fiat conversion
+| Layer | Choice |
+|---|---|
+| Framework | Expo SDK 55 (managed, with `expo prebuild`), React Native 0.83 |
+| Navigation | Expo Router (file-based) |
+| Wallet SDK | `@tetherto/wdk-react-native-core` + `@tetherto/wdk` (Bare-runtime worklet architecture — see [`ARCHITECTURE.md`](docs/ARCHITECTURE.md)) |
+| Data layer | TanStack Query — WDK hooks called directly from screens (an earlier mock/WDK DI seam exists in `src/data/` but is no longer used by any screen; see `docs/ARCHITECTURE.md`) |
+| State | Zustand (small, single-purpose stores — session, password session, lock suppression) |
+| Encryption | `@tetherto/wdk-utils` (AES-256-GCM + scrypt) |
+| Secure storage | `expo-secure-store` (iOS Keychain / Android Keystore) |
+| Cloud backup | `@tetherto/wdk-backup-cloud` — CloudKit (via WebView) + Google Drive |
+| Language | TypeScript, strict mode |
 
-4. **Configuration** (`config/` directory)
-   - Centralized network and asset configurations
-   - Chain-specific RPC endpoints and settings
+## Making it your own
 
-### User Flows
+Everything below is about forking this to ship a *different* app under
+your own identity — none of it is needed just to run/test the starter as
+it is (see the checklist above).
 
-#### First-Time User (Create Wallet)
-1. **Onboarding** → View welcome screen with app features
-2. **Wallet Setup** → Choose "Create New Wallet"
-3. **Name Wallet** → Set a custom wallet name
-4. **Secure Wallet** → View and backup 12-word seed phrase
-5. **Confirm Phrase** → Verify seed phrase knowledge
-6. **Complete** → Wallet created and unlocked
-7. **Wallet Dashboard** → Access main wallet interface
+**Update these via `.env`, not by editing `app.json` directly** —
+`app.config.js` reads each one and wires it into the native config for
+you (regenerating the entitlement, the Google Sign-In URL scheme, etc.),
+so there's exactly one place to change each value, not several kept in
+sync by hand:
 
-#### Returning User (Import Wallet)
-1. **Onboarding** → View welcome screen
-2. **Wallet Setup** → Choose "Import Existing Wallet"
-3. **Import Wallet** → Enter 12-word seed phrase
-4. **Name Wallet** → Set a custom wallet name
-5. **Complete** → Wallet imported and unlocked
-6. **Wallet Dashboard** → Access main wallet interface
+| What | `.env` key | Notes |
+|---|---|---|
+| iOS bundle identifier | `IOS_BUNDLE_IDENTIFIER` | Build-time only — changing this needs `npx expo prebuild --clean`, not just a reload |
+| Android package name | `ANDROID_PACKAGE_NAME` | Same as above |
+| CloudKit container | `EXPO_PUBLIC_CLOUDKIT_CONTAINER_ID` | Also drives `ios.entitlements` automatically. Container must actually exist in the Apple Developer portal — see `docs/CLOUD_BACKUP.md` |
+| Google Sign-In iOS URL scheme | *(nothing to set — derived automatically)* | Computed from `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`, which you do need to set — see `docs/CLOUD_BACKUP.md` |
+| App name / EAS project | `EAS_PROJECT_SLUG`, `EAS_PROJECT_ID` | Only needed if you're using EAS Build — see `docs/RELEASE.md` |
+| Deep-link / OAuth-redirect scheme | *(edit `app.json`'s `scheme` directly — not yet env-driven)* | If you have this app *and* an unmodified clone of it both installed on the same device, an unchanged scheme makes deep links ambiguous between them — real, not theoretical, if you're actively developing against your own fork alongside a reference install |
 
-#### Existing User (App Launch)
-1. **Entry Point** (`index.tsx`) → Check wallet status
-2. **Authorization** → Biometric authentication (Face ID/Touch ID)
-3. **Wallet Dashboard** → Access wallet after unlock
+Current default identity, if you want to know what you're replacing:
+bundle ID / package name `io.tether.wdk.starter.react.native`, CloudKit
+container `iCloud.io.tether.wdkshowcase` (intentionally *not* derived from
+the bundle ID — Apple permits this, and this app deliberately keeps an
+older container name; see `docs/ARCHITECTURE.md`).
 
-#### Send Flow
-1. **Wallet Dashboard** → Tap "Send" button
-2. **Select Token** → Choose token to send (BTC, USD₮, XAU₮)
-3. **Select Network** → Choose blockchain network
-4. **Send Details** → Enter recipient address, amount, and review fees
-5. **Confirm** → Approve transaction
-6. **Transaction Submitted** → View transaction status
+**If you're building via the CI pipeline (`docs/RELEASE.md`), not just
+locally:** `IOS_BUNDLE_IDENTIFIER` and `ANDROID_PACKAGE_NAME` are new as of
+this change and aren't yet wired into that pipeline — per `RELEASE.md`'s
+own note that adding a variable means updating both the workflow's
+job-level `env:` blocks and the `put` list in
+`.github/actions/write-dotenv/action.yaml`. Setting them locally in `.env`
+is enough for `npm run ios`/`android`; a CI-produced build won't see them
+until those two files are updated too.
 
-#### Receive Flow
-1. **Wallet Dashboard** → Tap "Receive" button
-2. **Select Token** → Choose token to receive
-3. **Select Network** → Choose blockchain network
-4. **Receive Details** → View QR code and address, copy or share
+**Everything else that's identity-shaped, not covered by the table above:**
+- App name, icon, splash screen — plain fields/asset paths in `app.json`,
+  no env indirection needed for these.
+- Google OAuth clients (Web + iOS), CloudKit API token — real external
+  accounts you create yourself; see `docs/CLOUD_BACKUP.md` for the full
+  walkthrough of both.
+- **Shipping to the actual App Store / Play Store** — a substantially
+  bigger checklist than anything above (signing credentials, store
+  listings, provisioning profiles with the right entitlements). See
+  [`docs/RELEASE.md`](docs/RELEASE.md)'s "One-time setup" section — it's
+  written as a literal, sequential checklist for exactly this.
 
-## 🌐 Supported Networks & Operations
+## Releasing
 
-This starter supports the following blockchain networks and operations:
+Signed builds and store submission run through the
+[Build and Publish](.github/workflows/build-and-publish.yaml) GitHub Actions
+workflow — `eas build --local`, then `eas submit` to TestFlight and the Play
+internal track.
 
-| Network | Balance | History | Send | Receive | Gas Sponsorship |
-|---------|---------|---------|------|---------|-----------------|
-| **Bitcoin (SegWit)** | ✅ | ✅ | ✅ | ✅ | N/A |
-| **Lightning** | ✅ | ✅ | ✅ | ✅ | N/A |
-| **Ethereum** | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Polygon** | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Arbitrum** | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **TON** | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Tron** | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Solana** | ✅ | ✅ | ✅ | ✅ | ✅ |
+See [`docs/RELEASE.md`](docs/RELEASE.md) for how the pipeline works, the secret
+inventory, and the one-time setup still outstanding — the workflow has never
+been run.
 
-### Token Support
+## License
 
-| Token | Symbol | Networks |
-|-------|--------|----------|
-| **Bitcoin** | BTC | Bitcoin (SegWit), Lightning |
-| **Tether USD** | USD₮ | Ethereum, Polygon, Arbitrum, TON, Tron, Solana |
-| **Tether Gold** | XAU₮ | Ethereum |
+Apache-2.0 — see [`LICENSE`](LICENSE).
 
-### Key Features
-- **Gas Sponsorship**: EVM networks (Ethereum, Polygon, Arbitrum) and other supported chains offer gasless transactions via paymasters
-- **Multi-Network**: Send the same token across different networks based on preference and fees
-- **Real-Time Data**: Live balance and transaction updates via WDK Indexer
-- **QR Code Support**: Generate and scan QR codes for easy address sharing
+## Contributing
 
-## 🔒 Security Features
-
-This starter implements multiple layers of security for protecting user assets:
-
-### Secure Key Management
-- **BareKit Worklets**: Cryptographic operations run in isolated worklet context
-- **Secret Manager**: Keys stored encrypted using native secure storage (iOS Keychain, Android KeyStore)
-- **No Key Exposure**: Private keys never leave the secure context or device
-- **BIP39 Compliant**: Standard 12-word mnemonic seed phrase generation
-
-### Authentication
-- **Biometric Lock**: Face ID/Touch ID for wallet unlock
-- **App Lock**: Wallet locked on app background/close
-- **Session Management**: Secure session handling with automatic timeout
-
-### Transaction Security
-- **User Confirmation**: All transactions require explicit user approval
-- **Amount Verification**: Clear display of amounts and fees before signing
-- **Address Validation**: Input validation for recipient addresses
-- **Network Selection**: User must explicitly choose network to prevent errors
-
-### Best Practices
-- **No Analytics**: No user data or transaction info sent to third parties
-- **Local Storage**: All wallet data stored locally on device
-- **Open Source**: Fully auditable codebase
-- **Non-Custodial**: Users have complete control of their private keys
-
-## ⚙️ Polyfills & Build Configuration
-
-### Node.js Polyfills
-The app includes comprehensive Node.js polyfills for React Native compatibility via `@tetherto/wdk-react-native-provider/metro-polyfills`
-### Native Modules
-- **Sodium**: `sodium-javascript` (WebAssembly-based cryptography)
-- **Random**: `react-native-get-random-values` (secure randomness)
-- **PBKDF2**: `react-native-fast-pbkdf2` (key derivation)
-- **TCP**: `react-native-tcp-socket` (for Bitcoin Electrum)
-
-## 🧪 Available Scripts
-
-| Script | Description |
-|--------|-------------|
-| `npm start` | Start Expo development server with dev client |
-| `npm run ios` | Run on iOS simulator |
-| `npm run android` | Run on Android emulator/device |
-| `npm run web` | Run in web browser |
-| `npm run prebuild` | Generate native project files |
-| `npm run prebuild:clean` | Clean and regenerate native project files |
-| `npm run lint` | Run ESLint to check code quality |
-| `npm run lint:fix` | Run ESLint and auto-fix issues |
-| `npm run format` | Format code with Prettier |
-| `npm run format:check` | Check code formatting without making changes |
-| `npm run typecheck` | Run TypeScript type checking |
-
-## 🔗 Version & Compatibility
-
-### Core Dependencies
-- **Expo**: ~54.0.8
-- **React**: 19.1.0
-- **React Native**: 0.81.4
-- **TypeScript**: ~5.9.2
-
-### Key Features
-- **New Architecture**: Enabled in `app.json` for improved performance
-- **React Native Reanimated**: ~4.1.0 for smooth animations
-- **React Compiler**: Enabled for automatic memoization
-
-### Platform Requirements
-- **Android**: minSdkVersion 29, compileSdkVersion 36
-- **iOS**: Latest Xcode toolchain recommended
-- **Node.js**: 22+ required
-
-### WDK Packages
-- `@tetherto/wdk-react-native-provider`: Main wallet provider
-- `@tetherto/wdk-uikit-react-native`: UI components library
-- `@tetherto/wdk-pricing-provider`: Fiat pricing integration
-- `@tetherto/wdk-pricing-bitfinex-http`: Bitfinex price data provider
-- `@tetherto/pear-wrk-wdk`: BareKit worklets runtime
-
-## 🎨 Customization Guide
-
-### Adding New Tokens
-1. Add token configuration in `src/config/assets.ts`:
-```typescript
-export const assetConfig: Record<string, AssetConfig> = {
-  newtoken: {
-    name: 'New Token',
-    icon: require('../../assets/images/tokens/newtoken-logo.png'),
-    color: '#YOUR_COLOR',
-    supportedNetworks: [NetworkType.ETHEREUM],
-  },
-};
-```
-
-2. Add token icon to `assets/images/tokens/`
-
-### Adding New Networks
-1. Add network configuration in `src/config/networks.ts`:
-```typescript
-[NetworkType.NEW_NETWORK]: {
-  id: 'new-network',
-  name: 'New Network',
-  gasLevel: 'Low',
-  gasColor: '#34C759',
-  icon: require('../../assets/images/chains/new-network-logo.png'),
-  color: '#YOUR_COLOR',
-}
-```
-
-2. Add chain configuration in `src/config/get-chains-config.ts`:
-```typescript
-newnetwork: {
-  chainId: YOUR_CHAIN_ID,
-  blockchain: 'newnetwork',
-  provider: 'https://your-rpc-url.com',
-  // Add other chain-specific configuration
-}
-```
-
-3. Add chain logo to `assets/images/chains/`
-
-### Customizing Theme & Brand
-Update the brand configuration in `src/app/_layout.tsx`:
-```typescript
-<ThemeProvider
-  defaultMode="dark"
-  brandConfig={{
-    primaryColor: '#YOUR_BRAND_COLOR',
-  }}
->
-```
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**Metro bundler cache issues**
-```bash
-npx expo start -c
-```
-
-**Native build issues**
-```bash
-npm run prebuild:clean
-cd ios && pod install
-cd android && ./gradlew clean
-```
-
-**Type errors after updates**
-```bash
-npm run typecheck
-```
-
-### Development Tips
-- Use Expo Dev Client for faster development cycles
-- Enable Fast Refresh for instant UI updates
-- Check Metro bundler logs for build issues
-- Use React DevTools for component debugging
-- Monitor network requests in browser DevTools (web) or Reactotron (native)
-
-## 📜 License
-
-This project is licensed under the Apache-2.0 - see the [LICENSE](LICENSE) file for details.
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-- Read the [code of conduct](CODE_OF_CONDUCT.md)
-- See [contributing guide](CONTRIBUTING.md)
-
-## 🆘 Support
-
-For support, please:
-- Check the [WDK documentation](https://docs.wallet.tether.io)
-- Open an issue on the GitHub repository
-- Join the WDK developer community
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the branch strategy and coding
+conventions used in this repo.

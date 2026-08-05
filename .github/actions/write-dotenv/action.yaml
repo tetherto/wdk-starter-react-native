@@ -1,0 +1,117 @@
+name: Write .env
+description: >
+  Materialise the build-time EXPO_PUBLIC_* configuration, plus a couple of
+  non-prefixed app-identity values app.config.js also needs on disk, into a
+  .env file at the project root. Every value is read from the job
+  environment, so the calling job is responsible for mapping each secret in
+  its own `env:` block.
+
+# Why a file and not just process env: babel-preset-expo inlines
+# `process.env.EXPO_PUBLIC_*` at bundle time, and `eas build --local` runs the
+# bundler in a copy of the project, so the values have to be on disk before the
+# build starts. See docs/RELEASE.md.
+#
+# IOS_BUNDLE_IDENTIFIER and ANDROID_PACKAGE_NAME below are a different case,
+# not inlined into the JS bundle by babel at all — they're read directly by
+# app.config.js at prebuild time (see that file's own comments). They still
+# need to be on disk here for the same underlying reason: app.config.js's
+# own `dotenv.config()` call reads from a real .env file, and `eas build
+# --local` runs prebuild in a copy of the project where nothing outside
+# this file is guaranteed to be visible.
+
+runs:
+  using: composite
+  steps:
+    - name: Write .env
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        : > .env
+
+        # Emit `KEY='value'` only when the value is non-empty. An empty secret
+        # would otherwise be inlined as "" rather than left undefined, which
+        # defeats the optional-value fallbacks in src/wdk/config.ts (and, for
+        # the two app-identity values below, in app.config.js).
+        #
+        # Quoting matters, and both halves are load-bearing. Expo parses .env
+        # with node:util.parseEnv and then runs dotenv-expand-style
+        # interpolation over the result (node_modules/@expo/env/build/parse.js):
+        #   - unquoted `k3y#chars`   parses to `k3y`      (# starts a comment)
+        #   - unquoted `k3y $pecial` expands to `k3y `    ($word is a variable)
+        # Both truncate *silently*, producing a build that only fails at
+        # runtime. Single quotes fix the first; escaping $ fixes the second
+        # (quotes don't help there — expansion runs after quote stripping).
+        put() {
+          local key="$1"
+          local value="${2-}"
+
+          if [ -z "$value" ]; then
+            echo "::warning::$key is empty — omitted from .env"
+            return 0
+          fi
+
+          # A single quote can't be represented inside a single-quoted .env
+          # value, and a newline would be read as the start of a new entry.
+          # Fail loudly rather than write something subtly wrong.
+          case "$value" in
+            *\'*)
+              echo "::error::$key contains a single quote, which cannot be encoded in .env"
+              return 1
+              ;;
+          esac
+          if [ "$value" != "${value%$'\n'*}" ]; then
+            echo "::error::$key contains a newline, which cannot be encoded in .env"
+            return 1
+          fi
+
+          printf "%s='%s'\n" "$key" "${value//\$/\\\$}" >> .env
+        }
+
+        # App identity — read by app.config.js, not by any runtime JS code
+        # (no EXPO_PUBLIC_ prefix, deliberately: never inlined into the
+        # client bundle, never needed at runtime). Empty is a valid,
+        # expected state — app.config.js falls back to this repo's own
+        # default identifiers when either is unset, same as running
+        # locally with nothing in .env.
+        put IOS_BUNDLE_IDENTIFIER "${IOS_BUNDLE_IDENTIFIER-}"
+        put ANDROID_PACKAGE_NAME "${ANDROID_PACKAGE_NAME-}"
+
+        # Bitcoin
+        put EXPO_PUBLIC_BTC_PROVIDER "${EXPO_PUBLIC_BTC_PROVIDER-}"
+        put EXPO_PUBLIC_BTC_NETWORK_LABEL "${EXPO_PUBLIC_BTC_NETWORK_LABEL-}"
+
+        # EVM — Ethereum (Sepolia)
+        put EXPO_PUBLIC_EVM_ETHEREUM_PROVIDER "${EXPO_PUBLIC_EVM_ETHEREUM_PROVIDER-}"
+        put EXPO_PUBLIC_EVM_ETHEREUM_BUNDLER_URL "${EXPO_PUBLIC_EVM_ETHEREUM_BUNDLER_URL-}"
+        put EXPO_PUBLIC_EVM_ETHEREUM_PAYMASTER_URL "${EXPO_PUBLIC_EVM_ETHEREUM_PAYMASTER_URL-}"
+        put EXPO_PUBLIC_EVM_ETHEREUM_NETWORK_LABEL "${EXPO_PUBLIC_EVM_ETHEREUM_NETWORK_LABEL-}"
+
+        # EVM — Arbitrum (mainnet)
+        put EXPO_PUBLIC_EVM_ARBITRUM_PROVIDER "${EXPO_PUBLIC_EVM_ARBITRUM_PROVIDER-}"
+        put EXPO_PUBLIC_EVM_ARBITRUM_BUNDLER_URL "${EXPO_PUBLIC_EVM_ARBITRUM_BUNDLER_URL-}"
+        put EXPO_PUBLIC_EVM_ARBITRUM_PAYMASTER_URL "${EXPO_PUBLIC_EVM_ARBITRUM_PAYMASTER_URL-}"
+
+        # EVM — Polygon (mainnet)
+        put EXPO_PUBLIC_EVM_POLYGON_PROVIDER "${EXPO_PUBLIC_EVM_POLYGON_PROVIDER-}"
+        put EXPO_PUBLIC_EVM_POLYGON_BUNDLER_URL "${EXPO_PUBLIC_EVM_POLYGON_BUNDLER_URL-}"
+        put EXPO_PUBLIC_EVM_POLYGON_PAYMASTER_URL "${EXPO_PUBLIC_EVM_POLYGON_PAYMASTER_URL-}"
+
+        put EXPO_PUBLIC_EVM_DELEGATION_ADDRESS "${EXPO_PUBLIC_EVM_DELEGATION_ADDRESS-}"
+
+        # Pricing and indexing
+        put EXPO_PUBLIC_COINGECKO_API_KEY "${EXPO_PUBLIC_COINGECKO_API_KEY-}"
+        put EXPO_PUBLIC_WDK_INDEXER_API_KEY "${EXPO_PUBLIC_WDK_INDEXER_API_KEY-}"
+
+        # Cloud backup — CloudKit
+        put EXPO_PUBLIC_CLOUDKIT_CONTAINER_ID "${EXPO_PUBLIC_CLOUDKIT_CONTAINER_ID-}"
+        put EXPO_PUBLIC_CLOUDKIT_API_TOKEN "${EXPO_PUBLIC_CLOUDKIT_API_TOKEN-}"
+        put EXPO_PUBLIC_CLOUDKIT_CALLBACK_URL "${EXPO_PUBLIC_CLOUDKIT_CALLBACK_URL-}"
+
+        # Cloud backup — Google Drive
+        put EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID "${EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID-}"
+        put EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID "${EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID-}"
+
+        # Names only — never echo the file itself.
+        echo "Wrote .env with $(wc -l < .env | tr -d ' ') variable(s):"
+        cut -d= -f1 .env | sed 's/^/  /'
