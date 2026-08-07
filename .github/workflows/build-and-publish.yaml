@@ -1,10 +1,16 @@
 # Build and Publish — local EAS builds plus store submission for TestFlight and
 # the Play internal track.
 #
-# Staging-only: both build jobs use the "staging" GitHub Environment, which is
-# where every secret below lives. Distribution never goes to a production store
-# listing — iOS uploads land in TestFlight and Android submits to the Play
-# "internal" track (configured in eas.json).
+# Both build jobs run against the "release" GitHub Environment, which is where
+# every secret below lives — including the Apple distribution certificate and
+# provisioning profile. Keeping them in a protected environment (rather than at
+# repository level) is deliberate: environment secrets are only exposed to jobs
+# that declare that environment, so they can be gated behind protection rules.
+# See docs/RELEASE.md.
+#
+# Separately, and despite the environment's name: distribution never goes to a
+# production store listing — iOS uploads land in TestFlight and Android submits
+# to the Play "internal" track (configured in eas.json).
 #
 # No credential cleanup step is needed: the decoded keystore, certs and
 # credentials.json are all untracked, so checkout's default `git clean -ffdx`
@@ -49,7 +55,7 @@ jobs:
     name: Android → Play internal
     if: ${{ inputs.buildTarget == 'android' || inputs.buildTarget == 'stores' }}
     runs-on: app-build-linux-x64
-    environment: staging
+    environment: release
     # Job-level rather than step-level: a composite action's inner steps do not
     # reliably see `env:` set on the `uses:` step that calls it, but they do
     # inherit the job environment. Consumed by ./.github/actions/write-dotenv.
@@ -143,12 +149,17 @@ jobs:
           export NODE_OPTIONS="--max-old-space-size=4096"
           mkdir -p artifacts
           ARTIFACT="$GITHUB_WORKSPACE/artifacts/app-release.aab"
+          # Piped through grep to drop eas-cli-local-build-plugin's very
+          # noisy per-file logging, which otherwise buries the real build
+          # output. `set -o pipefail` above means a failing `eas build`
+          # still fails this step despite the pipe.
           eas build \
             --platform android \
             --profile production \
             --local \
             --non-interactive \
-            --output "$ARTIFACT"
+            --output "$ARTIFACT" \
+            2>&1 | grep -v 'eas-cli-local-build-plugin'
           test -f "$ARTIFACT"
           echo "artifact=$ARTIFACT" >> "$GITHUB_OUTPUT"
 
@@ -180,7 +191,7 @@ jobs:
     name: iOS → TestFlight
     if: ${{ inputs.buildTarget == 'ios' || inputs.buildTarget == 'stores' }}
     runs-on: macos-26-xlarge
-    environment: staging
+    environment: release
     # See the note on the android job — job-level so the write-dotenv composite
     # action's inner steps inherit these.
     env:
@@ -247,12 +258,14 @@ jobs:
           export NODE_OPTIONS="--max-old-space-size=4096"
           mkdir -p artifacts
           ARTIFACT="$GITHUB_WORKSPACE/artifacts/app-release.ipa"
+          # Same log filtering as the Android job — see the note there.
           eas build \
             --platform ios \
             --profile production \
             --local \
             --non-interactive \
-            --output "$ARTIFACT"
+            --output "$ARTIFACT" \
+            2>&1 | grep -v 'eas-cli-local-build-plugin'
           test -f "$ARTIFACT"
           echo "artifact=$ARTIFACT" >> "$GITHUB_OUTPUT"
 
