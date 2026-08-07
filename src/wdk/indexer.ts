@@ -1,5 +1,6 @@
 import { WdkIndexerClient, isTokenTransfersResponse, type Blockchain, type Token } from '@tetherto/wdk-indexer-http';
-import { ASSETS } from './assets';
+import { ASSETS, ASSET_MAP } from './assets';
+import { indexerBlockchainFor } from './chains';
 
 /**
  * Real WDK Indexer API integration — replaces the useWdkTransactions() stub
@@ -40,27 +41,44 @@ function getClient(): WdkIndexerClient | null {
   return client;
 }
 
-/** Maps one of our own assets to the indexer's (blockchain, token) pair —
- * or null if this asset has no transaction-history equivalent in this API
- * (currently just native ETH). */
-function toIndexerParams(assetId: string): { blockchain: Blockchain; token: Token } | null {
+/** The token-level part of the indexer mapping — genuinely per-ASSET, not
+ * per-network (multiple assets can share one network but need different
+ * token strings, and this API has no separate 'usdt0' token type at all —
+ * Arbitrum's USDT0 maps to plain 'usdt'). Kept local rather than folded
+ * into wdk/chains.ts's per-network registry, since that registry's own
+ * `indexerBlockchain` field already supplies the network-level half of
+ * this mapping — see below. */
+function indexerTokenFor(assetId: string): Token | null {
   switch (assetId) {
     case 'bitcoin-native':
-      return { blockchain: 'bitcoin', token: 'btc' };
+      return 'btc';
     // 'ethereum-native' case removed — the asset itself no longer exists
     // in assets.ts (removed for exactly this reason: no 'eth' token type
     // in this API, so its transaction history could never work at all).
     // Left as a comment, not silently deleted, so the reasoning stays
     // visible here even though the dead case is gone.
     case 'usdt-ethereum':
-      return { blockchain: 'sepolia', token: 'usdt' }; // NOT 'ethereum' — see file header
-    case 'usdt0-arbitrum':
-      return { blockchain: 'arbitrum', token: 'usdt' }; // API has no separate 'usdt0' token type
+    case 'usdt0-arbitrum': // API has no separate 'usdt0' token type
     case 'usdt-polygon':
-      return { blockchain: 'polygon', token: 'usdt' };
+      return 'usdt';
     default:
       return null;
   }
+}
+
+/** Maps one of our own assets to the indexer's (blockchain, token) pair —
+ * or null if this asset has no transaction-history equivalent in this API
+ * (currently just native ETH). The blockchain half comes from
+ * wdk/chains.ts's per-network registry (indexerBlockchain) — that's the
+ * SAME source of truth every other per-network fact in the app now uses,
+ * not a separate, independently-maintained copy of the same information. */
+function toIndexerParams(assetId: string): { blockchain: Blockchain; token: Token } | null {
+  const token = indexerTokenFor(assetId);
+  if (!token) return null;
+  const asset = ASSET_MAP.get(assetId);
+  const blockchain = asset ? indexerBlockchainFor(asset.getNetwork()) : null;
+  if (!blockchain) return null;
+  return { blockchain: blockchain as Blockchain, token };
 }
 
 export interface RawTransferWithAsset {

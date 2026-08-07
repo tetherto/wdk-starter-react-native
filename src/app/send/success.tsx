@@ -6,7 +6,7 @@ import { Screen, Text, Button } from '@/components';
 import { useTheme } from '@/theme';
 import { useResponsive } from '@/theme/responsive';
 import { ASSETS } from '@/wdk/assets';
-import { networkDisplayName } from '@/wdk/networks';
+import { networkDisplayName, explorerFor } from '@/wdk/chains';
 
 /**
  * Send — success. Matches the prototype's `send-success` screen: a
@@ -26,13 +26,6 @@ import { networkDisplayName } from '@/wdk/networks';
  * send/review.tsx's onConfirm actually sends — the OLD placeholder this
  * replaces read a mismatched `txId` param that review.tsx never sent.
  */
-const EXPLORER: Record<string, { name: string; url: (hash: string) => string }> = {
-  bitcoin: { name: 'mempool.space', url: (h) => `https://mempool.space/testnet/tx/${h}` },
-  ethereum: { name: 'Etherscan', url: (h) => `https://sepolia.etherscan.io/tx/${h}` },
-  arbitrum: { name: 'Arbiscan', url: (h) => `https://arbiscan.io/tx/${h}` },
-  polygon: { name: 'Polygonscan', url: (h) => `https://polygonscan.com/tx/${h}` },
-};
-
 function formatCryptoAmount(value: string): string {
   if (!value.includes('.')) return value;
   return value.replace(/0+$/, '').replace(/\.$/, '');
@@ -50,7 +43,7 @@ export default function SendSuccess() {
 
   const asset = ASSETS.find((a) => a.getId() === tokenId);
   const network = asset?.getNetwork() ?? 'bitcoin';
-  const explorer = EXPLORER[network];
+  const explorer = explorerFor(network)!;
   const networkName = networkDisplayName(network);
   const shortHash = txHash ? `${txHash.slice(0, 6)}...${txHash.slice(-4)}` : '';
 
