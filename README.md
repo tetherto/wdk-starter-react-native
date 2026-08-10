@@ -185,7 +185,7 @@ sync by hand:
 | Deep-link / OAuth-redirect scheme | *(edit `app.json`'s `scheme` directly — not yet env-driven)* | If you have this app *and* an unmodified clone of it both installed on the same device, an unchanged scheme makes deep links ambiguous between them — real, not theoretical, if you're actively developing against your own fork alongside a reference install |
 
 Current default identity, if you want to know what you're replacing:
-bundle ID / package name `io.tether.wdk.starter.react.native`, CloudKit
+bundle ID / package name `io.tether.wdk.starter.reactnative`, CloudKit
 container `iCloud.io.tether.wdkshowcase` (intentionally *not* derived from
 the bundle ID — Apple permits this, and this app deliberately keeps an
 older container name; see `docs/ARCHITECTURE.md`).

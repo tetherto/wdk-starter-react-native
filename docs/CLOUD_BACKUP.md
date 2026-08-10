@@ -108,7 +108,7 @@ passphrase variable — see above.
    **Certificates, Identifiers & Profiles**
 2. **Identifiers** → **+**
 3. **App IDs** → **App** → Continue
-4. Description: `WDK Starter Wallet`, Bundle ID: `io.tether.wdk.starter.react.native`
+4. Description: `WDK Starter Wallet`, Bundle ID: `io.tether.wdk.starter.reactnative`
    (must exactly match `expo.ios.bundleIdentifier` in `app.json` — if
    you've forked this app under your own bundle ID, use that instead)
 5. Under **Capabilities**, check **iCloud** → **Edit**
@@ -220,7 +220,7 @@ testing a release build.
    **New Project** → name it → Create
 2. **APIs & Services → Credentials → + Create Credentials → OAuth Client ID**
 3. Application type: **Android**
-4. Package name: `io.tether.wdk.starter.react.native` (must exactly match
+4. Package name: `io.tether.wdk.starter.reactnative` (must exactly match
    `expo.android.package` in `app.json`)
 5. SHA-1: paste from Step 1
 6. **Create**
@@ -278,7 +278,7 @@ Back in Google Cloud Console, same project as above:
 
 1. **+ Create Credentials → OAuth Client ID**
 2. Application type: **iOS**
-3. Bundle ID: `io.tether.wdk.starter.react.native` (your iOS bundle
+3. Bundle ID: `io.tether.wdk.starter.reactnative` (your iOS bundle
    identifier — note this is a **bundle ID**, not a SHA-1; iOS clients
    work differently from Android ones)
 4. **Create**
