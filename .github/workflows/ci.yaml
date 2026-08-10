@@ -1,0 +1,99 @@
+# CI — fast, secret-free checks that gate every pull request.
+#
+# Deliberately does NOT build the app. Build and Publish (build-and-publish.yaml)
+# owns native builds; it needs signing credentials, self-hosted/macOS runners and
+# tens of minutes. Everything here runs on ubuntu-latest in a couple of minutes
+# and needs no secrets, so it is safe to run on any pull request.
+#
+# docs/CONTRIBUTING.md asks contributors to run `npm run typecheck` before a PR.
+# This workflow is what makes that instruction enforceable rather than optional.
+#
+# Not included, and why:
+#   - `npm run lint` (`expo lint`): no ESLint config is committed and neither
+#     `eslint` nor `eslint-config-expo` is in devDependencies, so the first run
+#     triggers Expo's interactive setup. It would hang or fail here. Wire the
+#     config up first, then add a job.
+#   - `prettier --check`: prettier is installed but has no config file, so it
+#     falls back to its own defaults rather than prettier-config-standard. The
+#     tree does not currently match those defaults; enabling this needs a
+#     repo-wide reformat first, which is a separate decision.
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+# Opposite of Build and Publish's queue-don't-cancel policy: these checks have no
+# side effects, so superseding an in-flight run on a force-push is free.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  EXPO_NO_TELEMETRY: "1"
+
+jobs:
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+
+      # Node/npm setup is inlined rather than reusing .github/actions/setup-eas,
+      # which also installs the EAS CLI — a large download this job has no use
+      # for. Keep the Node version and the npm floor in sync with that action.
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # docs/ENVIRONMENT.md: npm 10 silently drops packages from git-dependency
+      # trees with no error, and this project has three git dependencies.
+      # Node 22 ships npm 10.x, hence the explicit upgrade.
+      - name: Upgrade npm
+        run: |
+          npm install --global npm@^11
+          npm --version
+
+      - name: Install dependencies
+        # `--ignore-scripts` skips postinstall → `wdk-worklet-bundler generate`,
+        # which spends minutes producing an 11 MB worklet bundle that tsc never
+        # reads: src/app/_layout.tsx's import of the bundle is satisfied by the
+        # wildcard ambient declaration in src/wdk/bundle.d.ts, so typechecking
+        # succeeds with .wdk-bundle/ absent. Verified, not assumed.
+        #
+        # `npm install` rather than `npm ci` — npm/cli#8726 makes `npm ci` reject
+        # a lockfile that `npm install` itself just wrote. See docs/ENVIRONMENT.md.
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Typecheck
+        run: npm run typecheck
+
+  actionlint:
+    name: Lint workflows
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+
+      # Pinned to an exact release rather than tracking main, so a change
+      # upstream can never alter what runs against this repository. The
+      # self-hosted runner labels this project uses are declared in
+      # .github/actionlint.yaml, which actionlint picks up automatically.
+      - name: Run actionlint
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+        run: |
+          bash <(curl -fsSL "https://raw.githubusercontent.com/rhysd/actionlint/v${ACTIONLINT_VERSION}/scripts/download-actionlint.bash") "${ACTIONLINT_VERSION}"
+          ./actionlint -color
