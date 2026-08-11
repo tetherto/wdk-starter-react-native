@@ -1,0 +1,25 @@
+# Keeps the SHA-pinned actions in .github/workflows and .github/actions current.
+#
+# The pins exist because those steps run in the same job as the decoded signing
+# credentials (see the header of build-and-publish.yaml). A pin nobody refreshes
+# is just an old version, so this file is the other half of that decision — it
+# turns each upgrade into a reviewable PR instead of a silent tag move.
+#
+# Two directory entries, deliberately: for the github-actions ecosystem
+# Dependabot only scans /.github/workflows plus an action.yml in the repository
+# *root*. Composite actions under .github/actions/ are invisible without an
+# explicit entry, and setup-eas pins actions/setup-node.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directories:
+      - "/"
+      - "/.github/actions/*"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+    groups:
+      github-actions:
+        patterns:
+          - "*"

@@ -66,8 +66,11 @@ All secrets live in the **`release`** GitHub Environment (both build jobs declar
 | `APPLE_API_ISSUER_ID` | plain | ASC API issuer ID. |
 | `APPLE_TEAM_ID` | plain | Apple Developer team ID. |
 
-`credentials.json` is never committed — it exists only as `CREDENTIALS_JSON`. Its shape, with the
-paths the workflow actually writes:
+`credentials.json` is never committed — it exists only as `CREDENTIALS_JSON`. It and
+`google-service-account.json` are both in `.gitignore`, which matters because this repo is public and
+the second one holds a Play Developer API key. If you create either by hand for a local
+`eas build`/`eas submit`, that is what stops a stray `git add -A` from publishing it. Its shape, with
+the paths the workflow actually writes:
 
 ```json
 {
@@ -164,10 +167,18 @@ Not yet done — the workflow will not go green until these are complete.
    `io.tether.wdk.starter.reactnative`). Without it Google Sign-In fails with
    `DEVELOPER_ERROR (10)` in release builds only — debug builds keep working. See
    [CLOUD_BACKUP.md](CLOUD_BACKUP.md).
-5. **Confirm runner access.** The Android job targets the self-hosted `app-build-linux-x64` label and
-   iOS targets `macos-26-xlarge`. This repository is public, so confirm with whoever owns the runner
-   that pointing it at a public repo is acceptable, and that large macOS minutes are budgeted.
-   Swapping to `ubuntu-latest` / `macos-latest` is a two-line change if not.
+5. **Confirm runner access, and that the runner is dedicated.** The Android job targets the
+   self-hosted `app-build-linux-x64` label and iOS targets `macos-26-xlarge`. This repository is
+   public, so confirm with whoever owns the runner that pointing it at a public repo is acceptable,
+   and that large macOS minutes are budgeted. Swapping to `ubuntu-latest` / `macos-latest` is a
+   two-line change if not.
+
+   Separately, confirm that `app-build-linux-x64` is **dedicated to this repository**. Unlike the
+   GitHub-hosted iOS runner it is not destroyed after the job, so any other repo sharing that label
+   runs jobs on the same filesystem this one decodes the release keystore onto. The Android job's
+   final *Cleanup credentials* step narrows that window but does not close it — a job interleaved on
+   a shared runner would still see the workspace mid-build. GitHub's own guidance is not to use
+   self-hosted runners with public repositories for this reason.
 
 ## Verifying a release
 
