@@ -46,6 +46,11 @@ app-example
 .env
 .npmrc
 
+# local signing credentials — see docs/RELEASE.md. Written by the release
+# workflow and created by hand for local `eas build`; never commit either.
+credentials.json
+google-service-account.json
+
 # E2E tests
 test/apps/
 
