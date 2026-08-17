@@ -45,8 +45,23 @@ export function AutoLockOnBackground() {
         prev !== 'background' &&
         !suppressed
       ) {
-        lock();
-        clearPasswordSession();
+        // Genuinely must await now, not a style preference: wm.lock() (via
+        // useWalletActions' `lock`) shares an operation mutex with
+        // unlock/createWallet/restoreWallet/switchWallet as of
+        // wdk-react-native-core PR #77. Firing lock() without awaiting it
+        // (the old behavior here) left a real window where a fast
+        // background->foreground->unlock sequence could call unlock()
+        // while lock() was still mid-flight and holding the mutex — that
+        // PR's own notes are explicit lock() "must be awaited before
+        // calling another lifecycle method." clearPasswordSession() is
+        // deliberately sequenced to run after lock() actually resolves,
+        // not just after it's called.
+        // .catch() here, not left to surface as an unhandled rejection —
+        // this fires from an AppState listener, nothing downstream is
+        // awaiting this call or positioned to catch a rejection itself.
+        lock().then(clearPasswordSession).catch((e) => {
+          console.warn('[AutoLockOnBackground] lock() failed:', e);
+        });
       }
     });
     return () => sub.remove();

@@ -70,9 +70,16 @@ reaches WDK).
 
 Real bugs found and fixed here, worth knowing before you touch this code:
 
-1. **`lock()` doesn't produce a distinct `LOCKED` status** — see
-   `WDK_INTEGRATION.md`. `useWdkSession.ts` disambiguates using the
-   persisted wallets list.
+1. **`lock()` and the `NO_WALLET` misreport** — see `WDK_INTEGRATION.md`.
+   On the pre-#77 WDK version, `lock()` did not produce a distinct `LOCKED`
+   status; WDK reported `NO_WALLET`, so `useWdkSession.ts` disambiguates
+   using the persisted wallets list. As of `wdk-react-native-core` PR #77
+   (tetherto/wdk-react-native-core#77) this is fixed upstream, but the
+   disambiguation is deliberately kept as a safety net until verified on a
+   real device — don't remove it yet. Note also from that PR: `lock()` is
+   now async and shares an operation mutex, so `AutoLockOnBackground` must
+   **await** it (`lock().then(clearPasswordSession)`) rather than fire it
+   and clear the password session in parallel.
 2. **`WdkSessionGate` must only redirect on a *genuine* `unlocked → locked`
    transition**, not any arrival at `locked`. Wallet creation itself
    briefly passes through a locked-looking state as a normal part of its
