@@ -6,8 +6,7 @@ import { Screen, Text, EmptyState, LoadingState, ErrorState, AssetIcon, Card, Bu
 import { useTheme } from '@/theme';
 import { useResponsive } from '@/theme/responsive';
 import { useWdkTransactions } from '@/wdk/hooks/useWalletData';
-import { networkColor } from '@/wdk/hooks/useWalletData';
-import { networkDisplayName } from '@/wdk/networks';
+import { networkColorFor, networkDisplayName, ALL_NETWORKS } from '@/wdk/chains';
 import { ASSETS } from '@/wdk/assets';
 import type { Transaction, ChainId } from '@/domain/models';
 
@@ -35,12 +34,12 @@ type TypeFilter = 'all' | 'sent' | 'received';
 const LOGO_ASPECT_RATIO = 2.7;
 const LOGO_MAX_WIDTH = 360;
 
+// Derived from the registry's own network list, not hardcoded one key at
+// a time — adding or removing a network in wdk/chains.ts now updates this
+// filter automatically, no separate edit needed here.
 const CHAIN_OPTIONS: { key: ChainFilter; label: string }[] = [
   { key: 'all', label: 'All chains' },
-  { key: 'ethereum', label: networkDisplayName('ethereum') },
-  { key: 'arbitrum', label: networkDisplayName('arbitrum') },
-  { key: 'polygon', label: networkDisplayName('polygon') },
-  { key: 'bitcoin', label: networkDisplayName('bitcoin') },
+  ...ALL_NETWORKS.map((network) => ({ key: network as ChainFilter, label: networkDisplayName(network) })),
 ];
 const TYPE_OPTIONS: { key: TypeFilter; label: string }[] = [
   { key: 'all', label: 'All types' },
@@ -369,7 +368,7 @@ function TxRow({ tx, onPress }: { tx: Transaction; onPress: () => void }) {
   const isOut = tx.direction === 'out';
   const verb = isOut ? 'Sent' : 'Received';
   const chainName = networkDisplayName(tx.token.chain);
-  const chainColor = networkColor[tx.token.chain] ?? theme.colors.textSecondary;
+  const chainColor = networkColorFor(tx.token.chain) ?? theme.colors.textSecondary;
 
   return (
     <Pressable

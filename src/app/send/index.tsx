@@ -5,7 +5,7 @@ import { Screen, ScreenHeader, Text, AssetIcon, LoadingState, EmptyState } from 
 import { useTheme } from '@/theme';
 import { useResponsive } from '@/theme/responsive';
 import { useWdkBalances } from '@/wdk/hooks/useWalletData';
-import { networkDisplayName } from '@/wdk/networks';
+import { networkDisplayName } from '@/wdk/chains';
 
 /**
  * Send — pick token. Matches the prototype's `send-pick` screen exactly: a
