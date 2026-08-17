@@ -48,7 +48,13 @@ export function useWalletActions() {
         await wm.deleteWallet(DEFAULT_WALLET_ID);
         await wm.restoreWallet(trimmed, DEFAULT_WALLET_ID);
       }
-      wm.setActiveWalletId(DEFAULT_WALLET_ID);
+      // setActiveWalletId() call removed — it no longer exists in
+      // wdk-react-native-core PR #77 (tetherto/wdk-react-native-core#77).
+      // It was already redundant even before that: unlock() below sets
+      // the active identity correctly as part of its own real work, per
+      // that PR's own guidance ("unlock/createWallet/restoreWallet/
+      // switchWallet manage identity correctly ... and should be used
+      // instead").
       await wm.unlock(DEFAULT_WALLET_ID);
     },
 
@@ -57,8 +63,21 @@ export function useWalletActions() {
       await wm.unlock(DEFAULT_WALLET_ID);
     },
 
-    /** Lock the wallet, clearing sensitive data from memory. */
-    lock: (): void => wm.lock(),
+    /**
+     * Lock the wallet, clearing sensitive data from memory.
+     *
+     * MUST be awaited by every caller as of wdk-react-native-core PR #77:
+     * wm.lock() now returns Promise<void> (previously void) and shares an
+     * operation mutex with unlock/createWallet/restoreWallet/switchWallet.
+     * The PR's own breaking-changes note is explicit that it "must be
+     * awaited before calling another lifecycle method" — silently
+     * dropping the promise here (as the old `(): void => wm.lock()`
+     * did) would let a caller fire off another lifecycle call while this
+     * one is still mid-flight, which the shared mutex is specifically
+     * designed to reject. See AutoLockOnBackground.tsx, the one real
+     * caller, which was fixed alongside this for the same reason.
+     */
+    lock: (): Promise<void> => wm.lock(),
 
     /** Reveal the stored seed phrase (WDK prompts biometrics). */
     getMnemonic: (): Promise<string | null> => wm.getMnemonic(DEFAULT_WALLET_ID),
