@@ -56,12 +56,20 @@ export function AutoLockOnBackground() {
         // calling another lifecycle method." clearPasswordSession() is
         // deliberately sequenced to run after lock() actually resolves,
         // not just after it's called.
-        // .catch() here, not left to surface as an unhandled rejection —
-        // this fires from an AppState listener, nothing downstream is
-        // awaiting this call or positioned to catch a rejection itself.
-        lock().then(clearPasswordSession).catch((e) => {
-          console.warn('[AutoLockOnBackground] lock() failed:', e);
-        });
+        // .finally() here, not .then().catch(): clearPasswordSession must
+        // run whether lock() resolves OR rejects. If lock() throws (e.g.
+        // worklet call fails) and we only clear on the success path, the
+        // password stays resident in memory while the app sits in the
+        // background — exactly the state this component exists to avoid.
+        // The rejection is still logged (not left to surface as an
+        // unhandled rejection — this fires from an AppState listener,
+        // nothing downstream is awaiting this call or positioned to catch
+        // a rejection itself), but clearing the password is unconditional.
+        lock()
+          .catch((e) => {
+            console.warn('[AutoLockOnBackground] lock() failed:', e);
+          })
+          .finally(clearPasswordSession);
       }
     });
     return () => sub.remove();

@@ -267,10 +267,13 @@ The PR's breaking-changes note is explicit that it **must be awaited before
 calling another lifecycle method**. `useWalletActions.lock()` was changed
 from `(): void => wm.lock()` to `(): Promise<void> => wm.lock()`
 accordingly, and its one real caller, `AutoLockOnBackground.tsx`, now
-sequences `lock().then(clearPasswordSession).catch(...)` instead of firing
-both fire-and-forget — otherwise a fast background → foreground → unlock
-sequence could call `unlock()` while `lock()` is still mid-flight and
-holding the mutex.
+sequences `lock().catch(...).finally(clearPasswordSession)` instead of
+firing both fire-and-forget — otherwise a fast background → foreground →
+unlock sequence could call `unlock()` while `lock()` is still mid-flight
+and holding the mutex. `.finally()` rather than `.then()` matters here too:
+it runs `clearPasswordSession()` whether `lock()` resolves or rejects, so a
+failed `lock()` can't leave the password sitting in memory — see
+`SECURITY.md` bug #5.
 
 **`setActiveWalletId()` has been removed** from the API in the same PR.
 `useWalletActions.importWallet()` no longer calls it — the call was already

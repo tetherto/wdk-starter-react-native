@@ -140,9 +140,15 @@ export interface NetworkDefinition {
  * Tron is intentionally absent: gasfree.io is mid-migration to a new
  * testnet API version, so it's on hold rather than half-supported.
  */
-export const NETWORKS: NetworkDefinition[] = [
+export const NETWORKS = [
   {
-    network: 'bitcoin',
+    // `as const` here (and on each network below) is what lets NetworkId
+    // and ALL_NETWORKS, further down, be a real literal union derived from
+    // this list instead of widening to plain `string` — see both. Without
+    // it, downstream filters (e.g. Activity's chain filter) would have no
+    // way to type themselves off this registry and would fall back to a
+    // hand-copied literal list that can silently drift from what's here.
+    network: 'bitcoin' as const,
     kind: 'bitcoin',
     provider: process.env.EXPO_PUBLIC_BTC_PROVIDER,
     // Kept at 'bitcoin', exactly as before this file existed — see the
@@ -173,7 +179,7 @@ export const NETWORKS: NetworkDefinition[] = [
   },
 
   {
-    network: 'ethereum',
+    network: 'ethereum' as const,
     kind: 'evm',
     evm: {
       provider: process.env.EXPO_PUBLIC_EVM_ETHEREUM_PROVIDER,
@@ -214,7 +220,7 @@ export const NETWORKS: NetworkDefinition[] = [
   },
 
   {
-    network: 'arbitrum',
+    network: 'arbitrum' as const,
     kind: 'evm',
     evm: {
       provider: process.env.EXPO_PUBLIC_EVM_ARBITRUM_PROVIDER,
@@ -249,7 +255,7 @@ export const NETWORKS: NetworkDefinition[] = [
   },
 
   {
-    network: 'polygon',
+    network: 'polygon' as const,
     kind: 'evm',
     evm: {
       provider: process.env.EXPO_PUBLIC_EVM_POLYGON_PROVIDER,
@@ -279,7 +285,13 @@ export const NETWORKS: NetworkDefinition[] = [
       },
     ],
   },
-];
+  // `satisfies` (not a `: NetworkDefinition[]` annotation) is what keeps
+  // each entry's `as const` network literal intact — an explicit array
+  // type annotation here would force every element back to the wide
+  // `NetworkDefinition` shape (network: string) before NetworkId below
+  // ever sees it. `satisfies` still fully validates every entry against
+  // NetworkDefinition; it just doesn't erase the extra literal precision.
+] satisfies NetworkDefinition[];
 
 // ══════════════════════════════════════════════════════════════════════
 //  Everything below is derived from NETWORKS above. You shouldn't need to
@@ -290,9 +302,15 @@ const BY_KEY: Record<string, NetworkDefinition> = Object.fromEntries(
   NETWORKS.map((n) => [n.network, n]),
 );
 
+/** The literal union of every configured network key — 'bitcoin' |
+ * 'ethereum' | 'arbitrum' | 'polygon' today — derived from NETWORKS rather
+ * than hand-copied. Adding or removing a NETWORKS entry updates this
+ * automatically; nothing here needs editing when that list changes. */
+export type NetworkId = (typeof NETWORKS)[number]['network'];
+
 /** Every network key the app supports, in the order defined above. Network
  * pickers and filter lists derive from this rather than hardcoding keys. */
-export const ALL_NETWORKS: string[] = NETWORKS.map((n) => n.network);
+export const ALL_NETWORKS: NetworkId[] = NETWORKS.map((n) => n.network);
 
 /** Kept as a record for call sites that want a whole definition. */
 export const CHAINS = BY_KEY;
