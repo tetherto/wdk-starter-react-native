@@ -17,4 +17,5 @@ export {
   type NetworkDefinition,
   type NetworkKind,
   type NetworkAssetDefinition,
+  type NetworkId,
 } from './networks';

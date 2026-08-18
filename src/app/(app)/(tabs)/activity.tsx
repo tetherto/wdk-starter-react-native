@@ -7,6 +7,7 @@ import { useTheme } from '@/theme';
 import { useResponsive } from '@/theme/responsive';
 import { useWdkTransactions } from '@/wdk/hooks/useWalletData';
 import { networkColorFor, networkDisplayName, ALL_NETWORKS } from '@/wdk/chains';
+import type { NetworkId } from '@/wdk/chains';
 import { ASSETS } from '@/wdk/assets';
 import type { Transaction, ChainId } from '@/domain/models';
 
@@ -22,7 +23,11 @@ import type { Transaction, ChainId } from '@/domain/models';
  * registered indexer API key to return anything.
  */
 
-type ChainFilter = 'all' | 'ethereum' | 'arbitrum' | 'polygon' | 'bitcoin';
+// Derived from the registry's NetworkId (itself derived from NETWORKS in
+// wdk/networks.ts), not a hand-copied list of chain names — adding or
+// removing a network there now updates this filter's type automatically,
+// with no separate literal list here to fall out of sync.
+type ChainFilter = 'all' | NetworkId;
 type TokenFilter = 'all' | string; // lowercased symbol, e.g. 'usdt', 'usdt0', 'eth', 'btc'
 type TypeFilter = 'all' | 'sent' | 'received';
 
@@ -34,12 +39,9 @@ type TypeFilter = 'all' | 'sent' | 'received';
 const LOGO_ASPECT_RATIO = 2.7;
 const LOGO_MAX_WIDTH = 360;
 
-// Derived from the registry's own network list, not hardcoded one key at
-// a time — adding or removing a network in wdk/chains.ts now updates this
-// filter automatically, no separate edit needed here.
 const CHAIN_OPTIONS: { key: ChainFilter; label: string }[] = [
   { key: 'all', label: 'All chains' },
-  ...ALL_NETWORKS.map((network) => ({ key: network as ChainFilter, label: networkDisplayName(network) })),
+  ...ALL_NETWORKS.map((network) => ({ key: network, label: networkDisplayName(network) })),
 ];
 const TYPE_OPTIONS: { key: TypeFilter; label: string }[] = [
   { key: 'all', label: 'All types' },
