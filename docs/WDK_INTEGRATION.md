@@ -54,6 +54,18 @@ crash**, before any screen calls a single WDK function.
 exposes the worklet's lifecycle status:
 `INITIALIZING → NO_WALLET | LOCKED | READY | ERROR`.
 
+**`useWdkApp()` no longer exposes a `retry()` function** as of
+`wdk-react-native-core` PR #77 (`npc/remove-auto-init-flag`,
+tetherto/wdk-react-native-core#77). The upstream guidance for the removal
+is to re-call whichever specific lifecycle method failed
+(`unlock`/`createWallet`/`restoreWallet`) rather than a generic app-level
+retry. The one consumer here — `app/index.tsx`'s error state — has no such
+method to re-call (it renders when worklet/app-level init itself failed,
+before any lifecycle method ran), so it now shows a "close and reopen"
+message with no retry button rather than wiring a button to a fabricated
+action. A real retry path would mean giving `WdkAppProvider` a remount key
+at the layout level — a separate, larger change.
+
 **A real, non-obvious distinction that matters elsewhere in this app:**
 `useWalletManager().status` (`'LOCKED' | 'UNLOCKED' | 'NO_WALLET' |
 'LOADING' | 'ERROR'`) and `useWdkApp().state.status` (above) are **two
@@ -247,14 +259,41 @@ genuine uncertainty rather than round it up to "confirmed."
 `deleteWallet`, `getSeedAndEntropyFromMnemonic` (used for cloud backup —
 see `CLOUD_BACKUP.md`).
 
-**A real, non-obvious bug worth knowing before you touch this area again:**
-`lock()` does **not** produce a distinct `LOCKED` status. It clears the
-*active* wallet pointer, and WDK reports `NO_WALLET` — the identical raw
-status to "no wallet was ever created." Trusting raw status alone after a
-lock event would incorrectly send an existing user back through onboarding.
-`useWdkSession.ts` disambiguates this using the *persisted* wallets list
-(`useWalletManager().wallets`), which survives `lock()` clearing the active
-pointer. If you ever rewrite this hook, preserve that disambiguation.
+**`lock()` is now async and shares an operation mutex** (as of
+`wdk-react-native-core` PR #77, tetherto/wdk-react-native-core#77).
+`wm.lock()` returns `Promise<void>` (previously `void`) and shares a single
+operation mutex with `unlock`/`createWallet`/`restoreWallet`/`switchWallet`.
+The PR's breaking-changes note is explicit that it **must be awaited before
+calling another lifecycle method**. `useWalletActions.lock()` was changed
+from `(): void => wm.lock()` to `(): Promise<void> => wm.lock()`
+accordingly, and its one real caller, `AutoLockOnBackground.tsx`, now
+sequences `lock().catch(...).finally(clearPasswordSession)` instead of
+firing both fire-and-forget — otherwise a fast background → foreground →
+unlock sequence could call `unlock()` while `lock()` is still mid-flight
+and holding the mutex. `.finally()` rather than `.then()` matters here too:
+it runs `clearPasswordSession()` whether `lock()` resolves or rejects, so a
+failed `lock()` can't leave the password sitting in memory — see
+`SECURITY.md` bug #5.
+
+**`setActiveWalletId()` has been removed** from the API in the same PR.
+`useWalletActions.importWallet()` no longer calls it — the call was already
+redundant, since `unlock()` (and `createWallet`/`restoreWallet`/
+`switchWallet`) set the active identity correctly as part of their own work.
+
+**The historical `lock()` → `NO_WALLET` misreport, and why the workaround
+stays for now:** on the pre-#77 version, `lock()` (no id) did **not**
+produce a distinct `LOCKED` status — it cleared the *active* wallet pointer
+and WDK reported `NO_WALLET`, the identical raw status to "no wallet was
+ever created." Trusting raw status alone after a lock would have sent an
+existing user back through onboarding. PR #77 states this is fixed upstream
+(`NO_WALLET` no longer misreports right after `lock()` when a wallet is
+known to exist). `useWdkSession.ts` nonetheless still disambiguates using
+the *persisted* wallets list (`useWalletManager().wallets`, which survives
+`lock()` clearing the active pointer) — deliberately kept as a safety net,
+not deleted, until the new behavior has been exercised end to end on a real
+device (lock → background → foreground → confirm `'locked'`, not
+`'noWallet'`). Once verified, this block can likely collapse to a plain
+switch on `state.status`. Do not remove it before that verification.
 
 ## Version pins — the short version
 

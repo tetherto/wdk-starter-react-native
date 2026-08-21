@@ -2,8 +2,8 @@ import React from 'react';
 import { View, Image } from 'react-native';
 import { useTheme } from '@/theme';
 import { useResponsive } from '@/theme/responsive';
-import { CHAIN_ICONS, TOKEN_ICONS } from '@/theme/assetIcons';
-import { networkColor } from '@/wdk/hooks/useWalletData';
+import { TOKEN_ICONS } from '@/theme/assetIcons';
+import { CHAINS, networkColorFor } from '@/wdk/chains';
 
 interface AssetIconProps {
   symbol: string;
@@ -29,7 +29,7 @@ export function AssetIcon({ symbol, network, size, showChainBadge }: AssetIconPr
   const iconSize = size ?? moderateScale(38);
 
   const token = TOKEN_ICONS[symbol];
-  const chain = CHAIN_ICONS[network];
+  const chain = CHAINS[network]?.icon;
 
   // Fallback for anything not yet in the icon map — keeps the app from
   // crashing on an unmapped asset, rendering a plain colored circle instead
@@ -41,7 +41,7 @@ export function AssetIcon({ symbol, network, size, showChainBadge }: AssetIconPr
           width: iconSize,
           height: iconSize,
           borderRadius: iconSize / 2,
-          backgroundColor: networkColor[network] ?? theme.colors.textSecondary,
+          backgroundColor: networkColorFor(network) ?? theme.colors.textSecondary,
         }}
       />
     );
@@ -55,7 +55,7 @@ export function AssetIcon({ symbol, network, size, showChainBadge }: AssetIconPr
         width: iconSize,
         height: iconSize,
         borderRadius: iconSize / 2,
-        backgroundColor: networkColor[network] ?? theme.colors.textSecondary,
+        backgroundColor: networkColorFor(network) ?? theme.colors.textSecondary,
         alignItems: 'center',
         justifyContent: 'center',
       }}
@@ -92,7 +92,7 @@ export function AssetIcon({ symbol, network, size, showChainBadge }: AssetIconPr
           width: badgeSize,
           height: badgeSize,
           borderRadius: badgeSize / 2,
-          backgroundColor: chain.hasBackground ? 'transparent' : (networkColor[network] ?? theme.colors.textSecondary),
+          backgroundColor: chain.hasBackground ? 'transparent' : (networkColorFor(network) ?? theme.colors.textSecondary),
           borderWidth: chain.hasBackground ? 0 : badgeBorderWidth,
           borderColor: theme.colors.bgPrimary,
           alignItems: 'center',

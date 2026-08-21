@@ -23,25 +23,23 @@ import type { Account, TokenBalance, ChainId, Transaction } from '@/domain/model
  * useWdkAddressForAccountNetwork) rather than assuming "active".
  */
 
-/** Brand color per chain, for the token glyph. Indexed by ChainId. */
-export const networkColor: Record<string, string> = {
-  bitcoin: '#F7931A',
-  ethereum: '#627EEA',
-  arbitrum: '#28A0F0',
-  polygon: '#8247E5',
-  sepolia: '#CFCFEA', // muted variant of Ethereum blue, signals "testnet"
-  tron: '#FF060A',
-};
-
+// networkColor moved to wdk/chains.ts (as networkColorFor()), as part of
+// unifying every genuinely UI-facing per-network fact into one registry —
+// see that file's header comment. The two extra entries this map used to
+// carry ('sepolia', 'tron') didn't correspond to any real internal
+// network key this app actually uses (our key is always 'ethereum', never
+// literally 'sepolia'; Tron isn't compiled into the worklet at all) —
+// they weren't reachable, so they weren't carried forward.
+//
+// This used to switch on `network` and fall back to 'bitcoin' for any
+// value it didn't explicitly list — a real bug: an asset on a network
+// added to wdk/networks.ts but not also added to this switch would get
+// silently mislabeled as Bitcoin here instead of surfacing as itself (or
+// as a visible mismatch). `asset.getNetwork()` already returns this app's
+// own network key (see wdk/networks.ts), so passing it straight through
+// is correct as-is, with no translation or fallback needed.
 function networkToChain(network: string): ChainId {
-  switch (network) {
-    case 'ethereum': return 'ethereum';
-    case 'arbitrum': return 'arbitrum';
-    case 'polygon': return 'polygon';
-    case 'sepolia': return 'sepolia';
-    case 'tron': return 'tron';
-    default: return 'bitcoin';
-  }
+  return network as ChainId;
 }
 
 function toDisplay(baseUnits: string | null | undefined, decimals: number): string {

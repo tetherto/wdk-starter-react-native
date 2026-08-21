@@ -60,7 +60,7 @@ screen immediately after password entry (cloud-backup) reuse it without a
 second prompt. It's cleared the instant the wallet locks
 (`AutoLockOnBackground`) and is simply empty again after any cold start.
 
-## The lock/unlock chain, and three real bugs it took to get right
+## The lock/unlock chain, and real bugs it took to get right
 
 Three components work together: `AutoLockOnBackground` (calls `lock()` on
 real backgrounding), `WdkSessionGate` (watches for a lock and redirects to
@@ -70,9 +70,16 @@ reaches WDK).
 
 Real bugs found and fixed here, worth knowing before you touch this code:
 
-1. **`lock()` doesn't produce a distinct `LOCKED` status** — see
-   `WDK_INTEGRATION.md`. `useWdkSession.ts` disambiguates using the
-   persisted wallets list.
+1. **`lock()` and the `NO_WALLET` misreport** — see `WDK_INTEGRATION.md`.
+   On the pre-#77 WDK version, `lock()` did not produce a distinct `LOCKED`
+   status; WDK reported `NO_WALLET`, so `useWdkSession.ts` disambiguates
+   using the persisted wallets list. As of `wdk-react-native-core` PR #77
+   (tetherto/wdk-react-native-core#77) this is fixed upstream, but the
+   disambiguation is deliberately kept as a safety net until verified on a
+   real device — don't remove it yet. Note also from that PR: `lock()` is
+   now async and shares an operation mutex, so `AutoLockOnBackground` must
+   **await** it (`lock().catch(...).finally(clearPasswordSession)`) rather
+   than fire it and clear the password session in parallel.
 2. **`WdkSessionGate` must only redirect on a *genuine* `unlocked → locked`
    transition**, not any arrival at `locked`. Wallet creation itself
    briefly passes through a locked-looking state as a normal part of its
@@ -99,6 +106,16 @@ Real bugs found and fixed here, worth knowing before you touch this code:
    WebView-based sign-in does **not** need this — it's a React Native
    `<Modal>` inside the app's own Activity, so it never causes a real
    `AppState` transition in the first place.
+5. **A failed `lock()` used to leave the password resident in memory.**
+   The original sequencing was `lock().then(clearPasswordSession).catch(...)`
+   — `clearPasswordSession()` only ran on the success path, so if `lock()`
+   itself rejected (e.g. the worklet call failed), the in-memory password
+   session (`state/passwordSession.ts`) was never cleared, and stayed
+   populated for as long as the app sat in the background. Fixed by
+   restructuring to `lock().catch(...).finally(clearPasswordSession)` —
+   `.finally()` runs regardless of whether `lock()` resolved or rejected,
+   so the password is cleared unconditionally; the `.catch()` before it
+   still logs the failure so it isn't left as an unhandled rejection.
 
 ## iOS Keychain survives app deletion — a platform quirk, not a bug
 

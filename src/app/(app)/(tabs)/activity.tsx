@@ -6,8 +6,8 @@ import { Screen, Text, EmptyState, LoadingState, ErrorState, AssetIcon, Card, Bu
 import { useTheme } from '@/theme';
 import { useResponsive } from '@/theme/responsive';
 import { useWdkTransactions } from '@/wdk/hooks/useWalletData';
-import { networkColor } from '@/wdk/hooks/useWalletData';
-import { networkDisplayName } from '@/wdk/networks';
+import { networkColorFor, networkDisplayName, ALL_NETWORKS } from '@/wdk/chains';
+import type { NetworkId } from '@/wdk/chains';
 import { ASSETS } from '@/wdk/assets';
 import type { Transaction, ChainId } from '@/domain/models';
 
@@ -23,7 +23,11 @@ import type { Transaction, ChainId } from '@/domain/models';
  * registered indexer API key to return anything.
  */
 
-type ChainFilter = 'all' | 'ethereum' | 'arbitrum' | 'polygon' | 'bitcoin';
+// Derived from the registry's NetworkId (itself derived from NETWORKS in
+// wdk/networks.ts), not a hand-copied list of chain names — adding or
+// removing a network there now updates this filter's type automatically,
+// with no separate literal list here to fall out of sync.
+type ChainFilter = 'all' | NetworkId;
 type TokenFilter = 'all' | string; // lowercased symbol, e.g. 'usdt', 'usdt0', 'eth', 'btc'
 type TypeFilter = 'all' | 'sent' | 'received';
 
@@ -37,10 +41,7 @@ const LOGO_MAX_WIDTH = 360;
 
 const CHAIN_OPTIONS: { key: ChainFilter; label: string }[] = [
   { key: 'all', label: 'All chains' },
-  { key: 'ethereum', label: networkDisplayName('ethereum') },
-  { key: 'arbitrum', label: networkDisplayName('arbitrum') },
-  { key: 'polygon', label: networkDisplayName('polygon') },
-  { key: 'bitcoin', label: networkDisplayName('bitcoin') },
+  ...ALL_NETWORKS.map((network) => ({ key: network, label: networkDisplayName(network) })),
 ];
 const TYPE_OPTIONS: { key: TypeFilter; label: string }[] = [
   { key: 'all', label: 'All types' },
@@ -369,7 +370,7 @@ function TxRow({ tx, onPress }: { tx: Transaction; onPress: () => void }) {
   const isOut = tx.direction === 'out';
   const verb = isOut ? 'Sent' : 'Received';
   const chainName = networkDisplayName(tx.token.chain);
-  const chainColor = networkColor[tx.token.chain] ?? theme.colors.textSecondary;
+  const chainColor = networkColorFor(tx.token.chain) ?? theme.colors.textSecondary;
 
   return (
     <Pressable
