@@ -179,6 +179,31 @@ blocker) — this covers just the specific labeling bug reported; a fuller
 registry unifying asset config/indexer mapping/icon lookup into one
 structure is tracked separately, not attempted here.
 
+**Update — that fuller registry has since landed in this same file.**
+`NETWORKS` in `wdk/networks.ts` now holds every per-network fact in one
+place (`network` key, EVM/BTC runtime config, display label, color, icon,
+explorer link, indexer mapping, and its asset list) — `networkDisplayName()`
+above is now one of several small functions reading off this one array,
+not a standalone lookup. Everything else (`assets.ts`'s `ASSETS`/`ASSET_MAP`,
+`config.ts`'s `wdkConfigs`) is derived from `NETWORKS`, not maintained
+separately; both those files are now thin re-export shims over
+`networks.ts`, kept only so existing import paths don't need touching.
+
+One consequence worth knowing if you add a network filter or a domain type
+that should be exhaustive over "every configured network": `NETWORKS` is
+declared with `satisfies NetworkDefinition[]` rather than a
+`: NetworkDefinition[]` annotation, and each entry's `network` field is
+written as `'bitcoin' as const` (etc.) rather than a plain string literal.
+That combination is what lets `NetworkId` — `(typeof NETWORKS)[number]['network']`,
+also exported from `wdk/networks.ts` — be a real literal union
+(`'bitcoin' | 'ethereum' | 'arbitrum' | 'polygon'`) instead of widening to
+plain `string`. An explicit array type annotation would force every entry
+back to the wide `NetworkDefinition` shape before `NetworkId` ever saw it,
+which is why it's deliberately absent. `ALL_NETWORKS` (the runtime array of
+keys, used to build filter option lists) is typed as `NetworkId[]` for the
+same reason. Activity's chain filter (`ChainFilter = 'all' | NetworkId`) is
+the first consumer of this — see `app/(app)/(tabs)/activity.tsx`.
+
 ## Distinguishing a failed fetch from a genuine zero balance
 
 `TokenBalance` (`src/domain/models/index.ts`) has an optional

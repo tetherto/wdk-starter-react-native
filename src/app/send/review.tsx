@@ -12,7 +12,7 @@ import { ASSETS } from '@/wdk/assets';
 import { sendAsset, quoteSendFee } from '@/wdk/useSend';
 import { useWdkBalances } from '@/wdk/hooks/useWalletData';
 import { usePendingRefresh } from '@/state/pendingRefresh';
-import { networkDisplayName } from '@/wdk/networks';
+import { networkDisplayName } from '@/wdk/chains';
 
 /**
  * Formats a crypto amount WITHOUT unnecessary trailing zeros — "1.000000"

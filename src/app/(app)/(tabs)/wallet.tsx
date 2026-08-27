@@ -14,7 +14,7 @@ import { Screen, Text, LoadingState, ErrorState, AssetIcon } from '@/components'
 import { useTheme } from '@/theme';
 import { useResponsive } from '@/theme/responsive';
 import { useWdkBalances, useWdkAccount, useWdkTotalUsd } from '@/wdk/hooks/useWalletData';
-import { networkDisplayName } from '@/wdk/networks';
+import { networkDisplayName } from '@/wdk/chains';
 import { useAccounts } from '@/state/accounts';
 import { useToast } from '@/state/toast';
 import { usePendingRefresh, POLL_DELAYS_MS } from '@/state/pendingRefresh';

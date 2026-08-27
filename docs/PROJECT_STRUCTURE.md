@@ -86,13 +86,23 @@ src/
 │                                       # (Token, TokenBalance, Account, Transaction)
 │
 └── wdk/                              # WDK integration layer
-    ├── config.ts                      # wdkConfigs — networks compiled into the worklet
-    ├── networks.ts                    # Single source of truth for how each network
-    │                                    # is DISPLAYED — see ARCHITECTURE.md's
-    │                                    # "Network identity" section
-    ├── assets.ts / AppAsset.ts        # Asset registry — see the file's own header
-    │                                    # comments for verified contract addresses
-    │                                    # and the Arbitrum "USDT0" naming note
+    ├── config.ts                      # Shim — re-exports wdkConfigs from
+    │                                    # networks.ts, nothing to edit here
+    ├── networks.ts                    # Single source of truth for every
+    │                                    # per-network fact (display, EVM/BTC
+    │                                    # runtime config, assets, indexer
+    │                                    # mapping, icons, explorer links) —
+    │                                    # see ARCHITECTURE.md's "Network
+    │                                    # identity" section
+    ├── chains.ts                      # Shim — re-exports networkDisplayName,
+    │                                    # ALL_NETWORKS, NetworkId, etc. from
+    │                                    # networks.ts, nothing to edit here
+    ├── assets.ts / AppAsset.ts        # assets.ts is a shim re-exporting the
+    │                                    # asset list from networks.ts;
+    │                                    # AppAsset.ts is the real class — see
+    │                                    # its own header comments for
+    │                                    # verified contract addresses and
+    │                                    # the Arbitrum "USDT0" naming note
     ├── walletIdentity.ts              # DEFAULT_WALLET_ID — see ARCHITECTURE.md
     ├── passwordVault.ts               # Envelope-encrypted app password — see SECURITY.md
     ├── cloudBackupEncryption.ts       # wdk-utils wrapper for the backup payload
@@ -105,8 +115,8 @@ src/
     │                                    # WDK_INTEGRATION.md's transaction-history section
     ├── hooks/
     │   ├── useWalletData.ts            # useWdkBalances / useWdkAccount /
-    │   │                                  # useWdkTransactions / networkColor —
-    │   │                                  # the main data surface screens import
+    │   │                                  # useWdkTransactions — the main
+    │   │                                  # data surface screens import
     │   ├── useWalletActions.ts         # generateSeed/importWallet/unlock/lock/getMnemonic
     │   ├── useWdkSession.ts            # Maps WDK's raw lifecycle -> app session status
     │   ├── AutoLockOnBackground.tsx    # Locks on real backgrounding — see SECURITY.md

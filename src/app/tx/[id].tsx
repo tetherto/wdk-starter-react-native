@@ -6,6 +6,7 @@ import { Screen, Card, Text, LoadingState, AssetIcon } from '@/components';
 import { useTheme } from '@/theme';
 import { useResponsive } from '@/theme/responsive';
 import { useWdkTransactions, useWdkAddressForNetwork } from '@/wdk/hooks/useWalletData';
+import { explorerFor } from '@/wdk/chains';
 
 /**
  * Transaction detail — matches the prototype's dedicated `tx-detail` screen.
@@ -39,13 +40,6 @@ function formatTxDate(timestamp: number): string {
   return `${month} ${day} at ${hours}:${minutes} ${ampm}`;
 }
 
-const EXPLORER: Record<string, { name: string; url: (hash: string) => string }> = {
-  bitcoin: { name: 'mempool.space', url: (h) => `https://mempool.space/testnet/tx/${h}` },
-  ethereum: { name: 'Etherscan', url: (h) => `https://sepolia.etherscan.io/tx/${h}` },
-  arbitrum: { name: 'Arbiscan', url: (h) => `https://arbiscan.io/tx/${h}` },
-  polygon: { name: 'Polygonscan', url: (h) => `https://polygonscan.com/tx/${h}` },
-};
-
 export default function TxDetail() {
   const router = useRouter();
   const theme = useTheme();
@@ -75,7 +69,7 @@ export default function TxDetail() {
   const isOut = tx.direction === 'out';
   const isSponsoredNetwork = tx.token.chain !== 'bitcoin';
   const dateText = formatTxDate(tx.timestamp);
-  const explorer = EXPLORER[tx.token.chain];
+  const explorer = explorerFor(tx.token.chain)!;
 
   const shortAddr = (addr: string) => (addr && addr.length > 12 ? `${addr.slice(0, 6)}...${addr.slice(-5)}` : addr || '—');
   const fromAddress = isOut ? myAddress.address : tx.address;

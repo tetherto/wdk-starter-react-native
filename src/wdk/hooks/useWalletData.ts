@@ -23,25 +23,23 @@ import type { Account, TokenBalance, ChainId, Transaction } from '@/domain/model
  * useWdkAddressForAccountNetwork) rather than assuming "active".
  */
 
-/** Brand color per chain, for the token glyph. Indexed by ChainId. */
-export const networkColor: Record<string, string> = {
-  bitcoin: '#F7931A',
-  ethereum: '#627EEA',
-  arbitrum: '#28A0F0',
-  polygon: '#8247E5',
-  sepolia: '#CFCFEA', // muted variant of Ethereum blue, signals "testnet"
-  tron: '#FF060A',
-};
-
+// networkColor moved to wdk/chains.ts (as networkColorFor()), as part of
+// unifying every genuinely UI-facing per-network fact into one registry —
+// see that file's header comment. The two extra entries this map used to
+// carry ('sepolia', 'tron') didn't correspond to any real internal
+// network key this app actually uses (our key is always 'ethereum', never
+// literally 'sepolia'; Tron isn't compiled into the worklet at all) —
+// they weren't reachable, so they weren't carried forward.
+//
+// This used to switch on `network` and fall back to 'bitcoin' for any
+// value it didn't explicitly list — a real bug: an asset on a network
+// added to wdk/networks.ts but not also added to this switch would get
+// silently mislabeled as Bitcoin here instead of surfacing as itself (or
+// as a visible mismatch). `asset.getNetwork()` already returns this app's
+// own network key (see wdk/networks.ts), so passing it straight through
+// is correct as-is, with no translation or fallback needed.
 function networkToChain(network: string): ChainId {
-  switch (network) {
-    case 'ethereum': return 'ethereum';
-    case 'arbitrum': return 'arbitrum';
-    case 'polygon': return 'polygon';
-    case 'sepolia': return 'sepolia';
-    case 'tron': return 'tron';
-    default: return 'bitcoin';
-  }
+  return network as ChainId;
 }
 
 function toDisplay(baseUnits: string | null | undefined, decimals: number): string {
@@ -249,56 +247,70 @@ export function useWdkTransactions() {
 
   const data: Transaction[] = useMemo(() => {
     if (!query.data) return [];
-    return query.data.map((t) => {
-      const asset = ASSET_MAP.get(t.assetId);
-      const myAddress = addressesByNetwork[asset?.getNetwork() ?? ''] ?? '';
-      const isOutgoing = !!t.from && t.from.toLowerCase() === myAddress.toLowerCase();
-      const direction: 'in' | 'out' = isOutgoing ? 'out' : 'in';
-      const counterparty = (isOutgoing ? t.to : t.from) ?? '';
+    return query.data
+      .map((t): Transaction | null => {
+        const asset = ASSET_MAP.get(t.assetId);
+        // fetchAllTransfers() only ever queries by addresses derived from
+        // this app's own ASSETS list, so in practice every transfer it
+        // returns should resolve here. But if an asset were ever removed
+        // from wdk/networks.ts while the indexer still had history for
+        // it, `asset` would be undefined — skip that row rather than
+        // show it under a fabricated id/symbol/chain, same principle as
+        // networkToChain() no longer defaulting unknown networks to
+        // 'bitcoin' above. Keeps this mapper and useWdkBalancesForAccount
+        // above in agreement: both derive `chain` via networkToChain(),
+        // neither invents a placeholder for a missing asset.
+        if (!asset) return null;
 
-      // NOT shiftedBy(-decimals) here — real bug, confirmed against actual
-      // on-chain data: a genuine $1 USDT transfer was displaying as
-      // "0.000001", off by EXACTLY 10^6 — precisely USDT's own decimals
-      // value, too exact to be coincidence. This indexer API appears to
-      // return `amount` already as a human-readable decimal string (e.g.
-      // "1" meaning 1 USDT), NOT raw base units the way WDK's own balance
-      // hooks do (see toDisplay() above, which correctly DOES shift —
-      // that's a different, WDK-native data source, not this one).
-      // Applying our own decimals shift on TOP of an already-shifted value
-      // was the double-application causing this. Reformatted only for
-      // consistent display precision, no scaling.
-      const decimals = asset?.getDecimals() ?? 0;
-      const amount = new BigNumber(t.amount).toFixed(decimals);
-      const price = asset ? prices[asset.getSymbol()] : null;
-      const fiatValue = price != null ? `$${new BigNumber(amount).multipliedBy(price).toFixed(2)}` : '—';
+        const myAddress = addressesByNetwork[asset.getNetwork()] ?? '';
+        const isOutgoing = !!t.from && t.from.toLowerCase() === myAddress.toLowerCase();
+        const direction: 'in' | 'out' = isOutgoing ? 'out' : 'in';
+        const counterparty = (isOutgoing ? t.to : t.from) ?? '';
 
-      return {
-        id: t.transactionHash,
-        direction,
-        token: {
-          id: asset?.getId() ?? t.assetId,
-          symbol: asset?.getSymbol() ?? '',
-          chain: (asset?.getNetwork() ?? 'bitcoin') as ChainId,
-        },
-        amount,
-        fiatValue,
-        address: counterparty,
-        // FIXED a real bug, and a real overconfident claim on my part: this
-        // previously said "confirmed" that indexer timestamps are Unix
-        // SECONDS, requiring *1000 for JS Date compatibility — that was
-        // actually just an assumption based on common blockchain API
-        // convention, never verified against a real response (no API key
-        // available to check directly). It was wrong: real transactions
-        // several days old were showing as "just now" and landing in
-        // "Earlier" regardless of actual age — exactly what happens when an
-        // already-millisecond timestamp gets multiplied by 1000 again,
-        // landing absurdly far in the future and making now-minus-timestamp
-        // deeply negative. Treating it as already-milliseconds instead.
-        timestamp: t.timestamp,
-        status: 'confirmed' as const,
-        blockNumber: t.blockNumber ?? undefined,
-      };
-    });
+        // NOT shiftedBy(-decimals) here — real bug, confirmed against actual
+        // on-chain data: a genuine $1 USDT transfer was displaying as
+        // "0.000001", off by EXACTLY 10^6 — precisely USDT's own decimals
+        // value, too exact to be coincidence. This indexer API appears to
+        // return `amount` already as a human-readable decimal string (e.g.
+        // "1" meaning 1 USDT), NOT raw base units the way WDK's own balance
+        // hooks do (see toDisplay() above, which correctly DOES shift —
+        // that's a different, WDK-native data source, not this one).
+        // Applying our own decimals shift on TOP of an already-shifted value
+        // was the double-application causing this. Reformatted only for
+        // consistent display precision, no scaling.
+        const decimals = asset.getDecimals();
+        const amount = new BigNumber(t.amount).toFixed(decimals);
+        const price = prices[asset.getSymbol()];
+        const fiatValue = price != null ? `$${new BigNumber(amount).multipliedBy(price).toFixed(2)}` : '—';
+
+        return {
+          id: t.transactionHash,
+          direction,
+          token: {
+            id: asset.getId(),
+            symbol: asset.getSymbol(),
+            chain: networkToChain(asset.getNetwork()),
+          },
+          amount,
+          fiatValue,
+          address: counterparty,
+          // FIXED a real bug, and a real overconfident claim on my part: this
+          // previously said "confirmed" that indexer timestamps are Unix
+          // SECONDS, requiring *1000 for JS Date compatibility — that was
+          // actually just an assumption based on common blockchain API
+          // convention, never verified against a real response (no API key
+          // available to check directly). It was wrong: real transactions
+          // several days old were showing as "just now" and landing in
+          // "Earlier" regardless of actual age — exactly what happens when an
+          // already-millisecond timestamp gets multiplied by 1000 again,
+          // landing absurdly far in the future and making now-minus-timestamp
+          // deeply negative. Treating it as already-milliseconds instead.
+          timestamp: t.timestamp,
+          status: 'confirmed' as const,
+          blockNumber: t.blockNumber ?? undefined,
+        };
+      })
+      .filter((t): t is Transaction => t !== null);
   }, [query.data, prices]);
 
   return {

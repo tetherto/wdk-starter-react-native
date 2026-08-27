@@ -98,6 +98,17 @@ screen mid-flow, then eventually still completes the backup.
 app, registering as a false backgrounding signal. See `SECURITY.md` bug #4
 — `lockSuppression.ts` exists for exactly this.
 
+**Symptom:** the app password can end up still resident in memory
+(`state/passwordSession.ts`) some time after backgrounding, even though
+the wallet itself did lock.
+**Cause:** `AutoLockOnBackground` was sequenced as
+`lock().then(clearPasswordSession).catch(...)` — `clearPasswordSession()`
+only ran on the success path, so a rejected `lock()` (e.g. a failed
+worklet call) skipped it entirely. Fixed by restructuring to
+`lock().catch(...).finally(clearPasswordSession)`, which clears the
+password regardless of whether `lock()` resolved or rejected. See
+`SECURITY.md` bug #5.
+
 **Symptom:** typing a too-short password and leaving Confirm empty shows
 no error at all — the length requirement only seems to "kick in" once
 Confirm has something typed into it too.
@@ -181,6 +192,18 @@ account" enough times to reach the right index.
      point-in-time snapshot — a naive first attempt at this fix still had
      a timing gap, since `refetch()` doesn't synchronously flip
      `isFetching`.
+
+**Symptom:** a balance on a network genuinely not yet recognized by this
+app (e.g. one added to `wdk/networks.ts` without also being added
+somewhere else that needed it) silently displays with Bitcoin's chain
+badge/color instead of failing loudly or showing as itself.
+**Cause:** `networkToChain()` (`wdk/hooks/useWalletData.ts`) switched on
+the network key and fell back to `'bitcoin'` in its `default` case for
+anything it didn't explicitly list. `asset.getNetwork()` already returns
+this app's own network key correctly — there was nothing to translate or
+default. Fixed by returning the network straight through instead of
+switching on it, so an unrecognized value now surfaces as itself (visibly
+wrong, and traceable) rather than silently masquerading as Bitcoin.
 
 **Symptom, still unresolved as of this writing:** after an extended
 session, all EVM network balance fetches begin failing with `"Network

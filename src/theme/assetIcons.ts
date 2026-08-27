@@ -21,12 +21,19 @@ export interface AssetIconSource {
   hasBackground: boolean;
 }
 
-export const CHAIN_ICONS: Record<string, AssetIconSource> = {
-  bitcoin: { source: require('@/../assets/images/chains/bitcoin-btc-logo.png'), hasBackground: true },
-  ethereum: { source: require('@/../assets/images/chains/ethereum-eth-logo.png'), hasBackground: false },
-  arbitrum: { source: require('@/../assets/images/chains/arbitrum-arb-logo.png'), hasBackground: false },
-  polygon: { source: require('@/../assets/images/chains/polygon-matic-logo.png'), hasBackground: false },
-};
+// CHAIN_ICONS moved to wdk/chains.ts, as part of unifying every genuinely
+// UI-facing per-network fact (label, color, icon, explorer, indexer
+// mapping) into one registry — see that file's own header comment for the
+// full reasoning. Still defined with literal require() calls there,
+// exactly as here — Metro needs statically analyzable paths, which moving
+// them into a registry object doesn't change, since the object itself is
+// still a static literal, not built dynamically.
+//
+// TOKEN_ICONS stays here deliberately, NOT folded into the same registry —
+// it's keyed by asset SYMBOL (BTC/ETH/USDT/USDT0), not by network. Multiple
+// assets can share one network (native ETH and USDT-on-Ethereum both sit
+// on 'ethereum') but need different icons — a genuinely different axis
+// than the per-network registry, not the same fact organized differently.
 
 export const TOKEN_ICONS: Record<string, AssetIconSource> = {
   BTC: { source: require('@/../assets/images/tokens/bitcoin-btc-logo.png'), hasBackground: true },

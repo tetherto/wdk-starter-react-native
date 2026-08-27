@@ -9,7 +9,7 @@ import { useTheme } from '@/theme';
 import { useResponsive } from '@/theme/responsive';
 import { useWdkAddressForNetwork } from '@/wdk/hooks/useWalletData';
 import { ASSETS } from '@/wdk/assets';
-import { networkDisplayName } from '@/wdk/networks';
+import { networkDisplayName } from '@/wdk/chains';
 
 /**
  * Receive — rebuilt to match the prototype's `receive` screen exactly (the
