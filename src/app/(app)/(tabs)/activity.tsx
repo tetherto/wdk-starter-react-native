@@ -9,7 +9,7 @@ import { useWdkTransactions } from '@/wdk/hooks/useWalletData';
 import { networkColorFor, networkDisplayName, ALL_NETWORKS } from '@/wdk/chains';
 import type { NetworkId } from '@/wdk/chains';
 import { ASSETS } from '@/wdk/assets';
-import type { Transaction, ChainId } from '@/domain/models';
+import type { Transaction } from '@/domain/models';
 
 /**
  * Activity — matches the prototype's `activity` screen: three filter pills
