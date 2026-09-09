@@ -78,7 +78,8 @@
             "compileSdkVersion": 36,
             "buildToolsVersion": "36.0.0",
             "enableProguardInReleaseBuilds": true,
-            "enableShrinkResourcesInReleaseBuilds": true
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "extraProguardRules": "-dontwarn com.google.j2objc.annotations.ReflectionSupport\n-dontwarn com.google.j2objc.annotations.RetainedWith\n-dontwarn java.awt.Component"
           }
         }
       ],
