@@ -47,13 +47,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Node/npm setup is inlined rather than reusing .github/actions/setup-eas,
       # which also installs the EAS CLI — a large download this job has no use
       # for. Keep the Node version and the npm floor in sync with that action.
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -85,7 +85,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Pinned to an exact release rather than tracking main, so a change
       # upstream can never alter what runs against this repository. The
