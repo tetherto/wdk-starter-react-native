@@ -4,10 +4,12 @@
 > until a stable release is tagged.
 
 A reference **non-custodial wallet** built with Expo + React Native on
-Tether's [WDK (Wallet Development Kit)](https://wallet.tether.io/). This
+Tether's [WDK (Wallet Development Kit)](https://docs.wdk.tether.io/). This
 repo exists to teach other developers, end to end, how to integrate WDK into
 a real app — every architectural decision, and every hard-won bug fix along
 the way, is documented rather than hidden.
+
+See the [React Native starter documentation](https://docs.wdk.tether.io/examples-and-starters/react-native-starter/) for an overview.
 
 If you're new here, **read the docs in this order**:
 
