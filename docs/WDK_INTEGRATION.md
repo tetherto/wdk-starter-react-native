@@ -212,10 +212,10 @@ you touch this code:
 
 ### Transaction history (Activity tab)
 
-Via `@tetherto/wdk-indexer-http` (`WdkIndexerClient`) — **not yet on the
-public npm registry** (confirmed directly; `npm view` returns "Not
-Found"), same situation as `wdk-worklet-bundler` — installed via a pinned
-GitHub commit reference in `package.json`, not a version string. Requires
+Via `@tetherto/wdk-indexer-http` (`WdkIndexerClient`) — installed from npm,
+pinned to `1.0.1` in `package.json`. `baseUrl` is set explicitly to
+`https://wdk-api.tether.io` (the package default is
+`https://wdk-api.tether.su` since 1.0.0). Requires
 a real, registered API key (`EXPO_PUBLIC_WDK_INDEXER_API_KEY` — see
 `.env.example`); nothing in Activity works without one.
 
@@ -301,8 +301,9 @@ See `ENVIRONMENT.md` for the full table and reasoning. The one-line summary:
 `wdk-react-native-core` must stay on `1.0.0-beta.10` (not caret-ranged) —
 beta.12+ silently pulls SDK-56-only native modules that crash against this
 app's SDK-55 build, with an error message that gives no hint it's a version
-issue. `@tetherto/wdk-indexer-http` is pinned to a specific GitHub commit
-(no tagged releases exist yet) for the same class of reason.
+issue. `@tetherto/wdk-indexer-http` is pinned to an exact npm version
+(`1.0.1`) — 1.0.0 was a breaking rewrite, so check its changelog before
+bumping.
 
 ## What's covered vs. not, honestly
 

@@ -80,10 +80,7 @@ this app's code. See `docs/TROUBLESHOOTING.md`'s last entry.
 
 ## Getting started
 
-> **Check `npm --version` before anything else.** npm 10 silently drops
-> packages from git-dependency trees — no error, just a missing package
-> later on, for a reason that looks completely unrelated. This project has
-> three (see the note right after these steps). **`npm >= 11.10.1` is
+> **Check `npm --version` before anything else.** **`npm >= 11.10.1` is
 > required** — a real, confirmed npm CLI bug
 > ([npm/cli#8726](https://github.com/npm/cli/issues/8726)) can otherwise
 > make `npm ci` reject a lockfile `npm install` just generated; see
@@ -122,19 +119,11 @@ and cloud backup are real mainnet / real external accounts — see "Making
 it your own" below and `docs/CLOUD_BACKUP.md` — skip both if you just
 want to see the app work end to end on testnets.
 
-**A known, stated risk worth knowing about up front, not discovering the
-hard way:** three dependencies in `package.json` point at specific GitHub
-forks/commits, not published npm releases —
-`@tetherto/wdk-backup-cloud`, `@tetherto/wdk-indexer-http`, and
-`@tetherto/wdk-worklet-bundler`. Each exists because the official
-published version had a real, confirmed bug at the time (the worklet
-bundler's official beta, for example, shipped with no `dist/` at all —
-completely unusable). Running `npm install` on this project means
-implicitly depending on three third-party GitHub accounts staying
-reachable and those specific commits staying available. If one of these
-starts failing to resolve, that's almost certainly why — check whether
-the upstream package has since published a real, fixed release you could
-switch to instead of the pinned fork.
+Every dependency in `package.json` installs from a published npm release —
+there are no `github:` dependencies. `@tetherto/wdk-backup-cloud`,
+`@tetherto/wdk-indexer-http`, and `@tetherto/wdk-worklet-bundler` all
+previously pointed at GitHub forks/commits and now resolve from
+`registry.npmjs.org`.
 
 ### Which `.env` keys are required vs. optional — the short version
 
