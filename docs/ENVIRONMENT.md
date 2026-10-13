@@ -10,7 +10,7 @@ like a generic native crash with no obvious cause.
 | Tool | Required | Why |
 |---|---|---|
 | Node.js | ≥ 20 | — |
-| npm | **≥ 11.10.1** | Two separate, real reasons for this floor, not one: (1) npm 10 silently drops packages (like `expo` itself) from git-dependency trees, with no error — everything *looks* installed, but the app crashes at runtime with a missing-module error. (2) A confirmed, real npm CLI bug ([npm/cli#8726](https://github.com/npm/cli/issues/8726), open since 2021, affecting npm 9.x–11.x broadly) where `npm ci` can reject a lockfile `npm install` just generated, if a dependency's semver range could resolve to more than one valid version. This project has exactly that ambiguity between `@tetherto/wdk-wallet-btc` and `@tetherto/wdk-utils`'s differing `@noble/*` requirements — see `TROUBLESHOOTING.md`. **Be honest about this floor's real limit:** the underlying npm bug is reported across multiple majors, not tied to one specific version — 11.10.1 is a practical baseline that's worked in testing, not a version confirmed immune to the bug by npm's own maintainers. Check with `npm --version` before anything else. |
+| npm | **≥ 11.10.1** | A confirmed, real npm CLI bug ([npm/cli#8726](https://github.com/npm/cli/issues/8726), open since 2021, affecting npm 9.x–11.x broadly) where `npm ci` can reject a lockfile `npm install` just generated, if a dependency's semver range could resolve to more than one valid version. This project has exactly that ambiguity between `@tetherto/wdk-wallet-btc` and `@tetherto/wdk-utils`'s differing `@noble/*` requirements — see `TROUBLESHOOTING.md`. **Be honest about this floor's real limit:** the underlying npm bug is reported across multiple majors, not tied to one specific version — 11.10.1 is a practical baseline that's worked in testing, not a version confirmed immune to the bug by npm's own maintainers. Check with `npm --version` before anything else. |
 | JDK | **17** | JDK 21/24 cause Android codegen failures that surface as an unrelated-looking native crash (`PlatformConstants` `TurboModuleRegistry` errors), not a JDK error. |
 | Expo SDK | **55** (not 56) | WDK's native modules are only validated against SDK 55. See the version-pin table below — this is enforced via `overrides` in `package.json`, not just convention. |
 | React Native | 0.83.6 | Matches the SDK 55 baseline. |
@@ -41,12 +41,11 @@ reintroduce a bug that already cost real debugging time:
 - **`expo-crypto`: `~55.0.16` override.** Belt-and-suspenders against the
   core-version issue above — even if something transitively asks for a
   56.x range, this forces it back to the SDK-55-compatible version.
-- **`@tetherto/wdk-indexer-http`: pinned to a specific GitHub commit, not a
-  version string.** Not yet on the public npm registry (confirmed
-  directly — `npm view` returns "Not Found") — same situation as
-  `wdk-worklet-bundler` above. No tagged releases exist yet, so a specific
-  commit hash is used rather than a floating branch reference that could
-  change unexpectedly underneath this project.
+- **`@tetherto/wdk-indexer-http`: exactly `1.0.1` from npm.** 1.0.0 was a
+  breaking rewrite — it removed `isTokenTransfersResponse()` and changed the
+  default `baseUrl` to `https://wdk-api.tether.su`. `src/wdk/indexer.ts`
+  passes `baseUrl: 'https://wdk-api.tether.io'` explicitly. Read the
+  package's `CHANGELOG.md` before bumping.
 
 If `npm install` ever suggests a newer version for any of these three,
 **don't take it** without first checking `docs/TROUBLESHOOTING.md` and the
