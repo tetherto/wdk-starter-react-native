@@ -7,10 +7,9 @@ import { indexerBlockchainFor } from './chains';
  * that always returned an empty array.
  *
  * Package note: @tetherto/wdk-indexer-http is installed from the public npm
- * registry (pinned version in package.json). Since 1.0.0 its default
- * baseUrl is https://wdk-api.tether.su; this app passes
- * https://wdk-api.tether.io explicitly, matching the registration link
- * documented in .env.example.
+ * registry (pinned version in package.json). This app passes
+ * baseUrl https://wdk-api.tether.io explicitly, matching the registration
+ * link documented in .env.example; do not rely on the package default.
  *
  * Requires a real, registered API key — see .env.example for the
  * registration link. Nothing here works without one; this is a hard

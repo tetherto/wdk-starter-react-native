@@ -214,8 +214,7 @@ you touch this code:
 
 Via `@tetherto/wdk-indexer-http` (`WdkIndexerClient`) — installed from npm,
 pinned to `1.0.1` in `package.json`. `baseUrl` is set explicitly to
-`https://wdk-api.tether.io` (the package default is
-`https://wdk-api.tether.su` since 1.0.0). Requires
+`https://wdk-api.tether.io`; do not rely on the package default. Requires
 a real, registered API key (`EXPO_PUBLIC_WDK_INDEXER_API_KEY` — see
 `.env.example`); nothing in Activity works without one.
 

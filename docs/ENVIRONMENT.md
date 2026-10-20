@@ -43,9 +43,9 @@ reintroduce a bug that already cost real debugging time:
   56.x range, this forces it back to the SDK-55-compatible version.
 - **`@tetherto/wdk-indexer-http`: exactly `1.0.1` from npm.** 1.0.0 was a
   breaking rewrite — it removed `isTokenTransfersResponse()` and changed the
-  default `baseUrl` to `https://wdk-api.tether.su`. `src/wdk/indexer.ts`
-  passes `baseUrl: 'https://wdk-api.tether.io'` explicitly. Read the
-  package's `CHANGELOG.md` before bumping.
+  default `baseUrl`. `src/wdk/indexer.ts` passes
+  `baseUrl: 'https://wdk-api.tether.io'` explicitly. Read the package's
+  `CHANGELOG.md` before bumping.
 
 If `npm install` ever suggests a newer version for any of these three,
 **don't take it** without first checking `docs/TROUBLESHOOTING.md` and the
