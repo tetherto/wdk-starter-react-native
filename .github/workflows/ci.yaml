@@ -58,9 +58,9 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
-      # docs/ENVIRONMENT.md: npm 10 silently drops packages from git-dependency
-      # trees with no error, and this project has three git dependencies.
-      # Node 22 ships npm 10.x, hence the explicit upgrade.
+      # docs/ENVIRONMENT.md: npm >= 11.10.1 is required (npm/cli#8726 — `npm ci`
+      # can reject a lockfile `npm install` just wrote, due to the @noble/*
+      # range ambiguity). Node 22 ships npm 10.x, hence the explicit upgrade.
       - name: Upgrade npm
         run: |
           npm install --global npm@^11

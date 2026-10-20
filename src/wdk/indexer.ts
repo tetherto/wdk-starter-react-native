@@ -1,4 +1,4 @@
-import { WdkIndexerClient, isTokenTransfersResponse, type Blockchain, type Token } from '@tetherto/wdk-indexer-http';
+import { WdkIndexerClient, isApiError, type Blockchain, type Token } from '@tetherto/wdk-indexer-http';
 import { ASSETS, ASSET_MAP } from './assets';
 import { indexerBlockchainFor } from './chains';
 
@@ -6,11 +6,10 @@ import { indexerBlockchainFor } from './chains';
  * Real WDK Indexer API integration — replaces the useWdkTransactions() stub
  * that always returned an empty array.
  *
- * Package note: @tetherto/wdk-indexer-http is NOT yet on the public npm
- * registry (confirmed directly — npm view returns "Not Found"). It's a
- * real, actively maintained package, just still GitHub-only at this stage
- * (same situation as wdk-worklet-bundler earlier in this project). Install
- * via the GitHub reference in package.json, not a plain npm version string.
+ * Package note: @tetherto/wdk-indexer-http is installed from the public npm
+ * registry (pinned version in package.json). This app passes
+ * baseUrl https://wdk-api.tether.io explicitly, matching the registration
+ * link documented in .env.example; do not rely on the package default.
  *
  * Requires a real, registered API key — see .env.example for the
  * registration link. Nothing here works without one; this is a hard
@@ -33,11 +32,13 @@ import { indexerBlockchainFor } from './chains';
  *    mainnet, same caveat as elsewhere in this app.
  */
 
+const INDEXER_BASE_URL = 'https://wdk-api.tether.io';
+
 let client: WdkIndexerClient | null = null;
 function getClient(): WdkIndexerClient | null {
   const apiKey = process.env.EXPO_PUBLIC_WDK_INDEXER_API_KEY;
   if (!apiKey) return null;
-  if (!client) client = new WdkIndexerClient({ apiKey });
+  if (!client) client = new WdkIndexerClient({ apiKey, baseUrl: INDEXER_BASE_URL });
   return client;
 }
 
@@ -127,7 +128,7 @@ export async function fetchAllTransfers(
 
   const combined: RawTransferWithAsset[] = [];
   results.forEach((result, i) => {
-    if (!isTokenTransfersResponse(result)) return; // this specific asset's check failed — skip it, don't fail the whole screen
+    if (isApiError(result)) return; // this specific asset's check failed — skip it, don't fail the whole screen
     const assetId = requests[i].assetId;
     result.transfers.forEach((t) => {
       combined.push({
