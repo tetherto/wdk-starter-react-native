@@ -1,16 +1,20 @@
 import React, { useState } from 'react';
 import { Pressable } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { Copy, Check } from 'lucide-react-native';
 import { Screen, ScreenHeader, Text, Button, SeedWordGrid } from '@/components';
+import { usePendingMnemonic } from '@/state/pendingMnemonic';
 import { useTheme } from '@/theme';
 import { useResponsive } from '@/theme/responsive';
 
 /**
  * Recovery phrase — revealed. Matches the prototype's `seed-revealed` screen.
  *
- * Receives the mnemonic generated on seed-hidden via route params. Works for
+ * Reads the mnemonic generated on seed-hidden from the in-memory
+ * pendingMnemonic store, never from route params (see that file for why). If
+ * there is none, e.g. the screen was opened from a link, it redirects to the
+ * index route, which sends the person wherever their wallet state says. Works for
  * BOTH 12 and 24 words unchanged — SeedWordGrid renders whatever length array
  * it's given, so there's no separate branch for word count here; the choice
  * was already made on the previous screen.
@@ -23,8 +27,10 @@ export default function SeedRevealed() {
   const router = useRouter();
   const theme = useTheme();
   const { moderateScale } = useResponsive();
-  const { mnemonic = '' } = useLocalSearchParams<{ mnemonic?: string }>();
+  const mnemonic = usePendingMnemonic((s) => s.mnemonic);
   const [copied, setCopied] = useState(false);
+
+  if (!mnemonic) return <Redirect href="/" />;
 
   const words = mnemonic.trim().split(/\s+/).filter(Boolean);
 
@@ -35,7 +41,7 @@ export default function SeedRevealed() {
   };
 
   const onContinue = () => {
-    router.push({ pathname: '/(onboarding)/password', params: { mode: 'create', mnemonic } });
+    router.push('/(onboarding)/password?mode=create');
   };
 
   return (

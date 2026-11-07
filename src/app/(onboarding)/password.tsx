@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Redirect, useRouter, useLocalSearchParams } from 'expo-router';
 import { Screen, ScreenHeader, Text, TextField, Button } from '@/components';
 import { useWalletActions } from '@/wdk/hooks/useWalletActions';
 import { setAppPassword } from '@/wdk/passwordVault';
 import { usePasswordSession } from '@/state/passwordSession';
+import { usePendingMnemonic } from '@/state/pendingMnemonic';
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -20,17 +21,27 @@ const MIN_PASSWORD_LENGTH = 8;
  * The password is also kept in memory for this session (passwordSession) so
  * the very next screen (cloud-backup) can encrypt the backup payload with it
  * without asking a second time. It is never written to disk in plaintext.
+ *
+ * In create mode the phrase comes from the in-memory pendingMnemonic store
+ * that seed-hidden fills, never from route params, so an inbound link can't
+ * hand this screen a phrase to commit (see state/pendingMnemonic.ts). Opened
+ * in create mode without one, e.g. from a link, it redirects to the index
+ * route instead.
  */
 export default function Password() {
   const router = useRouter();
-  const { mode = 'create', mnemonic = '' } = useLocalSearchParams<{ mode?: 'create' | 'import'; mnemonic?: string }>();
+  const { mode = 'create' } = useLocalSearchParams<{ mode?: 'create' | 'import' }>();
   const { importWallet } = useWalletActions();
   const setSessionPassword = usePasswordSession((s) => s.setPassword);
+  const pendingMnemonic = usePendingMnemonic((s) => s.mnemonic);
+  const phraseToCommit = mode === 'create' ? pendingMnemonic : null;
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const step = mode === 'create' ? 'Step 3 of 4' : 'Step 2 of 3';
+
+  if (mode === 'create' && !phraseToCommit) return <Redirect href="/" />;
 
   const onContinue = async () => {
     setError(null);
@@ -44,9 +55,9 @@ export default function Password() {
     }
     setBusy(true);
     try {
-      if (mode === 'create') {
-        // Commit the previewed phrase now (persist + unlock via WDK).
-        await importWallet(mnemonic);
+      if (phraseToCommit) {
+        // Create mode: commit the previewed phrase now (persist + unlock via WDK).
+        await importWallet(phraseToCommit);
       }
       // Establish the app password gate (both create and import flows).
       await setAppPassword(password);
