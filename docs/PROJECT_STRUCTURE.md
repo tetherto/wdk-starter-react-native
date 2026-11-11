@@ -161,8 +161,8 @@ a recommendation to remove it before/shortly after this PR merges.
   app-level provider on iOS — this re-establishes correct insets regardless
   of how a screen was presented.
 - **`Toast` is mounted in more than one place, deliberately.** Once at the
-  app root, and again inside `send/_layout.tsx` and `receive/_layout.tsx`.
-  Those two screens are presented as native `fullScreenModal`s — a genuinely
+  app root, and again inside `send/_layout.tsx`, `receive/_layout.tsx` and
+  `walletconnect/_layout.tsx`. Those screens are presented as native `fullScreenModal`s — a genuinely
   separate native view hierarchy from the root on iOS — so a toast
   triggered while one is open was silently invisible under it, even though
   its state was updating correctly underneath. Multiple mounted instances

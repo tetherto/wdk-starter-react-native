@@ -30,9 +30,8 @@ function Bridge() {
   const presented = useRef(new Set<string>());
 
   useEffect(() => {
-    const store = useWalletConnect.getState();
     if (!unlocked) {
-      store.clear();
+      useWalletConnect.getState().clear();
       presented.current.clear();
       return;
     }
@@ -49,7 +48,7 @@ function Bridge() {
     Promise.all([wc.getPendingProposals(), wc.getPendingRequests(), wc.getSessions()])
       .then(([pendingProposals, pendingRequests, sessions]) => {
         if (cancelled) return;
-        useWalletConnect.getState().hydrate({ proposals: pendingProposals, requests: pendingRequests, sessions });
+        useWalletConnect.setState({ proposals: pendingProposals, requests: pendingRequests, sessions });
       })
       .catch((e) => console.warn('[walletconnect] could not load state from the worklet module:', e?.message ?? e));
 

@@ -116,7 +116,7 @@ export default function WalletHome() {
             <ChevronDown size={moderateScale(16)} color={theme.colors.textSecondary} />
           </Pressable>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row' }}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="WalletConnect"

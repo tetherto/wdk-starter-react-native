@@ -11,9 +11,6 @@ messages. The user approves the connection and every signature in the app.
 3. Restart Metro with a clean cache (`npx expo start -c`) so the value is
    inlined.
 
-Without a project ID the app still boots; the WalletConnect screen just says
-it is not set up.
-
 ## Using it
 
 Open the link icon at the top right of the Wallet tab.
@@ -31,12 +28,11 @@ Open the link icon at the top right of the Wallet tab.
 |---|---|
 | Networks | Every EVM network in `src/wdk/networks.ts` that has its provider and bundler URL set |
 | Methods | `personal_sign`, `eth_signTypedData_v4` |
-| Pairing | Pasting a `wc:` link |
 
 Not supported yet: QR scanning and `wc:` deep links, `eth_sendTransaction`,
 `personal_sign` on raw binary payloads (WDK's `sign()` takes text), and
-non-EVM networks. A dApp that *requires* any of these cannot connect; one
-that lists them as optional can.
+non-EVM networks. A dApp that *requires* an unsupported method or network
+cannot connect; one that lists it as optional can.
 
 ## How it works
 
@@ -65,10 +61,9 @@ dApp ⇄ WalletConnect relay ⇄ worklet module ⇄ (events / calls) ⇄ app UI
   it goes to the background. Requests sent meanwhile wait on the relay and
   arrive after the next unlock; the bridge re-reads pending items from the
   module each time.
-- **Bare needs four shims**, at the top of the module, all required before
-  WalletConnect is loaded. Each has a comment explaining why.
-- **WalletConnect's internal request queue is turned off**
-  (`signConfig.disableRequestQueue`); the comment there explains why.
+- **Bare needs shims, and WalletConnect's request queue is turned off**
+  (`signConfig.disableRequestQueue`). The comments in
+  `modules/walletconnect/index.js` explain why.
 - **Sessions are stored on disk** under the app's document directory
   (`walletconnect/`). They are not tied to a particular seed: after
   restoring a *different* wallet, disconnect old sessions by hand.

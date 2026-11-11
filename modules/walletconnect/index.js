@@ -12,7 +12,6 @@
  */
 
 // ── Bare compatibility shims ────────────────────────────────────────────
-// All of these must run BEFORE WalletConnect is required.
 
 // 1. Bare's URLSearchParams is iterable but has no entries(), which
 //    WalletConnect's pairing-URI parser calls.
@@ -60,38 +59,24 @@ const METADATA = {
   icons: []
 }
 
-function verifySummary (verifyContext) {
-  const verified = verifyContext && verifyContext.verified
-  if (!verified) return null
+function proposalSummary (proposal, verifyContext) {
   return {
-    origin: verified.origin || null,
-    validation: verified.validation || 'UNKNOWN',
-    isScam: verified.isScam === true
-  }
-}
-
-function proposalSummary (id, proposal, verifyContext) {
-  return {
-    id,
-    proposer: (proposal.proposer && proposal.proposer.metadata) || null,
-    verify: verifySummary(verifyContext)
+    id: proposal.id,
+    proposer: proposal.proposer.metadata,
+    verify: (verifyContext && verifyContext.verified) || null
   }
 }
 
 function sessionSummary (session) {
-  return { topic: session.topic, peer: (session.peer && session.peer.metadata) || null }
+  return { topic: session.topic, peer: session.peer.metadata }
 }
 
 /**
  * Module factory (the WdkModuleManager contract).
  *
- * @param {{ config: { projectId?: string, storagePath: string }, emit: (event: string, payload: unknown) => void }} ctx
+ * @param {{ config: { projectId: string, storagePath: string }, emit: (event: string, payload: unknown) => void }} ctx
  */
 async function createWalletConnectModule ({ config, emit }) {
-  if (typeof config.projectId !== 'string' || config.projectId.length === 0) {
-    throw new Error('WalletConnect module: config.projectId is required')
-  }
-
   const core = new Core({
     projectId: config.projectId,
     // On the Node code path WalletConnect keeps everything in memory unless a
@@ -123,12 +108,12 @@ async function createWalletConnectModule ({ config, emit }) {
       method: request.params.request.method,
       params: request.params.request.params,
       peer: (session && session.peer && session.peer.metadata) || null,
-      verify: verifySummary(request.verifyContext)
+      verify: (request.verifyContext && request.verifyContext.verified) || null
     }
   }
 
   const listeners = {
-    session_proposal: ({ id, params, verifyContext }) => emit('session_proposal', proposalSummary(id, params, verifyContext)),
+    session_proposal: ({ params, verifyContext }) => emit('session_proposal', proposalSummary(params, verifyContext)),
     session_request: (request) => emit('session_request', requestSummary(request)),
     session_delete: ({ topic }) => emit('session_delete', { topic }),
     proposal_expire: ({ id }) => emit('proposal_expire', { id }),
@@ -137,7 +122,7 @@ async function createWalletConnectModule ({ config, emit }) {
   for (const [event, listener] of Object.entries(listeners)) kit.on(event, listener)
 
   return {
-    /** Start pairing from a `wc:` URI. The proposal arrives as a `session_proposal` event. */
+    /** The proposal then arrives as a `session_proposal` event. */
     async pair (uri) {
       await kit.pair({ uri })
     },
@@ -183,14 +168,13 @@ async function createWalletConnectModule ({ config, emit }) {
     // Events fired while the app was not listening (e.g. right after unlock)
     // are not replayed, so the app pulls whatever is still pending instead.
     getPendingProposals () {
-      return Object.values(kit.getPendingSessionProposals()).map((proposal) => proposalSummary(proposal.id, proposal, null))
+      return Object.values(kit.getPendingSessionProposals()).map((proposal) => proposalSummary(proposal, null))
     },
 
     getPendingRequests () {
       return kit.getPendingSessionRequests().filter((request) => !answered.has(request.id)).map(requestSummary)
     },
 
-    // ── Lifecycle, driven by the module runtime ──────────────────────────
     // suspend/resume follow the worklet's Bare lifecycle (app background /
     // foreground); close runs on lock and on wallet re-init.
     async suspend () {

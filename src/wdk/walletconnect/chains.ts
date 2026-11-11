@@ -28,7 +28,7 @@ export function networkForChain(chainId: string): NetworkId | undefined {
   return NETWORK_BY_CHAIN.get(chainId);
 }
 
-/** What the wallet offers a dApp: every EVM network, for one address. */
+/** What the wallet offers a dApp: every configured EVM network, for one address. */
 export function supportedNamespacesFor(address: string): Record<string, SupportedNamespace> {
   return {
     eip155: {

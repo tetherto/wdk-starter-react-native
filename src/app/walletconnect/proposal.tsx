@@ -53,8 +53,7 @@ export default function Proposal() {
         id: proposal.id,
         supportedNamespaces: supportedNamespacesFor(address),
       });
-      const store = useWalletConnect.getState();
-      store.setSessions([...store.sessions.filter((s) => s.topic !== session.topic), session]);
+      useWalletConnect.setState((s) => ({ sessions: [...s.sessions.filter((x) => x.topic !== session.topic), session] }));
       finish(`Connected to ${proposal.proposer?.name || 'the app'}`);
     } catch (e: any) {
       setError(e?.message ?? 'Could not approve the connection.');

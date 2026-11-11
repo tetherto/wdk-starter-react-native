@@ -18,8 +18,6 @@ interface EvmSigningExtension {
   signTypedData(args: { domain: TypedData['domain']; types: TypedData['types']; message: TypedData['message'] }): Promise<string>;
 }
 
-type Signable = Exclude<ParsedRequest, { kind: 'unsupported' }>;
-
 export default function Request() {
   const router = useRouter();
   const showToast = useToast((s) => s.show);
@@ -123,7 +121,7 @@ function Signer({
   onSigned,
 }: {
   request: SessionRequest;
-  parsed: Signable;
+  parsed: Exclude<ParsedRequest, { kind: 'unsupported' }>;
   network: string;
   accountIndex: number;
   rejecting: boolean;
@@ -169,17 +167,17 @@ function Signer({
           {parsed.kind === 'message' ? 'Message' : 'Typed data'}
         </Text>
         <Card>
-            {parsed.kind === 'message' ? (
-              <Text variant="body">{parsed.message}</Text>
-            ) : (
-              <Text variant="mono" mono>
-                {JSON.stringify(
-                  { domain: parsed.typedData.domain, primaryType: parsed.typedData.primaryType, message: parsed.typedData.message },
-                  null,
-                  2,
-                )}
-              </Text>
-            )}
+          {parsed.kind === 'message' ? (
+            <Text variant="body">{parsed.message}</Text>
+          ) : (
+            <Text variant="mono" mono>
+              {JSON.stringify(
+                { domain: parsed.typedData.domain, primaryType: parsed.typedData.primaryType, message: parsed.typedData.message },
+                null,
+                2,
+              )}
+            </Text>
+          )}
         </Card>
 
         <Text variant="label" style={{ marginTop: 18, marginBottom: 6 }}>Signing with</Text>

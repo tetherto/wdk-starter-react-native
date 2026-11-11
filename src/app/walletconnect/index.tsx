@@ -84,8 +84,6 @@ export default function WalletConnect() {
     );
   }
 
-  const pendingCount = proposals.length + requests.length;
-
   return (
     <Screen scroll>
       <ScreenHeader title="WalletConnect" onBack={() => router.back()} />
@@ -109,7 +107,7 @@ export default function WalletConnect() {
       <Button label="Paste" variant="secondary" onPress={onPaste} />
       <Button label="Connect" onPress={onConnect} loading={pairing} disabled={uri.trim().length === 0} />
 
-      {pendingCount > 0 && (
+      {proposals.length + requests.length > 0 && (
         <>
           <Text variant="label" style={{ marginTop: 22, marginBottom: 6, fontWeight: 'bold' }}>
             Waiting for you

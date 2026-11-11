@@ -7,9 +7,8 @@ import { useResponsive } from '@/theme/responsive';
 import type { PeerMetadata, VerifySummary } from './types';
 
 /**
- * Who is asking: the dApp's self-reported name and URL, plus WalletConnect's
- * own domain check. The name and URL come from the dApp and can say
- * anything; the verify line is the only part it doesn't control.
+ * Who is asking. The name and URL are self-reported by the dApp and can say
+ * anything; WalletConnect's verify line is the only part it doesn't control.
  */
 export function DappSummary({ peer, verify }: { peer: PeerMetadata | null; verify: VerifySummary | null }) {
   const theme = useTheme();

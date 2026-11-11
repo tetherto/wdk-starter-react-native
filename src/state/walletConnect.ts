@@ -11,12 +11,10 @@ interface WalletConnectState {
   proposals: SessionProposal[];
   requests: SessionRequest[];
   sessions: Session[];
-  hydrate: (state: { proposals: SessionProposal[]; requests: SessionRequest[]; sessions: Session[] }) => void;
   addProposal: (proposal: SessionProposal) => void;
   removeProposal: (id: number) => void;
   addRequest: (request: SessionRequest) => void;
   removeRequest: (id: number) => void;
-  setSessions: (sessions: Session[]) => void;
   removeSession: (topic: string) => void;
   clear: () => void;
 }
@@ -26,8 +24,6 @@ export const useWalletConnect = create<WalletConnectState>((set) => ({
   requests: [],
   sessions: [],
 
-  hydrate: (state) => set(state),
-
   addProposal: (proposal) =>
     set((s) => ({ proposals: [...s.proposals.filter((p) => p.id !== proposal.id), proposal] })),
   removeProposal: (id) => set((s) => ({ proposals: s.proposals.filter((p) => p.id !== id) })),
@@ -36,7 +32,6 @@ export const useWalletConnect = create<WalletConnectState>((set) => ({
     set((s) => ({ requests: [...s.requests.filter((r) => r.id !== request.id), request] })),
   removeRequest: (id) => set((s) => ({ requests: s.requests.filter((r) => r.id !== id) })),
 
-  setSessions: (sessions) => set({ sessions }),
   // A session going away takes its unanswered requests with it.
   removeSession: (topic) =>
     set((s) => ({
