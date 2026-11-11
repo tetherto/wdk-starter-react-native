@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAccount, useAddresses, useModule } from '@tetherto/wdk-react-native-core';
 import { Button, Card, Screen, ScreenHeader, Text } from '@/components';
-import { useResponsive } from '@/theme/responsive';
 import { useAccounts } from '@/state/accounts';
 import { useToast } from '@/state/toast';
 import { useWalletConnect } from '@/state/walletConnect';
@@ -82,14 +81,17 @@ export default function Request() {
           : undefined;
 
   return (
-    <Screen scroll>
+    // The buttons sit outside the scroll area so a long request can never
+    // push Reject off screen.
+    <Screen>
       <ScreenHeader title="Signature request" />
-      <DappSummary peer={request.peer} verify={request.verify} />
 
       {parsed.kind === 'unsupported' || !network || !owner ? (
         <>
-          <Text variant="small" color="error" style={{ marginTop: 16 }}>{problem}</Text>
-          <View style={{ flex: 1 }} />
+          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+            <DappSummary peer={request.peer} verify={request.verify} />
+            <Text variant="small" color="error" style={{ marginTop: 16 }}>{problem}</Text>
+          </ScrollView>
           <Button label="Reject" onPress={() => onReject(problem)} loading={rejecting} />
         </>
       ) : (
@@ -128,7 +130,6 @@ function Signer({
   onReject: () => void;
   onSigned: () => void;
 }) {
-  const { moderateScale } = useResponsive();
   const wc = useModule<WalletConnectApi>(WALLETCONNECT_MODULE);
   const account = useAccount<EvmSigningExtension>({ network, accountIndex });
   const accountName = useAccounts((s) => s.names[accountIndex]) ?? `Account ${accountIndex + 1}`;
@@ -162,45 +163,45 @@ function Signer({
 
   return (
     <>
-      <Text variant="label" style={{ marginTop: 18, marginBottom: 6 }}>
-        {parsed.kind === 'message' ? 'Message' : 'Typed data'}
-      </Text>
-      <Card style={{ maxHeight: moderateScale(260) }}>
-        <ScrollView nestedScrollEnabled>
-          {parsed.kind === 'message' ? (
-            <Text variant="body">{parsed.message}</Text>
-          ) : (
-            <Text variant="mono" mono>
-              {JSON.stringify(
-                { domain: parsed.typedData.domain, primaryType: parsed.typedData.primaryType, message: parsed.typedData.message },
-                null,
-                2,
-              )}
-            </Text>
-          )}
-        </ScrollView>
-      </Card>
-
-      <Text variant="label" style={{ marginTop: 18, marginBottom: 6 }}>Signing with</Text>
-      <Card>
-        <Text variant="tokenName">{accountName}</Text>
-        <Text variant="mono" mono numberOfLines={1} ellipsizeMode="middle" style={{ marginTop: 3 }}>
-          {parsed.address}
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+        <DappSummary peer={request.peer} verify={request.verify} />
+        <Text variant="label" style={{ marginTop: 18, marginBottom: 6 }}>
+          {parsed.kind === 'message' ? 'Message' : 'Typed data'}
         </Text>
-        <Text variant="small" color="textSecondary" style={{ marginTop: 6 }}>On {networkDisplayName(network)}</Text>
-      </Card>
+        <Card>
+            {parsed.kind === 'message' ? (
+              <Text variant="body">{parsed.message}</Text>
+            ) : (
+              <Text variant="mono" mono>
+                {JSON.stringify(
+                  { domain: parsed.typedData.domain, primaryType: parsed.typedData.primaryType, message: parsed.typedData.message },
+                  null,
+                  2,
+                )}
+              </Text>
+            )}
+        </Card>
 
-      <Text variant="small" color="textSecondary" style={{ marginTop: 14 }}>
-        Signing does not send a transaction or cost anything, but a signature can authorize actions on the app that asked
-        for it. Only sign what you understand.
-      </Text>
-      {(error || account.error) && (
-        <Text variant="small" color="error" style={{ marginTop: 10 }}>
-          {error ?? `This account could not be loaded on ${networkDisplayName(network)}, so it cannot sign there.`}
+        <Text variant="label" style={{ marginTop: 18, marginBottom: 6 }}>Signing with</Text>
+        <Card>
+          <Text variant="tokenName">{accountName}</Text>
+          <Text variant="mono" mono numberOfLines={1} ellipsizeMode="middle" style={{ marginTop: 3 }}>
+            {parsed.address}
+          </Text>
+          <Text variant="small" color="textSecondary" style={{ marginTop: 6 }}>On {networkDisplayName(network)}</Text>
+        </Card>
+
+        <Text variant="small" color="textSecondary" style={{ marginTop: 14 }}>
+          Signing does not send a transaction or cost anything, but a signature can authorize actions on the app that asked
+          for it. Only sign what you understand.
         </Text>
-      )}
+        {(error || account.error) && (
+          <Text variant="small" color="error" style={{ marginTop: 10 }}>
+            {error ?? `This account could not be loaded on ${networkDisplayName(network)}, so it cannot sign there.`}
+          </Text>
+        )}
+      </ScrollView>
 
-      <View style={{ flex: 1 }} />
       <Button label="Sign" onPress={onApprove} loading={signing} disabled={!account.address || rejecting} />
       <Button label="Reject" variant="secondary" onPress={onReject} loading={rejecting} disabled={signing} />
     </>
