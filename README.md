@@ -142,6 +142,7 @@ switch to instead of the pinned fork.
 | Activity tab to show anything | `EXPO_PUBLIC_WDK_INDEXER_API_KEY` |
 | Real balances (any one network) | That network's `_PROVIDER` (+ `_BUNDLER_URL`/`_PAYMASTER_URL` for EVM chains) |
 | Cloud backup | See `docs/CLOUD_BACKUP.md` — several accounts/credentials, not a quick add |
+| WalletConnect (connecting dApps) | `EXPO_PUBLIC_WALLETCONNECT_PROJECT_ID` — see `docs/WALLETCONNECT.md` |
 | Shipping your own build | See "Making it your own" below |
 
 Every key's own comment in `.env.example` explains what breaks without it —

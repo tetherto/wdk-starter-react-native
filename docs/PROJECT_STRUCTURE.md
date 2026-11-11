@@ -36,6 +36,11 @@ src/
 │   │   ├── amount.tsx                # Recipient + amount, crypto/fiat toggle
 │   │   ├── review.tsx                # Confirm — executes a REAL send
 │   │   └── success.tsx               # Real tx hash, links to a real explorer
+│   ├── walletconnect/                # See docs/WALLETCONNECT.md
+│   │   ├── _layout.tsx               # Also mounts its own <Toast/> — same reason
+│   │   ├── index.tsx                 # Paste a wc: link, pending items, connected apps
+│   │   ├── proposal.tsx              # Approve/reject a dApp's connection request
+│   │   └── request.tsx               # Approve/reject a signature request
 │   └── tx/
 │       ├── _layout.tsx
 │       └── [id].tsx                  # Transaction detail (looked up from the same

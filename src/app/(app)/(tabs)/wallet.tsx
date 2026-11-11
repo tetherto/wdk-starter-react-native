@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ScanLine,
   ArrowUpRight,
+  Link2,
   ArrowDownLeft,
   ArrowLeftRight,
   CreditCard,
@@ -115,6 +116,23 @@ export default function WalletHome() {
             <ChevronDown size={moderateScale(16)} color={theme.colors.textSecondary} />
           </Pressable>
 
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          {/* WalletConnect: pair with a dApp, manage connected dApps. */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="WalletConnect"
+            onPress={() => router.push('/walletconnect')}
+            style={{
+              width: moderateScale(36),
+              height: moderateScale(36),
+              borderRadius: moderateScale(18),
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Link2 size={moderateScale(20)} color={theme.colors.textPrimary} />
+          </Pressable>
+
           {/* Visibly disabled — explicit product feedback: not-yet-built
               actions should read as clearly inactive, not indistinguishable
               from live controls. */}
@@ -131,6 +149,7 @@ export default function WalletHome() {
           >
             <ScanLine size={moderateScale(20)} color={theme.colors.textSecondary} />
           </Pressable>
+          </View>
         </View>
 
         {/* Total balance */}

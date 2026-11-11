@@ -24,6 +24,34 @@ module.exports = {
     }
     // tron: still on hold — see config.ts's comment.
   },
+  // Worklet modules: long-lived services that run next to the wallets inside
+  // the worklet. The app talks to them with useModule('<name>'); their runtime
+  // config (project ID, storage path) comes from wdkConfigs.modules in
+  // src/wdk/networks.ts. See docs/WALLETCONNECT.md.
+  modules: {
+    walletconnect: {
+      package: 'wdk-module-walletconnect'
+    }
+  },
+  // The only module methods the app may call over IPC. Not enforced yet: the
+  // worklet runtime this app resolves (@tetherto/pear-wrk-wdk 1.0.0-beta.10,
+  // via wdk-react-native-core) ignores this list. It takes effect once that
+  // dependency moves to a version that reads it.
+  allowedModuleMethods: {
+    walletconnect: {
+      methods: [
+        'pair',
+        'approveSession',
+        'rejectSession',
+        'respondRequest',
+        'rejectRequest',
+        'disconnect',
+        'getSessions',
+        'getPendingProposals',
+        'getPendingRequests'
+      ]
+    }
+  },
   preloadModules: [
     '@buildonspark/spark-frost-bare-addon'
   ]
