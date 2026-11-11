@@ -19,10 +19,9 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
 
-    # docs/ENVIRONMENT.md: npm 10 silently drops packages (including `expo`
-    # itself) from git-dependency trees with no error. This project has three
-    # git dependencies, so npm >= 11 is a hard requirement. Node 22 ships
-    # npm 10.x, hence the explicit upgrade.
+    # docs/ENVIRONMENT.md: npm >= 11.10.1 is required (npm/cli#8726 — `npm ci`
+    # can reject a lockfile `npm install` just wrote, due to the @noble/*
+    # range ambiguity). Node 22 ships npm 10.x, hence the explicit upgrade.
     - name: Upgrade npm
       shell: bash
       run: |
