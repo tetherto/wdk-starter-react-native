@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ScanLine,
   ArrowUpRight,
+  Link2,
   ArrowDownLeft,
   ArrowLeftRight,
   CreditCard,
@@ -115,22 +116,39 @@ export default function WalletHome() {
             <ChevronDown size={moderateScale(16)} color={theme.colors.textSecondary} />
           </Pressable>
 
-          {/* Visibly disabled — explicit product feedback: not-yet-built
-              actions should read as clearly inactive, not indistinguishable
-              from live controls. */}
-          <Pressable
-            onPress={() => comingSoon('Scan')}
-            style={{
-              width: moderateScale(36),
-              height: moderateScale(36),
-              borderRadius: moderateScale(18),
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: 0.6, // increased from 0.4 — was reading as too faint/dull
-            }}
-          >
-            <ScanLine size={moderateScale(20)} color={theme.colors.textSecondary} />
-          </Pressable>
+          <View style={{ flexDirection: 'row' }}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="WalletConnect"
+              onPress={() => router.push('/walletconnect')}
+              style={{
+                width: moderateScale(36),
+                height: moderateScale(36),
+                borderRadius: moderateScale(18),
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Link2 size={moderateScale(20)} color={theme.colors.textPrimary} />
+            </Pressable>
+
+            {/* Visibly disabled — explicit product feedback: not-yet-built
+                actions should read as clearly inactive, not indistinguishable
+                from live controls. */}
+            <Pressable
+              onPress={() => comingSoon('Scan')}
+              style={{
+                width: moderateScale(36),
+                height: moderateScale(36),
+                borderRadius: moderateScale(18),
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: 0.6, // increased from 0.4 — was reading as too faint/dull
+              }}
+            >
+              <ScanLine size={moderateScale(20)} color={theme.colors.textSecondary} />
+            </Pressable>
+          </View>
         </View>
 
         {/* Total balance */}

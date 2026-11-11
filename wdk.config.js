@@ -24,6 +24,15 @@ module.exports = {
     }
     // tron: still on hold — see config.ts's comment.
   },
+  // Worklet modules: long-lived services that run next to the wallets inside
+  // the worklet. The app talks to them with useModule('<name>'); their runtime
+  // config (project ID, storage path) comes from wdkConfigs.modules in
+  // src/wdk/networks.ts. See docs/WALLETCONNECT.md.
+  modules: {
+    walletconnect: {
+      package: 'wdk-module-walletconnect'
+    }
+  },
   preloadModules: [
     '@buildonspark/spark-frost-bare-addon'
   ]

@@ -36,6 +36,11 @@ src/
 │   │   ├── amount.tsx                # Recipient + amount, crypto/fiat toggle
 │   │   ├── review.tsx                # Confirm — executes a REAL send
 │   │   └── success.tsx               # Real tx hash, links to a real explorer
+│   ├── walletconnect/                # See docs/WALLETCONNECT.md
+│   │   ├── _layout.tsx               # Also mounts its own <Toast/> — same reason
+│   │   ├── index.tsx                 # Paste a wc: link, pending items, connected apps
+│   │   ├── proposal.tsx              # Approve/reject a dApp's connection request
+│   │   └── request.tsx               # Approve/reject a signature request
 │   └── tx/
 │       ├── _layout.tsx
 │       └── [id].tsx                  # Transaction detail (looked up from the same
@@ -156,8 +161,8 @@ a recommendation to remove it before/shortly after this PR merges.
   app-level provider on iOS — this re-establishes correct insets regardless
   of how a screen was presented.
 - **`Toast` is mounted in more than one place, deliberately.** Once at the
-  app root, and again inside `send/_layout.tsx` and `receive/_layout.tsx`.
-  Those two screens are presented as native `fullScreenModal`s — a genuinely
+  app root, and again inside `send/_layout.tsx`, `receive/_layout.tsx` and
+  `walletconnect/_layout.tsx`. Those screens are presented as native `fullScreenModal`s — a genuinely
   separate native view hierarchy from the root on iOS — so a toast
   triggered while one is open was silently invisible under it, even though
   its state was updating correctly underneath. Multiple mounted instances

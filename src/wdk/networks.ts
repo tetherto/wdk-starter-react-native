@@ -3,6 +3,7 @@ import type { BtcWalletConfig } from '@tetherto/wdk-wallet-btc';
 import type { Evm7702GaslessWalletConfig } from '@tetherto/wdk-wallet-evm-7702-gasless';
 import { AppAsset, type AppAssetConfig } from './AppAsset';
 import type { AssetIconSource } from '@/theme/assetIcons';
+import { walletConnectModuleConfig } from './walletconnect/moduleConfig';
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -96,6 +97,13 @@ export interface NetworkDefinition {
   btcNetwork?: BtcWalletConfig['network'];
   /** EVM networks only. */
   evm?: {
+    /**
+     * EIP-155 chain ID of the chain the provider below points at. Used to
+     * match WalletConnect requests (`eip155:<chainId>`) to this network.
+     * Like `explorerUrl` and `indexerBlockchain`, it must be updated by hand
+     * if the provider is ever repointed to a different chain.
+     */
+    chainId: number;
     provider: string | undefined;
     bundlerUrl: string | undefined;
     paymasterUrl: string | undefined;
@@ -182,6 +190,7 @@ export const NETWORKS = [
     network: 'ethereum' as const,
     kind: 'evm',
     evm: {
+      chainId: 11155111, // Sepolia
       provider: process.env.EXPO_PUBLIC_EVM_ETHEREUM_PROVIDER,
       bundlerUrl: process.env.EXPO_PUBLIC_EVM_ETHEREUM_BUNDLER_URL,
       paymasterUrl: process.env.EXPO_PUBLIC_EVM_ETHEREUM_PAYMASTER_URL,
@@ -223,6 +232,7 @@ export const NETWORKS = [
     network: 'arbitrum' as const,
     kind: 'evm',
     evm: {
+      chainId: 42161,
       provider: process.env.EXPO_PUBLIC_EVM_ARBITRUM_PROVIDER,
       bundlerUrl: process.env.EXPO_PUBLIC_EVM_ARBITRUM_BUNDLER_URL,
       paymasterUrl: process.env.EXPO_PUBLIC_EVM_ARBITRUM_PAYMASTER_URL,
@@ -258,6 +268,7 @@ export const NETWORKS = [
     network: 'polygon' as const,
     kind: 'evm',
     evm: {
+      chainId: 137,
       provider: process.env.EXPO_PUBLIC_EVM_POLYGON_PROVIDER,
       bundlerUrl: process.env.EXPO_PUBLIC_EVM_POLYGON_BUNDLER_URL,
       paymasterUrl: process.env.EXPO_PUBLIC_EVM_POLYGON_PAYMASTER_URL,
@@ -435,6 +446,9 @@ export const wdkConfigs: WdkConfigs<BtcWalletConfig | Evm7702GaslessWalletConfig
       },
     ]),
   ),
+  // Worklet modules (see wdk.config.js). Left out entirely when unconfigured,
+  // so the module is simply never constructed.
+  ...(walletConnectModuleConfig ? { modules: { walletconnect: walletConnectModuleConfig } } : {}),
 } as WdkConfigs<BtcWalletConfig | Evm7702GaslessWalletConfig>;
 
 export default wdkConfigs;

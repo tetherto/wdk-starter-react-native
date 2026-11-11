@@ -14,6 +14,7 @@ import 'react-native-get-random-values';
 import { CloudBackupProvider } from '@/wdk/cloud-backup/CloudBackupContext';
 import { Toast } from '@/components';
 import { AccountDiscovery } from '@/wdk/hooks/AccountDiscovery';
+import { WalletConnectBridge } from '@/wdk/walletconnect/WalletConnectBridge';
 
 function useEdgeToEdge() {
   const theme = useTheme();
@@ -41,6 +42,7 @@ function RootStack() {
       <Stack.Screen name="unlock" />
       <Stack.Screen name="send" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
       <Stack.Screen name="receive" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="walletconnect" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
       <Stack.Screen name="accounts" />
       <Stack.Screen name="tx" />
     </Stack>
@@ -57,6 +59,7 @@ export default function RootLayout() {
             <ThemeProvider>
               <CloudBackupProvider>
                 <WdkSessionGate />
+                <WalletConnectBridge />
                 <RootStack />
                 <Toast />
               </CloudBackupProvider>
