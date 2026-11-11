@@ -2,7 +2,7 @@ import { NETWORKS, type NetworkId } from '../networks';
 import type { SupportedNamespace } from './types';
 
 /** The signing methods this wallet answers. Anything else is rejected. */
-export const EVM_METHODS = ['personal_sign', 'eth_signTypedData_v4'];
+const EVM_METHODS = ['personal_sign', 'eth_signTypedData_v4'];
 const EVM_EVENTS = ['chainChanged', 'accountsChanged'];
 
 /** CAIP-2 chain → the app's network key, for every EVM network in NETWORKS. */

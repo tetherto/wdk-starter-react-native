@@ -20,40 +20,15 @@ export type ParsedRequest =
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 const HEX = /^0x([0-9a-fA-F]{2})*$/;
 
-/**
- * Strict UTF-8 decode of a 0x-hex string; null if the bytes aren't valid
- * UTF-8. Hand-rolled because TextDecoder isn't guaranteed in Hermes.
- */
+/** Strict UTF-8 decode of a 0x-hex string; null if the bytes aren't valid UTF-8. */
 function hexToUtf8(hex: string): string | null {
-  const bytes: number[] = [];
-  for (let i = 2; i < hex.length; i += 2) bytes.push(parseInt(hex.slice(i, i + 2), 16));
-
-  let out = '';
-  for (let i = 0; i < bytes.length; ) {
-    const b = bytes[i];
-    let extra: number;
-    let code: number;
-    if (b < 0x80) { extra = 0; code = b; }
-    else if (b >= 0xc2 && b < 0xe0) { extra = 1; code = b & 0x1f; }
-    else if (b >= 0xe0 && b < 0xf0) { extra = 2; code = b & 0x0f; }
-    else if (b >= 0xf0 && b < 0xf5) { extra = 3; code = b & 0x07; }
-    else return null;
-
-    if (i + extra >= bytes.length) return null;
-    for (let j = 1; j <= extra; j++) {
-      const next = bytes[i + j];
-      if ((next & 0xc0) !== 0x80) return null;
-      code = (code << 6) | (next & 0x3f);
-    }
-    // Reject overlong encodings, surrogates and out-of-range code points.
-    if (extra === 2 && code < 0x800) return null;
-    if (extra === 3 && (code < 0x10000 || code > 0x10ffff)) return null;
-    if (code >= 0xd800 && code <= 0xdfff) return null;
-
-    out += String.fromCodePoint(code);
-    i += extra + 1;
+  const bytes = new Uint8Array((hex.length - 2) / 2);
+  for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(hex.slice(2 + i * 2, 4 + i * 2), 16);
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    return null;
   }
-  return out;
 }
 
 function parsePersonalSign(params: unknown): ParsedRequest {

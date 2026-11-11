@@ -16,7 +16,7 @@ export function DappSummary({ peer, verify }: { peer: PeerMetadata | null; verif
   const { moderateScale } = useResponsive();
 
   const flagged = verify?.isScam || verify?.validation === 'INVALID';
-  const verified = verify?.validation === 'VALID' && !verify.isScam;
+  const verified = verify?.validation === 'VALID';
 
   return (
     <Card>

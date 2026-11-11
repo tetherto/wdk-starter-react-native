@@ -33,25 +33,6 @@ module.exports = {
       package: 'wdk-module-walletconnect'
     }
   },
-  // The only module methods the app may call over IPC. Not enforced yet: the
-  // worklet runtime this app resolves (@tetherto/pear-wrk-wdk 1.0.0-beta.10,
-  // via wdk-react-native-core) ignores this list. It takes effect once that
-  // dependency moves to a version that reads it.
-  allowedModuleMethods: {
-    walletconnect: {
-      methods: [
-        'pair',
-        'approveSession',
-        'rejectSession',
-        'respondRequest',
-        'rejectRequest',
-        'disconnect',
-        'getSessions',
-        'getPendingProposals',
-        'getPendingRequests'
-      ]
-    }
-  },
   preloadModules: [
     '@buildonspark/spark-frost-bare-addon'
   ]

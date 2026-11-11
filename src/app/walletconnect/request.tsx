@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAccount, useAddresses, useModule } from '@tetherto/wdk-react-native-core';
 import { Button, Card, Screen, ScreenHeader, Text } from '@/components';
 import { useResponsive } from '@/theme/responsive';
@@ -28,18 +28,19 @@ export default function Request() {
   const { getAccountInfoFromAddress, loadAddresses } = useAddresses();
 
   // Pinned for the same reason as on the proposal screen.
-  const [requestId] = useState(() => useWalletConnect.getState().requests[0]?.id);
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const [requestId] = useState(() => (id ? Number(id) : useWalletConnect.getState().requests[0]?.id));
   const request = useWalletConnect((s) => s.requests.find((r) => r.id === requestId));
   const [rejecting, setRejecting] = useState(false);
 
   // The request may name an account whose address hasn't been loaded in this
   // session yet (only the active account's is loaded eagerly). Load them all
   // so the lookup below can match it.
-  const requestNetwork = request ? networkForChain(request.chainId) : undefined;
+  const network = request ? networkForChain(request.chainId) : undefined;
   useEffect(() => {
-    if (!requestNetwork) return;
-    loadAddresses(useAccounts.getState().indices, [requestNetwork]).catch(() => {});
-  }, [requestNetwork, loadAddresses]);
+    if (!network) return;
+    loadAddresses(useAccounts.getState().indices, [network]).catch(() => {});
+  }, [network, loadAddresses]);
 
   if (!request) {
     return (
@@ -67,7 +68,6 @@ export default function Request() {
   };
 
   const parsed = parseRequest(request);
-  const network = requestNetwork;
   // Which of this wallet's accounts the dApp is asking to sign with. An EVM
   // address is the same on every EVM network, so only the index matters.
   const owner = parsed.kind === 'unsupported' ? undefined : getAccountInfoFromAddress(parsed.address);
@@ -79,18 +79,18 @@ export default function Request() {
         ? `This wallet has no network for ${request.chainId}.`
         : !owner
           ? 'The requested account is not one of this wallet’s loaded accounts.'
-          : null;
+          : undefined;
 
   return (
     <Screen scroll>
       <ScreenHeader title="Signature request" />
       <DappSummary peer={request.peer} verify={request.verify} />
 
-      {problem || parsed.kind === 'unsupported' || !network || !owner ? (
+      {parsed.kind === 'unsupported' || !network || !owner ? (
         <>
           <Text variant="small" color="error" style={{ marginTop: 16 }}>{problem}</Text>
           <View style={{ flex: 1 }} />
-          <Button label="Reject" onPress={() => onReject(problem ?? undefined)} loading={rejecting} />
+          <Button label="Reject" onPress={() => onReject(problem)} loading={rejecting} />
         </>
       ) : (
         <Signer

@@ -29,7 +29,7 @@ Open the link icon at the top right of the Wallet tab.
 
 | | |
 |---|---|
-| Networks | Every EVM network in `src/wdk/networks.ts` (Ethereum Sepolia, Arbitrum, Polygon) |
+| Networks | Every EVM network in `src/wdk/networks.ts` |
 | Methods | `personal_sign`, `eth_signTypedData_v4` |
 | Pairing | Pasting a `wc:` link |
 
@@ -65,16 +65,10 @@ dApp ⇄ WalletConnect relay ⇄ worklet module ⇄ (events / calls) ⇄ app UI
   it goes to the background. Requests sent meanwhile wait on the relay and
   arrive after the next unlock; the bridge re-reads pending items from the
   module each time.
-- **Bare needs three shims**, all at the top of the module and all required
-  before WalletConnect is loaded: `URLSearchParams.entries()` and friends,
-  `http(s).get`, and swapping the global `WebSocket` for the `ws` package
-  while WalletConnect loads. Each has a comment explaining why.
+- **Bare needs three shims**, at the top of the module, all required before
+  WalletConnect is loaded. Each has a comment explaining why.
 - **WalletConnect's internal request queue is turned off**
-  (`signConfig.disableRequestQueue`). With it on, a request the relay
-  delivers twice jams the queue and every later request on that session is
-  silently dropped.
+  (`signConfig.disableRequestQueue`); the comment there explains why.
 - **Sessions are stored on disk** under the app's document directory
   (`walletconnect/`). They are not tied to a particular seed: after
   restoring a *different* wallet, disconnect old sessions by hand.
-- **`allowedModuleMethods` in `wdk.config.js` is not enforced** by the
-  worklet runtime version this app currently resolves.

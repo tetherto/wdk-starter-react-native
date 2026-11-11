@@ -5,36 +5,29 @@
  *
  * Runs inside the Bare worklet, bundled by `wdk-worklet-bundler` through the
  * `modules` entry in wdk.config.js. It owns the WalletConnect client (relay
- * socket, pairings, sessions, storage) and nothing else: it never sees a key
- * and never signs. Proposals and signing requests are forwarded to the app as
- * module events; the app shows the approval UI, signs through the normal WDK
- * account path, and hands the result back with respondRequest().
+ * socket, pairings, sessions, storage) and nothing else: it never reads the
+ * seed and never signs. Proposals and signing requests are forwarded to the
+ * app as module events; the app shows the approval UI, signs through the
+ * normal WDK account path, and hands the result back with respondRequest().
  */
 
 // ── Bare compatibility shims ────────────────────────────────────────────
 // All of these must run BEFORE WalletConnect is required.
 
-// 1. Bare's URLSearchParams is iterable but has no entries/keys/values/
-//    forEach. WalletConnect's pairing-URI parser calls entries().
-if (typeof URLSearchParams !== 'undefined') {
-  const proto = URLSearchParams.prototype
-  if (!proto.entries) proto.entries = function () { return this[Symbol.iterator]() }
-  if (!proto.keys) proto.keys = function * () { for (const [key] of this) yield key }
-  if (!proto.values) proto.values = function * () { for (const [, value] of this) yield value }
-  if (!proto.forEach) {
-    proto.forEach = function (fn, thisArg) { for (const [key, value] of this) fn.call(thisArg, value, key, this) }
-  }
+// 1. Bare's URLSearchParams is iterable but has no entries(), which
+//    WalletConnect's pairing-URI parser calls.
+if (!URLSearchParams.prototype.entries) {
+  URLSearchParams.prototype.entries = function () { return this[Symbol.iterator]() }
 }
 
-// 2. `ws` opens its socket with http(s).get(), which bare-https only gained
-//    in 3.1.0 (and this app's lockfile may resolve an older one).
-for (const http of [require('http'), require('https')]) {
-  if (typeof http.get !== 'function' && typeof http.request === 'function') {
-    http.get = function (...args) {
-      const request = http.request(...args)
-      request.end()
-      return request
-    }
+// 2. `ws` opens its socket with https.get(), which bare-https only gained in
+//    3.1.0 (this app's lockfile resolves an older one).
+const https = require('https')
+if (!https.get) {
+  https.get = function (...args) {
+    const request = https.request(...args)
+    request.end()
+    return request
   }
 }
 
@@ -50,7 +43,8 @@ const { WalletKit } = require('@reown/walletkit')
 const { buildApprovedNamespaces, getSdkError } = require('@walletconnect/utils')
 global.WebSocket = previousWebSocket
 
-const DEFAULT_METADATA = {
+// Shown to the user by the dApp when it asks to connect.
+const METADATA = {
   name: 'WDK Starter Wallet',
   description: 'WDK React Native starter wallet',
   url: 'https://wdk.tether.io',
@@ -71,60 +65,38 @@ function proposalSummary (id, proposal, verifyContext) {
   return {
     id,
     proposer: (proposal.proposer && proposal.proposer.metadata) || null,
-    requiredNamespaces: proposal.requiredNamespaces || {},
-    optionalNamespaces: proposal.optionalNamespaces || {},
-    expiryTimestamp: proposal.expiryTimestamp || null,
     verify: verifySummary(verifyContext)
   }
 }
 
 function sessionSummary (session) {
-  const accounts = []
-  const chains = []
-  for (const namespace of Object.values(session.namespaces || {})) {
-    for (const account of namespace.accounts || []) accounts.push(account)
-    for (const chain of namespace.chains || []) chains.push(chain)
-  }
-  return {
-    topic: session.topic,
-    peer: (session.peer && session.peer.metadata) || null,
-    expiry: session.expiry,
-    accounts,
-    chains
-  }
+  return { topic: session.topic, peer: (session.peer && session.peer.metadata) || null }
 }
 
 /**
  * Module factory (the WdkModuleManager contract).
  *
- * `seed` is deliberately ignored — see the file header.
- *
- * @param {{ config: { projectId?: string, storagePath?: string, metadata?: object }, emit: (event: string, payload: unknown) => void }} ctx
+ * @param {{ config: { projectId?: string, storagePath: string }, emit: (event: string, payload: unknown) => void }} ctx
  */
 async function createWalletConnectModule ({ config, emit }) {
-  const projectId = config && config.projectId
-  if (typeof projectId !== 'string' || projectId.length === 0) {
+  if (typeof config.projectId !== 'string' || config.projectId.length === 0) {
     throw new Error('WalletConnect module: config.projectId is required')
   }
 
   const core = new Core({
-    projectId,
-    logger: 'error',
+    projectId: config.projectId,
     // On the Node code path WalletConnect keeps everything in memory unless a
     // database path is given, which would drop every session on restart.
-    storageOptions: { database: (config && config.storagePath) || ':memory:' }
+    storageOptions: { database: config.storagePath }
   })
 
   const kit = await WalletKit.init({
     core,
-    metadata: { ...DEFAULT_METADATA, ...((config && config.metadata) || {}) },
-    // WalletConnect holds incoming requests in an internal one-at-a-time
-    // queue. The relay sometimes re-delivers a request that was already
-    // answered; it lands back at the head of that queue, is recognised as a
-    // duplicate and skipped, and the queue never advances again — every later
-    // request on the session is silently dropped. Without the queue each new
-    // request is emitted as it arrives (duplicates are still skipped), and
-    // the app keeps its own list of what is waiting on the user.
+    metadata: METADATA,
+    // WalletConnect's one-at-a-time request queue stalls for good when the
+    // relay re-delivers an already-answered request, silently dropping every
+    // later request on the session. Without it each request is emitted as it
+    // arrives; the app keeps its own list of what is waiting.
     signConfig: { disableRequestQueue: true }
   })
 
@@ -141,7 +113,6 @@ async function createWalletConnectModule ({ config, emit }) {
       chainId: request.params.chainId,
       method: request.params.request.method,
       params: request.params.request.params,
-      expiryTimestamp: request.params.request.expiryTimestamp || null,
       peer: (session && session.peer && session.peer.metadata) || null,
       verify: verifySummary(request.verifyContext)
     }
@@ -159,9 +130,7 @@ async function createWalletConnectModule ({ config, emit }) {
   return {
     /** Start pairing from a `wc:` URI. The proposal arrives as a `session_proposal` event. */
     async pair (uri) {
-      if (typeof uri !== 'string' || !uri.startsWith('wc:')) throw new Error('Not a WalletConnect URI')
       await kit.pair({ uri })
-      return true
     },
 
     /**
@@ -181,26 +150,21 @@ async function createWalletConnectModule ({ config, emit }) {
 
     async rejectSession ({ id }) {
       await kit.rejectSession({ id, reason: getSdkError('USER_REJECTED') })
-      return true
     },
 
-    /** Answer a signing request with its result (e.g. the signature). */
     async respondRequest ({ topic, id, result }) {
       await kit.respondSessionRequest({ topic, response: { id, jsonrpc: '2.0', result } })
       answered.add(id)
-      return true
     },
 
     async rejectRequest ({ topic, id, message }) {
       const error = message ? { code: 5000, message } : getSdkError('USER_REJECTED')
       await kit.respondSessionRequest({ topic, response: { id, jsonrpc: '2.0', error } })
       answered.add(id)
-      return true
     },
 
     async disconnect ({ topic }) {
       await kit.disconnectSession({ topic, reason: getSdkError('USER_DISCONNECTED') })
-      return true
     },
 
     getSessions () {
@@ -238,4 +202,3 @@ async function createWalletConnectModule ({ config, emit }) {
 }
 
 module.exports = createWalletConnectModule
-module.exports.createWalletConnectModule = createWalletConnectModule

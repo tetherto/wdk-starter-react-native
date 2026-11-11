@@ -5,9 +5,7 @@
 
 export interface PeerMetadata {
   name: string;
-  description?: string;
   url: string;
-  icons?: string[];
 }
 
 /** WalletConnect's Verify API result for the dApp's domain. */
@@ -17,18 +15,9 @@ export interface VerifySummary {
   isScam: boolean;
 }
 
-export interface ProposalNamespace {
-  chains?: string[];
-  methods: string[];
-  events: string[];
-}
-
 export interface SessionProposal {
   id: number;
   proposer: PeerMetadata | null;
-  requiredNamespaces: Record<string, ProposalNamespace>;
-  optionalNamespaces: Record<string, ProposalNamespace>;
-  expiryTimestamp: number | null;
   verify: VerifySummary | null;
 }
 
@@ -39,7 +28,6 @@ export interface SessionRequest {
   chainId: string;
   method: string;
   params: unknown;
-  expiryTimestamp: number | null;
   peer: PeerMetadata | null;
   verify: VerifySummary | null;
 }
@@ -47,11 +35,6 @@ export interface SessionRequest {
 export interface Session {
   topic: string;
   peer: PeerMetadata | null;
-  /** Unix seconds. */
-  expiry: number;
-  /** CAIP-10, e.g. `eip155:11155111:0xabc…`. */
-  accounts: string[];
-  chains: string[];
 }
 
 export interface SupportedNamespace {
@@ -63,15 +46,15 @@ export interface SupportedNamespace {
 
 /** The module's callable surface (each call is one IPC round trip). */
 export interface WalletConnectApi {
-  pair(uri: string): Promise<boolean>;
+  pair(uri: string): Promise<void>;
   approveSession(args: {
     id: number;
     supportedNamespaces: Record<string, SupportedNamespace>;
   }): Promise<Session>;
-  rejectSession(args: { id: number }): Promise<boolean>;
-  respondRequest(args: { topic: string; id: number; result: unknown }): Promise<boolean>;
-  rejectRequest(args: { topic: string; id: number; message?: string }): Promise<boolean>;
-  disconnect(args: { topic: string }): Promise<boolean>;
+  rejectSession(args: { id: number }): Promise<void>;
+  respondRequest(args: { topic: string; id: number; result: unknown }): Promise<void>;
+  rejectRequest(args: { topic: string; id: number; message?: string }): Promise<void>;
+  disconnect(args: { topic: string }): Promise<void>;
   getSessions(): Promise<Session[]>;
   getPendingProposals(): Promise<SessionProposal[]>;
   getPendingRequests(): Promise<SessionRequest[]>;

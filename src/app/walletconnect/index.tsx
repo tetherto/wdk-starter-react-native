@@ -1,6 +1,6 @@
-import React, { useCallback, useState } from 'react';
+import React, { useState } from 'react';
 import { Pressable, View } from 'react-native';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { ChevronRight } from 'lucide-react-native';
 import { useModule } from '@tetherto/wdk-react-native-core';
@@ -12,10 +12,6 @@ import { useWalletConnect } from '@/state/walletConnect';
 import { isWalletConnectConfigured, WALLETCONNECT_MODULE } from '@/wdk/walletconnect/moduleConfig';
 import type { WalletConnectApi } from '@/wdk/walletconnect/types';
 
-/**
- * WalletConnect home: pair with a dApp by pasting its `wc:` link, see what
- * is waiting on a decision, and manage connected dApps.
- */
 export default function WalletConnect() {
   const router = useRouter();
   const theme = useTheme();
@@ -31,17 +27,6 @@ export default function WalletConnect() {
   const [pairing, setPairing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
-
-  // The list can change without an event reaching us (a session expiring
-  // while the app was in the background), so re-read it whenever shown.
-  useFocusEffect(
-    useCallback(() => {
-      if (!isWalletConnectConfigured) return;
-      wc.getSessions()
-        .then((list) => useWalletConnect.getState().setSessions(list ?? []))
-        .catch(() => {});
-    }, [wc]),
-  );
 
   const onPaste = async () => {
     const text = (await Clipboard.getStringAsync()).trim();
@@ -91,7 +76,7 @@ export default function WalletConnect() {
         <Card>
           <Text variant="tokenName">Not set up</Text>
           <Text variant="small" color="textSecondary" style={{ marginTop: 6 }}>
-            Set EXPO_PUBLIC_WALLETCONNECT_PROJECT_ID in .env and rebuild. A project ID is free at
+            Set EXPO_PUBLIC_WALLETCONNECT_PROJECT_ID in .env and restart Metro. A project ID is free at
             dashboard.walletconnect.com — see docs/WALLETCONNECT.md.
           </Text>
         </Card>
@@ -134,7 +119,7 @@ export default function WalletConnect() {
               key={`p${p.id}`}
               title={p.proposer?.name || 'Unknown app'}
               subtitle="Wants to connect"
-              onPress={() => router.push('/walletconnect/proposal')}
+              onPress={() => router.push({ pathname: '/walletconnect/proposal', params: { id: p.id } })}
             />
           ))}
           {requests.map((r) => (
@@ -142,7 +127,7 @@ export default function WalletConnect() {
               key={`r${r.id}`}
               title={r.peer?.name || 'Unknown app'}
               subtitle="Wants a signature"
-              onPress={() => router.push('/walletconnect/request')}
+              onPress={() => router.push({ pathname: '/walletconnect/request', params: { id: r.id } })}
             />
           ))}
         </>

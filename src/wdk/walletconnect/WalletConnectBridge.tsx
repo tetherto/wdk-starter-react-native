@@ -49,11 +49,7 @@ function Bridge() {
     Promise.all([wc.getPendingProposals(), wc.getPendingRequests(), wc.getSessions()])
       .then(([pendingProposals, pendingRequests, sessions]) => {
         if (cancelled) return;
-        useWalletConnect.getState().hydrate({
-          proposals: pendingProposals ?? [],
-          requests: pendingRequests ?? [],
-          sessions: sessions ?? [],
-        });
+        useWalletConnect.getState().hydrate({ proposals: pendingProposals, requests: pendingRequests, sessions });
       })
       .catch((e) => console.warn('[walletconnect] could not load state from the worklet module:', e?.message ?? e));
 
@@ -85,5 +81,3 @@ function Bridge() {
 export function WalletConnectBridge() {
   return isWalletConnectConfigured ? <Bridge /> : null;
 }
-
-export default WalletConnectBridge;

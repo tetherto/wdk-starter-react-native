@@ -18,27 +18,13 @@ export const isWalletConnectConfigured = projectId.length > 0;
 /**
  * Where the module persists pairings and sessions. The worklet has no
  * reliable notion of an app-writable directory of its own, so the app passes
- * one in. Without a path WalletConnect keeps sessions in memory only.
+ * one in.
  */
-function storagePath(): string | undefined {
-  try {
-    const documentPath = decodeURIComponent(Paths.document.uri.replace(/^file:\/\//, ''));
-    return `${documentPath.replace(/\/$/, '')}/walletconnect`;
-  } catch {
-    return undefined;
-  }
+function storagePath(): string {
+  const documentPath = decodeURIComponent(Paths.document.uri.replace(/^file:\/\//, ''));
+  return `${documentPath.replace(/\/$/, '')}/walletconnect`;
 }
 
 export const walletConnectModuleConfig: Record<string, unknown> | null = isWalletConnectConfigured
-  ? {
-      projectId,
-      storagePath: storagePath(),
-      // Shown to the user by the dApp when it asks to connect.
-      metadata: {
-        name: 'WDK Starter Wallet',
-        description: 'WDK React Native starter wallet',
-        url: 'https://wdk.tether.io',
-        icons: [],
-      },
-    }
+  ? { projectId, storagePath: storagePath() }
   : null;
