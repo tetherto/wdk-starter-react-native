@@ -194,8 +194,10 @@ function Signer({
         Signing does not send a transaction or cost anything, but a signature can authorize actions on the app that asked
         for it. Only sign what you understand.
       </Text>
-      {error && (
-        <Text variant="small" color="error" style={{ marginTop: 10 }}>{error}</Text>
+      {(error || account.error) && (
+        <Text variant="small" color="error" style={{ marginTop: 10 }}>
+          {error ?? `This account could not be loaded on ${networkDisplayName(network)}, so it cannot sign there.`}
+        </Text>
       )}
 
       <View style={{ flex: 1 }} />
