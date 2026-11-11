@@ -29,7 +29,7 @@ Open the link icon at the top right of the Wallet tab.
 
 | | |
 |---|---|
-| Networks | Every EVM network in `src/wdk/networks.ts` |
+| Networks | Every EVM network in `src/wdk/networks.ts` that has its provider and bundler URL set |
 | Methods | `personal_sign`, `eth_signTypedData_v4` |
 | Pairing | Pasting a `wc:` link |
 

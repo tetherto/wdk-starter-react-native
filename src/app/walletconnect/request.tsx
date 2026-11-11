@@ -202,7 +202,7 @@ function Signer({
         )}
       </ScrollView>
 
-      <Button label="Sign" onPress={onApprove} loading={signing} disabled={!account.address || rejecting} />
+      <Button label="Sign" onPress={onApprove} loading={signing || account.isLoading} disabled={!account.address || rejecting} />
       <Button label="Reject" variant="secondary" onPress={onReject} loading={rejecting} disabled={signing} />
     </>
   );
