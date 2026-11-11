@@ -65,7 +65,7 @@ dApp ⇄ WalletConnect relay ⇄ worklet module ⇄ (events / calls) ⇄ app UI
   it goes to the background. Requests sent meanwhile wait on the relay and
   arrive after the next unlock; the bridge re-reads pending items from the
   module each time.
-- **Bare needs three shims**, at the top of the module, all required before
+- **Bare needs four shims**, at the top of the module, all required before
   WalletConnect is loaded. Each has a comment explaining why.
 - **WalletConnect's internal request queue is turned off**
   (`signConfig.disableRequestQueue`); the comment there explains why.

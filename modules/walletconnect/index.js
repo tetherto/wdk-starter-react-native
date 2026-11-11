@@ -20,7 +20,16 @@ if (!URLSearchParams.prototype.entries) {
   URLSearchParams.prototype.entries = function () { return this[Symbol.iterator]() }
 }
 
-// 2. `ws` opens its socket with https.get(), which bare-https only gained in
+// 2. Bare's URL has no `origin`. WalletConnect compares the dApp's claimed
+//    origin with the verified one, so without it every dApp is reported as
+//    not coming from the site it claims to be.
+if (!('origin' in URL.prototype)) {
+  Object.defineProperty(URL.prototype, 'origin', {
+    get () { return `${this.protocol}//${this.host}` }
+  })
+}
+
+// 3. `ws` opens its socket with https.get(), which bare-https only gained in
 //    3.1.0 (this app's lockfile resolves an older one).
 const https = require('https')
 if (!https.get) {
@@ -31,7 +40,7 @@ if (!https.get) {
   }
 }
 
-// 3. bare-node-runtime installs a global WebSocket that is a Duplex stream
+// 4. bare-node-runtime installs a global WebSocket that is a Duplex stream
 //    with no onopen/onmessage/onclose. WalletConnect prefers a global
 //    WebSocket over the `ws` package and captures it when it is first
 //    required, so the relay socket would never report open. Point the global
