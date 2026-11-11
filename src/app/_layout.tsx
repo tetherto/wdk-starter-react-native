@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
@@ -18,6 +19,8 @@ import { AccountDiscovery } from '@/wdk/hooks/AccountDiscovery';
 function useEdgeToEdge() {
   const theme = useTheme();
   useEffect(() => {
+    // Android only: on iOS setStyle does nothing but log a warning.
+    if (Platform.OS !== 'android') return;
     (async () => {
       try {
         await NavigationBar.setStyle(theme.mode === 'dark' ? 'light' : 'dark');
