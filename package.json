@@ -60,7 +60,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
-    "@expo/config-plugins": "~55.0.8",
+    "@expo/config-plugins": "~55.0.12",
     "dotenv": "^16.4.5",
     "@tetherto/wdk-worklet-bundler": "^1.0.0-beta.9",
     "@types/react": "~19.2.10",
