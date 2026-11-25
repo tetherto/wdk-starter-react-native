@@ -94,3 +94,20 @@ policy is the place to limit what dApps can spend.
 - **Sessions are stored on disk** under the app's document directory
   (`walletconnect/`). They are not tied to a particular seed: after
   restoring a *different* wallet, disconnect old sessions by hand.
+
+## Testing with the test dApp
+
+`tools/walletconnect-test-dapp` is a local web page, branded WDK, that plays
+the dApp side and checks every answer the wallet gives: signatures are
+verified, transaction hashes are looked up on Sepolia, and each case the
+wallet should refuse is expected to be refused.
+
+```sh
+npm run test-dapp     # builds the page and serves it on http://localhost:8765
+```
+
+It uses the same `EXPO_PUBLIC_WALLETCONNECT_PROJECT_ID` as the wallet, read
+from `.env`. Press Connect, paste the link in the wallet, then run each test
+and follow what it says to do in the wallet. Transaction tests run on
+Sepolia only; they cost the user nothing, but each one uses paymaster
+sponsorship.
