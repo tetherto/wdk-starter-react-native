@@ -2,15 +2,14 @@
 // docs/WALLETCONNECT.md ("Testing with the test dApp").
 import { SignClient } from '@walletconnect/sign-client'
 import { createPublicClient, http, toHex, verifyMessage, verifyTypedData, parseEventLogs, erc20Abi, maxUint256 } from 'viem'
-import { arbitrum, polygon, sepolia } from 'viem/chains'
+import { entryPoint08Abi } from 'viem/account-abstraction'
+import { sepolia } from 'viem/chains'
 
 /* global WC_PROJECT_ID */
-const CHAINS = {
-  'eip155:11155111': { chain: sepolia, name: 'Sepolia', rpc: 'https://ethereum-sepolia-rpc.publicnode.com', explorer: 'https://sepolia.etherscan.io/tx/' },
-  'eip155:42161': { chain: arbitrum, name: 'Arbitrum', rpc: 'https://arbitrum-one-rpc.publicnode.com', explorer: 'https://arbiscan.io/tx/' },
-  'eip155:137': { chain: polygon, name: 'Polygon', rpc: 'https://polygon-bor-rpc.publicnode.com', explorer: 'https://polygonscan.com/tx/' }
-}
+// Every chain the wallet can offer. Transactions are only tested on Sepolia.
+const CHAINS = { 'eip155:11155111': 'Sepolia', 'eip155:42161': 'Arbitrum', 'eip155:137': 'Polygon' }
 const SEPOLIA = 'eip155:11155111'
+const sepoliaClient = createPublicClient({ chain: sepolia, transport: http('https://ethereum-sepolia-rpc.publicnode.com') })
 // The wallet's Sepolia test USDT (src/wdk/networks.ts).
 const TEST_USDT = '0xd077A400968890Eacc75cdc901F0356c943e4fDb'
 const SPENDER = '0x000000000000000000000000000000000000dEaD'
@@ -44,14 +43,13 @@ const errorText = (e) => e?.message || (typeof e === 'object' ? JSON.stringify(e
 // ── Session ───────────────────────────────────────────────────────────────
 
 function approvedChains () {
-  return session ? session.namespaces.eip155.chains ?? [...new Set(session.namespaces.eip155.accounts.map((a) => a.split(':').slice(0, 2).join(':')))] : []
+  return session ? [...new Set(session.namespaces.eip155.accounts.map((a) => a.split(':').slice(0, 2).join(':')))] : []
 }
 
 const activeChain = () => $('chain').value
 
 function render () {
   const connected = !!session
-  document.body.classList.toggle('connected', connected)
   $('connect').hidden = connected
   $('disconnect').hidden = !connected
   $('wallet').textContent = connected ? session.peer.metadata.name : 'Not connected'
@@ -60,8 +58,9 @@ function render () {
 
   const select = $('chain')
   const previous = select.value
-  select.replaceChildren(...approvedChains().map((id) => new Option(CHAINS[id]?.name ?? id, id)))
-  if (approvedChains().includes(previous)) select.value = previous
+  const chains = approvedChains()
+  select.replaceChildren(...chains.map((id) => new Option(CHAINS[id] ?? id, id)))
+  if (chains.includes(previous)) select.value = previous
   select.hidden = !connected
 
   for (const test of TESTS) {
@@ -90,7 +89,7 @@ async function connect () {
     $('pairing').hidden = false
     log('Connection link created. Copy it and paste it in the wallet (link icon on the Wallet tab).')
     setSession(await approval())
-    log(`Connected to ${session.peer.metadata.name} on ${approvedChains().map((c) => CHAINS[c]?.name ?? c).join(', ')}`, 'ok')
+    log(`Connected to ${session.peer.metadata.name} on ${approvedChains().map((c) => CHAINS[c] ?? c).join(', ')}`, 'ok')
   } catch (e) {
     $('pairing').hidden = true
     log('Connection refused: ' + errorText(e), 'bad')
@@ -110,15 +109,13 @@ async function disconnect () {
 const request = (method, params, chainId = activeChain()) =>
   client.request({ topic: session.topic, chainId, request: { method, params } })
 
-const publicClient = (chainId) => createPublicClient({ chain: CHAINS[chainId].chain, transport: http(CHAINS[chainId].rpc) })
-
 // ── Checks ────────────────────────────────────────────────────────────────
 
 class Fail extends Error {}
 
 function expectRefusal (e, pattern) {
   const text = errorText(e)
-  if (pattern && !pattern.test(text)) throw new Fail(`refused, but not for the expected reason: ${text}`)
+  if (!pattern.test(text)) throw new Fail(`refused, but not for the expected reason: ${text}`)
   return `refused as expected: ${text}`
 }
 
@@ -148,18 +145,21 @@ function typedData (chainId) {
 }
 
 /**
- * Sends a transaction and checks the hash the wallet returns: it must be a
- * real transaction on chain (the wallet waits for the bundler to include its
- * user operation), and the receipt must succeed.
+ * Sends a Sepolia transaction and checks the hash the wallet returns. It must
+ * be a real transaction on chain (the wallet waits for the bundler to include
+ * its user operation), and the account's own user operation in it must have
+ * succeeded: the bundle transaction succeeds even when the call inside it
+ * reverts, so its status alone proves nothing.
  */
 async function sendAndCheck (tx, check) {
-  const chainId = activeChain()
-  const hash = await request('eth_sendTransaction', [{ from: address, ...tx }], chainId)
-  log(`Wallet returned ${hash}. Fetching the receipt…`, '', CHAINS[chainId].explorer + hash)
-  const receipt = await publicClient(chainId).waitForTransactionReceipt({ hash, timeout: 60_000 })
-  if (receipt.status !== 'success') throw new Fail(`transaction ${hash} has status ${receipt.status}`)
-  const sender = receipt.from.toLowerCase() === address.toLowerCase() ? 'the account itself' : `bundler ${receipt.from}`
-  return (await check?.(receipt)) ?? `on chain in block ${receipt.blockNumber}, sent by ${sender}`
+  const hash = await request('eth_sendTransaction', [{ from: address, ...tx }], SEPOLIA)
+  log(`Wallet returned ${hash}. Fetching the receipt…`, '', `${sepolia.blockExplorers.default.url}/tx/${hash}`)
+  const receipt = await sepoliaClient.waitForTransactionReceipt({ hash, timeout: 60_000 })
+  const op = parseEventLogs({ abi: entryPoint08Abi, eventName: 'UserOperationEvent', logs: receipt.logs })
+    .find((e) => e.args.sender.toLowerCase() === address.toLowerCase())
+  if (!op) throw new Fail(`no user operation from ${address} in ${hash}`)
+  if (!op.args.success) throw new Fail(`the account's call reverted inside ${hash}`)
+  return (await check?.(receipt)) ?? `user operation succeeded in block ${receipt.blockNumber}, bundled by ${receipt.from}`
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────
@@ -204,15 +204,7 @@ const TESTS = [
     id: 'reject',
     title: 'Reject a signature',
     expect: 'Tap Reject. The dApp must receive the rejection.',
-    run: async () => {
-      try {
-        await signMessage('Please reject this one')
-      } catch (e) {
-        if (e instanceof Fail) throw e
-        return expectRefusal(e, /reject/i)
-      }
-      throw new Fail('the request was signed instead of rejected')
-    }
+    run: () => refused(signMessage('Please reject this one'), /reject/i)
   },
   {
     group: 'Transactions · Sepolia',
@@ -227,16 +219,8 @@ const TESTS = [
     id: 'approve',
     sepoliaOnly: true,
     title: 'Approve 1 test USDT',
-    expect: 'Shows "Token approval", 1 USDT, spender 0x…dEaD, and an approval warning. Tap Send.',
-    run: () => sendAndCheck(
-      { to: TEST_USDT, data: approveData(1_000_000n) },
-      (receipt) => {
-        const [event] = parseEventLogs({ abi: erc20Abi, eventName: 'Approval', logs: receipt.logs })
-        if (!event) throw new Fail('no Approval event in the receipt')
-        if (event.args.owner.toLowerCase() !== address.toLowerCase()) throw new Fail(`Approval owner is ${event.args.owner}, not the account`)
-        return `Approval(${event.args.owner} → ${event.args.spender}, ${event.args.value}) emitted for the account`
-      }
-    )
+    expect: 'Shows "Token approval", 1 USDT, spender 0x0000…dead, and an approval warning. Tap Send.',
+    run: () => sendAndCheck({ to: TEST_USDT, data: approveData(1_000_000n) }, expectApproval(1_000_000n))
   },
   {
     group: 'Transactions · Sepolia',
@@ -244,7 +228,7 @@ const TESTS = [
     sepoliaOnly: true,
     title: 'Revoke the approval (approve 0)',
     expect: 'Shows "Token approval" for 0 USDT. Tap Send.',
-    run: () => sendAndCheck({ to: TEST_USDT, data: approveData(0n) })
+    run: () => sendAndCheck({ to: TEST_USDT, data: approveData(0n) }, expectApproval(0n))
   },
   {
     group: 'Should be refused or flagged',
@@ -252,14 +236,7 @@ const TESTS = [
     sepoliaOnly: true,
     title: 'Unlimited approval warning',
     expect: 'The wallet must warn that this spends ALL of the token. Check the warning, then tap Reject.',
-    run: async () => {
-      try {
-        await request('eth_sendTransaction', [{ from: address, to: TEST_USDT, data: approveData(maxUint256) }])
-      } catch (e) {
-        return expectRefusal(e, /reject/i)
-      }
-      throw new Fail('the unlimited approval was sent. Revoke it with "Revoke the approval".')
-    }
+    run: () => refused(request('eth_sendTransaction', [{ from: address, to: TEST_USDT, data: approveData(maxUint256) }]), /reject/i)
   },
   {
     group: 'Should be refused or flagged',
@@ -278,7 +255,6 @@ const TESTS = [
   {
     group: 'Should be refused or flagged',
     id: 'deploy',
-    sepoliaOnly: true,
     title: 'Deploy a contract',
     expect: 'The wallet says contract deployment is not supported. Tap Reject.',
     run: () => refused(request('eth_sendTransaction', [{ from: address, data: '0x6080604052' }]), /deployment/i)
@@ -290,10 +266,22 @@ const TESTS = [
     title: 'A call that would revert',
     expect: 'Transfers more test USDT than exists. Tap Send: the wallet shows an error and nothing is sent. Then tap Reject.',
     run: () => refused(
-      request('eth_sendTransaction', [{ from: address, to: TEST_USDT, data: transferData(address, maxUint256) }])
+      request('eth_sendTransaction', [{ from: address, to: TEST_USDT, data: transferData(address, maxUint256) }]),
+      /reject/i
     )
   }
 ]
+
+/** Checks the receipt carries the account's Approval of `amount` to SPENDER. */
+const expectApproval = (amount) => (receipt) => {
+  const event = parseEventLogs({ abi: erc20Abi, eventName: 'Approval', logs: receipt.logs })
+    .find((e) => e.args.owner.toLowerCase() === address.toLowerCase())
+  if (!event) throw new Fail('no Approval event from the account in the receipt')
+  if (event.args.spender.toLowerCase() !== SPENDER.toLowerCase() || event.args.value !== amount) {
+    throw new Fail(`Approval is ${event.args.value} to ${event.args.spender}, expected ${amount} to ${SPENDER}`)
+  }
+  return `Approval(${event.args.owner} → ${event.args.spender}, ${event.args.value}) emitted for the account`
+}
 
 function word (value) { return BigInt(value).toString(16).padStart(64, '0') }
 function approveData (amount) { return '0x095ea7b3' + word(SPENDER) + word(amount) }
@@ -321,7 +309,7 @@ async function runTest (test) {
   } catch (e) {
     status.className = 'status fail'
     status.textContent = 'Fail'
-    log(`${test.title}: fail. ${e instanceof Fail ? e.message : errorText(e)}`, 'bad')
+    log(`${test.title}: fail. ${errorText(e)}`, 'bad')
   }
 }
 
