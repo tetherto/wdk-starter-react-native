@@ -2,22 +2,15 @@ import type { DappTransaction } from './requests';
 
 /**
  * The 7702 gasless account methods used to answer `eth_sendTransaction`,
- * reached through `useAccount().extension()`. Bigints come back as strings
- * after crossing the worklet boundary.
+ * reached through `useAccount().extension()`.
  */
 export interface Evm7702SendExtension {
   sendTransaction(tx: DappTransaction): Promise<{ hash: string }>;
-  getUserOperationReceipt(hash: string): Promise<{
-    success: boolean;
-    receipt: { transactionHash: string } | null;
-  } | null>;
+  waitForTransaction(userOpHash: string): Promise<{
+    finality: string;
+    userOperationReceipt: { success: boolean; receipt: { transactionHash: string } } | null;
+  }>;
 }
-
-const POLL_INTERVAL_MS = 2_000;
-// Matches the 7702 account's own default wait for bundler inclusion.
-const INCLUSION_TIMEOUT_MS = 180_000;
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Sends a dApp transaction from the EIP-7702 delegated account and returns
@@ -26,13 +19,13 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
  * The account does not broadcast a transaction itself: it signs a user
  * operation (with the 7702 authorization on first use) and hands it to the
  * bundler, which returns a user operation hash. dApps expect a transaction
- * hash they can look up on chain, so this waits until the bundler has
- * included the operation and returns the bundling transaction's hash.
+ * hash they can look up on chain, so this waits (up to the account's
+ * 3-minute default) until the operation is in a block and returns the
+ * bundling transaction's hash.
  *
  * That transaction is sent by the bundler to the EntryPoint, and it succeeds
- * even when the dApp's call inside it reverts. A revert is therefore
- * reported as an error here, since the dApp could not tell from the
- * transaction's own receipt.
+ * even when the dApp's call inside it reverts. Success is therefore read from
+ * the user operation's own receipt, and a revert is reported as an error.
  *
  * `onSubmitted` fires once the bundler has accepted the operation, so the
  * screen can stop offering Reject.
@@ -42,26 +35,25 @@ export async function sendDappTransaction(
   tx: DappTransaction,
   onSubmitted: () => void,
 ): Promise<string> {
-  const submitted = await account.sendTransaction(tx);
-  const userOpHash = submitted?.hash;
+  const userOpHash = (await account.sendTransaction(tx))?.hash;
   if (!userOpHash) throw new Error('The transaction could not be submitted.');
   onSubmitted();
 
-  const deadline = Date.now() + INCLUSION_TIMEOUT_MS;
-  while (Date.now() < deadline) {
-    await sleep(POLL_INTERVAL_MS);
-    let result: Awaited<ReturnType<Evm7702SendExtension['getUserOperationReceipt']>>;
-    try {
-      result = await account.getUserOperationReceipt(userOpHash);
-    } catch {
-      continue; // a flaky bundler response; try again until the deadline
-    }
-    const txHash = result?.receipt?.transactionHash;
-    if (!result || !txHash) continue;
-    if (!result.success) throw new Error(`The transaction was included in ${txHash} but the call reverted.`);
-    return txHash;
+  let result: Awaited<ReturnType<Evm7702SendExtension['waitForTransaction']>>;
+  try {
+    result = await account.waitForTransaction(userOpHash);
+  } catch (e: any) {
+    throw new Error(
+      `The transaction was submitted (user operation ${userOpHash}) but is not on chain yet: ${e?.message ?? e}. It may still go through.`,
+    );
   }
-  throw new Error(
-    `The transaction was submitted (user operation ${userOpHash}) but was not on chain after 3 minutes. It may still go through.`,
-  );
+  if (result?.finality === 'dropped') {
+    throw new Error(`The bundler dropped the transaction (user operation ${userOpHash}).`);
+  }
+  const op = result?.userOperationReceipt;
+  if (!op?.receipt?.transactionHash) {
+    throw new Error(`The transaction is on chain but its receipt is not available yet (user operation ${userOpHash}).`);
+  }
+  if (!op.success) throw new Error(`The transaction was included in ${op.receipt.transactionHash} but the call reverted.`);
+  return op.receipt.transactionHash;
 }

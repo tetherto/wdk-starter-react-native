@@ -37,6 +37,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
  */
 export function TransactionSummary({ tx, network }: { tx: DappTransaction; network: NetworkId }) {
   const call = decodeCall(tx.data);
+  const plainSend = tx.data === '0x';
 
   return (
     <>
@@ -73,21 +74,21 @@ export function TransactionSummary({ tx, network }: { tx: DappTransaction; netwo
           </>
         ) : (
           <>
-            <Text variant="tokenName">{tx.data === '0x' ? 'Send' : 'Contract call'}</Text>
-            <Row label={tx.data === '0x' ? 'To' : 'Contract'}>
+            <Text variant="tokenName">{plainSend ? 'Send' : 'Contract call'}</Text>
+            <Row label={plainSend ? 'To' : 'Contract'}>
               <Text variant="mono" mono>{tx.to}</Text>
             </Row>
           </>
         )}
 
         {/* Value is shown whenever it is set, even on a decoded token call: it is sent as well. */}
-        {(tx.value !== '0' || tx.data === '0x') && (
+        {(tx.value !== '0' || plainSend) && (
           <Row label="Value">
             <Text variant="body">{formatUnits(tx.value, 18)} {nativeSymbolFor(network)}</Text>
           </Row>
         )}
 
-        {tx.data !== '0x' && !call && (
+        {!plainSend && !call && (
           <Row label="Data">
             <Text variant="mono" mono numberOfLines={6}>{tx.data}</Text>
           </Row>

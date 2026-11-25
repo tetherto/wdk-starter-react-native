@@ -12,10 +12,7 @@ export interface TypedData {
   message: Record<string, unknown>;
 }
 
-/**
- * The part of a dApp transaction this wallet sends. `value` is in wei, as a
- * decimal string so it can cross the worklet boundary as JSON.
- */
+/** The part of a dApp transaction this wallet sends. `value` is in wei, as a decimal string. */
 export interface DappTransaction {
   to: string;
   value: string;
@@ -69,6 +66,16 @@ function parsePersonalSign(params: unknown): ParsedRequest {
   return { kind: 'message', address, message };
 }
 
+/**
+ * A request must not ask for one chain through a session on another. Returns
+ * the refusal when `named` (a chain ID in any number form) differs from the
+ * request's CAIP-2 `chainId`.
+ */
+function wrongChain(what: string, named: unknown, chainId: string): ParsedRequest | undefined {
+  if (named === undefined || `eip155:${Number(named)}` === chainId) return undefined;
+  return { kind: 'unsupported', reason: `The ${what} is for chain ${String(named)}, but the request came in on ${chainId}.` };
+}
+
 function parseTypedData(params: unknown, chainId: string): ParsedRequest {
   if (!Array.isArray(params) || typeof params[0] !== 'string') {
     return { kind: 'unsupported', reason: 'Malformed typed-data request.' };
@@ -88,15 +95,8 @@ function parseTypedData(params: unknown, chainId: string): ParsedRequest {
     return { kind: 'unsupported', reason: 'The typed data is incomplete.' };
   }
 
-  // A signature for one chain's domain must not be requested through a
-  // session on another chain.
-  const domainChain = typedData.domain?.chainId;
-  if (domainChain !== undefined && `eip155:${Number(domainChain)}` !== chainId) {
-    return {
-      kind: 'unsupported',
-      reason: `The typed data is for chain ${String(domainChain)}, but the request came in on ${chainId}.`,
-    };
-  }
+  const mismatch = wrongChain('typed data', typedData.domain?.chainId, chainId);
+  if (mismatch) return mismatch;
   return { kind: 'typedData', address, typedData: { ...typedData, domain: typedData.domain ?? {} } };
 }
 
@@ -135,12 +135,8 @@ function parseSendTransaction(params: unknown, chainId: string): ParsedRequest {
   if (typeof to !== 'string' || !ADDRESS.test(to)) {
     return { kind: 'unsupported', reason: 'The transaction does not name a valid recipient.' };
   }
-  if (txChain !== undefined && `eip155:${Number(quantity(txChain))}` !== chainId) {
-    return {
-      kind: 'unsupported',
-      reason: `The transaction is for chain ${String(txChain)}, but the request came in on ${chainId}.`,
-    };
-  }
+  const mismatch = wrongChain('transaction', txChain, chainId);
+  if (mismatch) return mismatch;
 
   const wei = quantity(value);
   if (wei === null) return { kind: 'unsupported', reason: 'The transaction value is not a valid amount.' };
