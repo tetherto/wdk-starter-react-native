@@ -25,7 +25,7 @@
     "@tetherto/wdk-utils": "^1.0.0-beta.7",
     "@tetherto/wdk-wallet-btc": "^1.0.0-beta.8",
     "@tetherto/wdk-wallet-spark": "^1.0.0-beta.17",
-    "@tetherto/wdk-pricing-coingecko-http": "1.0.0-beta.2",
+    "@tetherto/wdk-pricing-coingecko-http": "1.0.0-beta.3",
     "@tetherto/wdk-indexer-http": "1.0.1",
     "bare-node-runtime": "^1.5.0",
     "bignumber.js": "^11.1.5",
@@ -34,7 +34,7 @@
     "expo-build-properties": "^55.0.13",
     "expo-clipboard": "^55.0.0",
     "expo-constants": "^55.0.16",
-    "expo-file-system": "~55.0.26",
+    "expo-file-system": "~58.0.13",
     "expo-linking": "^55.0.15",
     "expo-navigation-bar": "^55.0.0",
     "expo-router": "^58.0.29",
@@ -62,7 +62,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
-    "@expo/config-plugins": "~55.0.8",
+    "@expo/config-plugins": "~55.0.12",
     "dotenv": "^16.4.5",
     "@tetherto/wdk-worklet-bundler": "^1.0.0-beta.9",
     "@types/react": "~19.2.10",
