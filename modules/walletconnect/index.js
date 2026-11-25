@@ -28,18 +28,7 @@ if (!('origin' in URL.prototype)) {
   })
 }
 
-// 3. `ws` opens its socket with https.get(), which bare-https only gained in
-//    3.1.0 (this app's lockfile resolves an older one).
-const https = require('https')
-if (!https.get) {
-  https.get = function (...args) {
-    const request = https.request(...args)
-    request.end()
-    return request
-  }
-}
-
-// 4. bare-node-runtime installs a global WebSocket that is a Duplex stream
+// 3. bare-node-runtime installs a global WebSocket that is a Duplex stream
 //    with no onopen/onmessage/onclose. WalletConnect prefers a global
 //    WebSocket over the `ws` package and captures it when it is first
 //    required, so the relay socket would never report open. Point the global
@@ -95,9 +84,12 @@ async function createWalletConnectModule ({ config, emit }) {
   })
 
   // A re-delivered request (see signConfig above) is also written back into
-  // WalletConnect's pending store, where it stays until it expires. Remember
-  // what has been answered so it is never offered to the user a second time.
-  const answered = new Set()
+  // WalletConnect's pending store, where it stays until it expires. Every
+  // answer sent is recorded in WalletConnect's history, which is kept on disk,
+  // so check it: an answered request is never offered again, even after the
+  // module is rebuilt on unlock. For eth_sendTransaction that would be a
+  // second send.
+  const answered = (id) => core.history.records.get(id)?.response !== undefined
 
   function requestSummary (request) {
     const session = kit.getActiveSessions()[request.topic]
@@ -114,7 +106,7 @@ async function createWalletConnectModule ({ config, emit }) {
 
   const listeners = {
     session_proposal: ({ params, verifyContext }) => emit('session_proposal', proposalSummary(params, verifyContext)),
-    session_request: (request) => emit('session_request', requestSummary(request)),
+    session_request: (request) => { if (!answered(request.id)) emit('session_request', requestSummary(request)) },
     session_delete: ({ topic }) => emit('session_delete', { topic }),
     proposal_expire: ({ id }) => emit('proposal_expire', { id }),
     session_request_expire: ({ id }) => emit('session_request_expire', { id })
@@ -148,13 +140,11 @@ async function createWalletConnectModule ({ config, emit }) {
 
     async respondRequest ({ topic, id, result }) {
       await kit.respondSessionRequest({ topic, response: { id, jsonrpc: '2.0', result } })
-      answered.add(id)
     },
 
     async rejectRequest ({ topic, id, message }) {
       const error = message ? { code: 5000, message } : getSdkError('USER_REJECTED')
       await kit.respondSessionRequest({ topic, response: { id, jsonrpc: '2.0', error } })
-      answered.add(id)
     },
 
     async disconnect ({ topic }) {
@@ -172,7 +162,7 @@ async function createWalletConnectModule ({ config, emit }) {
     },
 
     getPendingRequests () {
-      return kit.getPendingSessionRequests().filter((request) => !answered.has(request.id)).map(requestSummary)
+      return kit.getPendingSessionRequests().filter((request) => !answered(request.id)).map(requestSummary)
     },
 
     // suspend/resume follow the worklet's Bare lifecycle (app background /

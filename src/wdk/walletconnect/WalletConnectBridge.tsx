@@ -48,7 +48,14 @@ function Bridge() {
     Promise.all([wc.getPendingProposals(), wc.getPendingRequests(), wc.getSessions()])
       .then(([pendingProposals, pendingRequests, sessions]) => {
         if (cancelled) return;
-        useWalletConnect.setState({ proposals: pendingProposals, requests: pendingRequests, sessions });
+        // A proposal read back from the module has no verify result (only the
+        // live event carries it), so keep the event's copy when there is one.
+        const fromEvents = new Map(useWalletConnect.getState().proposals.map((p) => [p.id, p]));
+        useWalletConnect.setState({
+          proposals: pendingProposals.map((p) => fromEvents.get(p.id) ?? p),
+          requests: pendingRequests,
+          sessions,
+        });
       })
       .catch((e) => console.warn('[walletconnect] could not load state from the worklet module:', e?.message ?? e));
 
