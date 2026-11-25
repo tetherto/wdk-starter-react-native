@@ -1,8 +1,8 @@
 import type { SessionRequest } from './types';
 
 /**
- * Turns a raw WalletConnect signing request into something the request
- * screen can show and sign — or a reason it can't be signed.
+ * Turns a raw WalletConnect request into something the request screen can
+ * show and sign or send — or a reason it can't be.
  */
 
 export interface TypedData {
@@ -12,9 +12,20 @@ export interface TypedData {
   message: Record<string, unknown>;
 }
 
+/**
+ * The part of a dApp transaction this wallet sends. `value` is in wei, as a
+ * decimal string so it can cross the worklet boundary as JSON.
+ */
+export interface DappTransaction {
+  to: string;
+  value: string;
+  data: string;
+}
+
 export type ParsedRequest =
   | { kind: 'message'; address: string; message: string }
   | { kind: 'typedData'; address: string; typedData: TypedData }
+  | { kind: 'transaction'; address: string; tx: DappTransaction }
   | { kind: 'unsupported'; reason: string };
 
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
@@ -89,12 +100,68 @@ function parseTypedData(params: unknown, chainId: string): ParsedRequest {
   return { kind: 'typedData', address, typedData: { ...typedData, domain: typedData.domain ?? {} } };
 }
 
+/** A JSON-RPC quantity (0x-hex, or decimal from lenient dApps) as a decimal string; null if invalid. */
+function quantity(value: unknown): string | null {
+  if (value === undefined || value === null || value === '' || value === '0x') return '0';
+  if (typeof value !== 'string' && typeof value !== 'number') return null;
+  try {
+    const n = BigInt(value);
+    return n < 0n ? null : n.toString();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Only `to`, `value` and `data` are kept. The account is an EIP-7702
+ * delegated EOA that sends through a bundler and a sponsoring paymaster, so
+ * they set the gas fields and the nonce themselves; whatever the dApp
+ * suggested for those is ignored.
+ */
+function parseSendTransaction(params: unknown, chainId: string): ParsedRequest {
+  const tx = Array.isArray(params) ? params[0] : undefined;
+  if (!tx || typeof tx !== 'object') {
+    return { kind: 'unsupported', reason: 'Malformed transaction request.' };
+  }
+  const { from, to, value, data, input, chainId: txChain } = tx as Record<string, unknown>;
+
+  if (typeof from !== 'string' || !ADDRESS.test(from)) {
+    return { kind: 'unsupported', reason: 'The transaction does not name a valid sending account.' };
+  }
+  // The smart account executes calls; it has no way to deploy a contract.
+  if (to === undefined || to === null) {
+    return { kind: 'unsupported', reason: 'Contract deployment is not supported by this wallet.' };
+  }
+  if (typeof to !== 'string' || !ADDRESS.test(to)) {
+    return { kind: 'unsupported', reason: 'The transaction does not name a valid recipient.' };
+  }
+  if (txChain !== undefined && `eip155:${Number(quantity(txChain))}` !== chainId) {
+    return {
+      kind: 'unsupported',
+      reason: `The transaction is for chain ${String(txChain)}, but the request came in on ${chainId}.`,
+    };
+  }
+
+  const wei = quantity(value);
+  if (wei === null) return { kind: 'unsupported', reason: 'The transaction value is not a valid amount.' };
+
+  // `input` is the newer name for `data`; some dApps send only that one.
+  const calldata = data ?? input ?? '0x';
+  if (typeof calldata !== 'string' || !HEX.test(calldata)) {
+    return { kind: 'unsupported', reason: 'The transaction data is not valid hex.' };
+  }
+
+  return { kind: 'transaction', address: from, tx: { to, value: wei, data: calldata } };
+}
+
 export function parseRequest(request: SessionRequest): ParsedRequest {
   switch (request.method) {
     case 'personal_sign':
       return parsePersonalSign(request.params);
     case 'eth_signTypedData_v4':
       return parseTypedData(request.params, request.chainId);
+    case 'eth_sendTransaction':
+      return parseSendTransaction(request.params, request.chainId);
     default:
       return { kind: 'unsupported', reason: `This wallet does not support ${request.method}.` };
   }
@@ -104,4 +171,30 @@ export function parseRequest(request: SessionRequest): ParsedRequest {
 export function signableTypes(typedData: TypedData): TypedData['types'] {
   const { EIP712Domain: _domain, ...types } = typedData.types;
   return types;
+}
+
+/** ERC-20 calls worth spelling out before the user sends them. */
+type DecodedCall =
+  | { kind: 'approve'; spender: string; amount: bigint; unlimited: boolean }
+  | { kind: 'transfer'; recipient: string; amount: bigint };
+
+const APPROVE = '0x095ea7b3';
+const TRANSFER = '0xa9059cbb';
+
+/**
+ * Recognises ERC-20 `approve` and `transfer`. An approval is the one a
+ * malicious dApp most often asks for, and with gas sponsored it costs the
+ * user nothing to approve one by mistake, so it is called out on screen.
+ */
+export function decodeCall(data: string): DecodedCall | null {
+  // selector (4 bytes) + an address word + an amount word (32 bytes each)
+  if (data.length !== 2 + 8 + 64 + 64) return null;
+  const selector = data.slice(0, 10).toLowerCase();
+  if (selector !== APPROVE && selector !== TRANSFER) return null;
+  if (!/^0{24}$/.test(data.slice(10, 34))) return null; // address word must be zero-padded
+  const address = `0x${data.slice(34, 74)}`;
+  const amount = BigInt(`0x${data.slice(74)}`);
+  if (selector === TRANSFER) return { kind: 'transfer', recipient: address, amount };
+  // Wallets and dApps treat anything near 2^256-1 as "unlimited".
+  return { kind: 'approve', spender: address, amount, unlimited: amount >= 1n << 255n };
 }

@@ -79,7 +79,7 @@ export default function Proposal() {
 
       <Text variant="label" style={{ marginTop: 18, marginBottom: 6 }}>It will be able to</Text>
       <Card>
-        <Text variant="body">See your address and ask you to sign messages.</Text>
+        <Text variant="body">See your address and ask you to sign messages and send transactions.</Text>
         <Text variant="small" color="textSecondary" style={{ marginTop: 6 }}>
           It cannot move funds or sign anything without your approval each time.
         </Text>

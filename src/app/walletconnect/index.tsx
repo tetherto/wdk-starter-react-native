@@ -124,7 +124,7 @@ export default function WalletConnect() {
             <PendingRow
               key={`r${r.id}`}
               title={r.peer?.name || 'Unknown app'}
-              subtitle="Wants a signature"
+              subtitle={r.method === 'eth_sendTransaction' ? 'Wants to send a transaction' : 'Wants a signature'}
               onPress={() => router.push({ pathname: '/walletconnect/request', params: { id: r.id } })}
             />
           ))}

@@ -7,8 +7,11 @@ import { useAccounts } from '@/state/accounts';
 import { useToast } from '@/state/toast';
 import { useWalletConnect } from '@/state/walletConnect';
 import { networkDisplayName } from '@/wdk/chains';
+import type { NetworkId } from '@/wdk/networks';
 import { DappSummary } from '@/wdk/walletconnect/DappSummary';
 import { networkForChain } from '@/wdk/walletconnect/chains';
+import { sendDappTransaction, type Evm7702SendExtension } from '@/wdk/walletconnect/sendTransaction';
+import { TransactionSummary } from '@/wdk/walletconnect/TransactionSummary';
 import { WALLETCONNECT_MODULE } from '@/wdk/walletconnect/moduleConfig';
 import { parseRequest, signableTypes, type ParsedRequest, type TypedData } from '@/wdk/walletconnect/requests';
 import type { SessionRequest, WalletConnectApi } from '@/wdk/walletconnect/types';
@@ -42,7 +45,7 @@ export default function Request() {
   if (!request) {
     return (
       <Screen>
-        <ScreenHeader title="Signature request" onBack={() => router.back()} />
+        <ScreenHeader title="Request" onBack={() => router.back()} />
         <Text color="textSecondary">This request is no longer available. It may have expired.</Text>
       </Screen>
     );
@@ -82,7 +85,7 @@ export default function Request() {
     // The buttons sit outside the scroll area so a long request can never
     // push Reject off screen.
     <Screen>
-      <ScreenHeader title="Signature request" />
+      <ScreenHeader title={request.method === 'eth_sendTransaction' ? 'Transaction request' : 'Signature request'} />
 
       {parsed.kind === 'unsupported' || !network || !owner ? (
         <>
@@ -100,7 +103,7 @@ export default function Request() {
           accountIndex={owner.accountIndex}
           rejecting={rejecting}
           onReject={() => onReject()}
-          onSigned={() => finish('Signed')}
+          onDone={finish}
         />
       )}
     </Screen>
@@ -118,44 +121,83 @@ function Signer({
   accountIndex,
   rejecting,
   onReject,
-  onSigned,
+  onDone,
 }: {
   request: SessionRequest;
   parsed: Exclude<ParsedRequest, { kind: 'unsupported' }>;
-  network: string;
+  network: NetworkId;
   accountIndex: number;
   rejecting: boolean;
   onReject: () => void;
-  onSigned: () => void;
+  onDone: (toast: string) => void;
 }) {
   const wc = useModule<WalletConnectApi>(WALLETCONNECT_MODULE);
-  const account = useAccount<EvmSigningExtension>({ network, accountIndex });
+  const account = useAccount<EvmSigningExtension & Evm7702SendExtension>({ network, accountIndex });
   const accountName = useAccounts((s) => s.names[accountIndex]) ?? `Account ${accountIndex + 1}`;
   const [signing, setSigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Set once the bundler has accepted a transaction: from then on it cannot
+  // be called back, so Reject goes away.
+  const [submitted, setSubmitted] = useState(false);
+  // Set when a submitted transaction failed or timed out and the dApp has
+  // been told. Only Done is left.
+  const [failed, setFailed] = useState(false);
+
+  const isTransaction = parsed.kind === 'transaction';
+
+  // What the dApp gets back: a signature, or the hash of the transaction.
+  const approve = async (onSubmitted: () => void): Promise<string> => {
+    if (parsed.kind === 'transaction') return sendDappTransaction(account.extension(), parsed.tx, onSubmitted);
+    if (parsed.kind === 'message') {
+      const result = await account.sign(parsed.message);
+      if (!result.success || !result.signature) throw new Error(result.error ?? 'Signing failed.');
+      return result.signature;
+    }
+    const signature = await account.extension().signTypedData({
+      domain: parsed.typedData.domain,
+      types: signableTypes(parsed.typedData),
+      message: parsed.typedData.message,
+    });
+    if (!signature) throw new Error('Signing failed.');
+    return signature;
+  };
 
   const onApprove = async () => {
     setSigning(true);
     setError(null);
+    let sent = false;
+    let result: string;
     try {
-      let signature: string | undefined;
-      if (parsed.kind === 'message') {
-        const result = await account.sign(parsed.message);
-        if (!result.success) throw new Error(result.error ?? 'Signing failed.');
-        signature = result.signature;
-      } else {
-        signature = await account.extension().signTypedData({
-          domain: parsed.typedData.domain,
-          types: signableTypes(parsed.typedData),
-          message: parsed.typedData.message,
-        });
-      }
-      if (!signature) throw new Error('Signing failed.');
-      await wc.respondRequest({ topic: request.topic, id: request.id, result: signature });
-      onSigned();
+      result = await approve(() => {
+        sent = true;
+        setSubmitted(true);
+      });
     } catch (e: any) {
-      setError(e?.message ?? 'Signing failed.');
-      setSigning(false);
+      const message = e?.message ?? (isTransaction ? 'The transaction failed.' : 'Signing failed.');
+      setError(message);
+      if (!sent) {
+        // Nothing left the device: the user can try again or reject.
+        setSigning(false);
+        return;
+      }
+      // The operation is with the bundler, so a retry could send it twice.
+      // Tell the dApp what happened and stop here.
+      try {
+        await wc.rejectRequest({ topic: request.topic, id: request.id, message });
+      } catch {
+        // The request already expired on the dApp's side.
+      }
+      setFailed(true);
+      return;
+    }
+    const done = isTransaction ? 'Transaction sent' : 'Signed';
+    try {
+      await wc.respondRequest({ topic: request.topic, id: request.id, result });
+      onDone(done);
+    } catch {
+      // Typically the request expired while the transaction was being
+      // included. What was signed or sent still stands.
+      onDone(`${done}, but the app could not be told`);
     }
   };
 
@@ -163,24 +205,30 @@ function Signer({
     <>
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
         <DappSummary peer={request.peer} verify={request.verify} />
-        <Text variant="label" style={{ marginTop: 18, marginBottom: 6 }}>
-          {parsed.kind === 'message' ? 'Message' : 'Typed data'}
-        </Text>
-        <Card>
-          {parsed.kind === 'message' ? (
-            <Text variant="body">{parsed.message}</Text>
-          ) : (
-            <Text variant="mono" mono>
-              {JSON.stringify(
-                { domain: parsed.typedData.domain, primaryType: parsed.typedData.primaryType, message: parsed.typedData.message },
-                null,
-                2,
-              )}
+        {isTransaction ? (
+          <TransactionSummary tx={parsed.tx} network={network} />
+        ) : (
+          <>
+            <Text variant="label" style={{ marginTop: 18, marginBottom: 6 }}>
+              {parsed.kind === 'message' ? 'Message' : 'Typed data'}
             </Text>
-          )}
-        </Card>
+            <Card>
+              {parsed.kind === 'message' ? (
+                <Text variant="body">{parsed.message}</Text>
+              ) : (
+                <Text variant="mono" mono>
+                  {JSON.stringify(
+                    { domain: parsed.typedData.domain, primaryType: parsed.typedData.primaryType, message: parsed.typedData.message },
+                    null,
+                    2,
+                  )}
+                </Text>
+              )}
+            </Card>
+          </>
+        )}
 
-        <Text variant="label" style={{ marginTop: 18, marginBottom: 6 }}>Signing with</Text>
+        <Text variant="label" style={{ marginTop: 18, marginBottom: 6 }}>{isTransaction ? 'Sending from' : 'Signing with'}</Text>
         <Card>
           <Text variant="tokenName">{accountName}</Text>
           <Text variant="mono" mono numberOfLines={1} ellipsizeMode="middle" style={{ marginTop: 3 }}>
@@ -190,18 +238,37 @@ function Signer({
         </Card>
 
         <Text variant="small" color="textSecondary" style={{ marginTop: 14 }}>
-          Signing does not send a transaction or cost anything, but a signature can authorize actions on the app that asked
-          for it. Only sign what you understand.
+          {isTransaction
+            ? 'Sending runs this transaction on chain from your account. It cannot be undone. Only send what you understand.'
+            : 'Signing does not send a transaction or cost anything, but a signature can authorize actions on the app that asked for it. Only sign what you understand.'}
         </Text>
+        {submitted && !failed && (
+          <Text variant="small" color="textSecondary" style={{ marginTop: 10 }}>
+            Sent. Waiting for it to be included on chain…
+          </Text>
+        )}
         {(error || account.error) && (
           <Text variant="small" color="error" style={{ marginTop: 10 }}>
-            {error ?? `This account could not be loaded on ${networkDisplayName(network)}, so it cannot sign there.`}
+            {error ?? `This account could not be loaded on ${networkDisplayName(network)}, so it cannot ${isTransaction ? 'send' : 'sign'} there.`}
           </Text>
         )}
       </ScrollView>
 
-      <Button label="Sign" onPress={onApprove} loading={signing || account.isLoading} disabled={!account.address || rejecting} />
-      <Button label="Reject" variant="secondary" onPress={onReject} loading={rejecting} disabled={signing} />
+      {failed ? (
+        <Button label="Done" onPress={() => onDone('Transaction failed')} />
+      ) : (
+        <>
+          <Button
+            label={isTransaction ? 'Send' : 'Sign'}
+            onPress={onApprove}
+            loading={signing || account.isLoading}
+            disabled={!account.address || rejecting}
+          />
+          {!submitted && (
+            <Button label="Reject" variant="secondary" onPress={onReject} loading={rejecting} disabled={signing} />
+          )}
+        </>
+      )}
     </>
   );
 }

@@ -1,7 +1,8 @@
 # WalletConnect
 
-Lets a dApp connect to the wallet over WalletConnect and ask it to sign
-messages. The user approves the connection and every signature in the app.
+Lets a dApp connect to the wallet over WalletConnect, ask it to sign
+messages and send transactions. The user approves the connection, every
+signature and every transaction in the app.
 
 ## Setup
 
@@ -18,8 +19,9 @@ Open the link icon at the top right of the Wallet tab.
 - **Connect:** in the dApp, choose WalletConnect and copy the connection
   link (`wc:…`). Paste it in the wallet and press Connect. The dApp's
   connection request opens on its own.
-- **Sign:** when a connected dApp asks for a signature, the request opens on
-  its own. Anything left undecided is listed under "Waiting for you".
+- **Sign or send:** when a connected dApp asks for a signature or a
+  transaction, the request opens on its own. Anything left undecided is
+  listed under "Waiting for you".
 - **Disconnect:** from the "Connected apps" list.
 
 ## What is supported
@@ -27,11 +29,12 @@ Open the link icon at the top right of the Wallet tab.
 | | |
 |---|---|
 | Networks | Every EVM network in `src/wdk/networks.ts` that has its provider and bundler URL set |
-| Methods | `personal_sign`, `eth_signTypedData_v4` |
+| Methods | `personal_sign`, `eth_signTypedData_v4`, `eth_sendTransaction` |
 
-Not supported yet: QR scanning and `wc:` deep links, `eth_sendTransaction`,
-`personal_sign` on raw binary payloads (WDK's `sign()` takes text), and
-non-EVM networks. A dApp that *requires* an unsupported method or network
+Not supported yet: QR scanning and `wc:` deep links, contract deployment
+through `eth_sendTransaction` (no `to`), batched calls
+(`wallet_sendCalls`), `personal_sign` on raw binary payloads (WDK's
+`sign()` takes text), and non-EVM networks. A dApp that *requires* an unsupported method or network
 cannot connect; one that lists it as optional can.
 
 ## How it works
@@ -53,6 +56,30 @@ dApp ⇄ WalletConnect relay ⇄ worklet module ⇄ (events / calls) ⇄ app UI
 - **Signing** goes through the normal WDK account path
   (`useAccount().sign` / `extension().signTypedData`), then the signature is
   handed back to the module with `respondRequest`.
+- **Sending** (`eth_sendTransaction`) goes through the same EIP-7702
+  account as the app's own sends: see below.
+
+### How `eth_sendTransaction` works
+
+Every EVM account here is an EOA delegated with EIP-7702 to a smart account
+implementation (`@tetherto/wdk-wallet-evm-7702-gasless`). The address the
+dApp sees is the user's own EOA; the delegation is signed into the first
+transaction that needs it.
+
+The dApp's `to`, `value` and `data` are sent from that account through the
+bundler, with gas sponsored by the paymaster. The bundler returns a user
+operation hash, so the wallet waits for it to be included and answers with
+the real transaction hash; a call that reverts inside it is answered with an
+error. Details in `src/wdk/walletconnect/requests.ts` and
+`sendTransaction.ts`.
+
+What a dApp may notice: the receipt of the returned hash has the bundler as
+`from` and the EntryPoint as `to`. The dApp's own contract events are in its
+logs as usual, emitted for the user's address.
+
+Sponsorship is paid by whoever owns the paymaster key in `.env`, on every
+network, including Arbitrum and Polygon mainnet. A paymaster sponsorship
+policy is the place to limit what dApps can spend.
 
 ### Things worth knowing before changing it
 

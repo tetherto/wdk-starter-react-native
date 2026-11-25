@@ -6,7 +6,8 @@ src/
 │   ├── _layout.tsx                  # Root: WdkAppProvider, ThemeProvider,
 │   │                                 # CloudBackupProvider, GestureHandlerRootView,
 │   │                                 # SafeAreaProvider, AutoLockOnBackground,
-│   │                                 # AccountDiscovery, WdkSessionGate, Toast
+│   │                                 # AccountDiscovery, WdkSessionGate,
+│   │                                 # WalletConnectBridge, Toast
 │   ├── index.tsx                    # Entry gate — routes based on session status
 │   ├── unlock.tsx                   # App-password unlock screen
 │   ├── (onboarding)/
@@ -40,7 +41,7 @@ src/
 │   │   ├── _layout.tsx               # Also mounts its own <Toast/> — same reason
 │   │   ├── index.tsx                 # Paste a wc: link, pending items, connected apps
 │   │   ├── proposal.tsx              # Approve/reject a dApp's connection request
-│   │   └── request.tsx               # Approve/reject a signature request
+│   │   └── request.tsx               # Approve/reject a signature or transaction request
 │   └── tx/
 │       ├── _layout.tsx
 │       └── [id].tsx                  # Transaction detail (looked up from the same
@@ -56,8 +57,8 @@ src/
 │   ├── Button.tsx / TextField.tsx / Pill.tsx / Card.tsx
 │   ├── AssetIcon.tsx                 # Shared token/chain icon — see ARCHITECTURE.md
 │   ├── Toast.tsx                     # Bottom pill notification (not a native Alert) —
-│   │                                  # mounted at root AND inside send/receive's own
-│   │                                  # nested layouts (see the note below)
+│   │                                  # mounted at root AND inside the send, receive and
+│   │                                  # walletconnect nested layouts (see the note below)
 │   ├── SeedWordGrid.tsx              # Read-only word grid
 │   ├── SeedWordInputGrid.tsx         # Editable word grid, paste-distribution
 │   ├── StateViews.tsx                # LoadingState / EmptyState / ErrorState

@@ -3,7 +3,7 @@ import type { BtcWalletConfig } from '@tetherto/wdk-wallet-btc';
 import type { Evm7702GaslessWalletConfig } from '@tetherto/wdk-wallet-evm-7702-gasless';
 import { AppAsset, type AppAssetConfig } from './AppAsset';
 import type { AssetIconSource } from '@/theme/assetIcons';
-import { walletConnectModuleConfig } from './walletconnect/moduleConfig';
+import { WALLETCONNECT_MODULE, walletConnectModuleConfig } from './walletconnect/moduleConfig';
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -104,6 +104,8 @@ export interface NetworkDefinition {
      * if the provider is ever repointed to a different chain.
      */
     chainId: number;
+    /** Symbol of the chain's native coin, used to show the value of a dApp transaction. */
+    nativeSymbol: string;
     provider: string | undefined;
     bundlerUrl: string | undefined;
     paymasterUrl: string | undefined;
@@ -191,6 +193,7 @@ export const NETWORKS = [
     kind: 'evm',
     evm: {
       chainId: 11155111, // Sepolia
+      nativeSymbol: 'ETH',
       provider: process.env.EXPO_PUBLIC_EVM_ETHEREUM_PROVIDER,
       bundlerUrl: process.env.EXPO_PUBLIC_EVM_ETHEREUM_BUNDLER_URL,
       paymasterUrl: process.env.EXPO_PUBLIC_EVM_ETHEREUM_PAYMASTER_URL,
@@ -233,6 +236,7 @@ export const NETWORKS = [
     kind: 'evm',
     evm: {
       chainId: 42161,
+      nativeSymbol: 'ETH',
       provider: process.env.EXPO_PUBLIC_EVM_ARBITRUM_PROVIDER,
       bundlerUrl: process.env.EXPO_PUBLIC_EVM_ARBITRUM_BUNDLER_URL,
       paymasterUrl: process.env.EXPO_PUBLIC_EVM_ARBITRUM_PAYMASTER_URL,
@@ -269,6 +273,7 @@ export const NETWORKS = [
     kind: 'evm',
     evm: {
       chainId: 137,
+      nativeSymbol: 'POL',
       provider: process.env.EXPO_PUBLIC_EVM_POLYGON_PROVIDER,
       bundlerUrl: process.env.EXPO_PUBLIC_EVM_POLYGON_BUNDLER_URL,
       paymasterUrl: process.env.EXPO_PUBLIC_EVM_POLYGON_PAYMASTER_URL,
@@ -448,7 +453,7 @@ export const wdkConfigs: WdkConfigs<BtcWalletConfig | Evm7702GaslessWalletConfig
   ),
   // Worklet modules (see wdk.config.js). Left out entirely when unconfigured,
   // so the module is simply never constructed.
-  ...(walletConnectModuleConfig ? { modules: { walletconnect: walletConnectModuleConfig } } : {}),
+  ...(walletConnectModuleConfig ? { modules: { [WALLETCONNECT_MODULE]: walletConnectModuleConfig } } : {}),
 } as WdkConfigs<BtcWalletConfig | Evm7702GaslessWalletConfig>;
 
 export default wdkConfigs;

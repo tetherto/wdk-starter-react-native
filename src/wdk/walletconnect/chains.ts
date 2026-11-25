@@ -1,8 +1,8 @@
 import { NETWORKS, type NetworkId } from '../networks';
 import type { SupportedNamespace } from './types';
 
-/** The signing methods this wallet answers. Anything else is rejected. */
-const EVM_METHODS = ['personal_sign', 'eth_signTypedData_v4'];
+/** The methods this wallet answers. Anything else is rejected. */
+const EVM_METHODS = ['personal_sign', 'eth_signTypedData_v4', 'eth_sendTransaction'];
 const EVM_EVENTS = ['chainChanged', 'accountsChanged'];
 
 /**
@@ -26,6 +26,11 @@ export const FIRST_EVM_NETWORK: NetworkId | undefined = NETWORK_BY_CHAIN.values(
 
 export function networkForChain(chainId: string): NetworkId | undefined {
   return NETWORK_BY_CHAIN.get(chainId);
+}
+
+export function nativeSymbolFor(network: NetworkId): string {
+  const definition = NETWORKS.find((n) => n.network === network);
+  return definition?.kind === 'evm' ? definition.evm.nativeSymbol : '';
 }
 
 /** What the wallet offers a dApp: every configured EVM network, for one address. */
