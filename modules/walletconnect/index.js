@@ -33,6 +33,13 @@ if (!('origin' in URL.prototype)) {
 //    WebSocket over the `ws` package and captures it when it is first
 //    required, so the relay socket would never report open. Point the global
 //    at `ws` for the duration of the require, then put the original back.
+// 4. A second `new Core()` in the same process silently reuses the first
+//    one's relay connection and keys. The module is rebuilt on every unlock,
+//    so the closed instance's WalletKit would still be listening there with
+//    an outdated session list, and would answer each request with an error
+//    before the live one saw it. Give each module instance its own Core.
+process.env.DISABLE_GLOBAL_CORE = 'true'
+
 const previousWebSocket = global.WebSocket
 global.WebSocket = require('ws')
 const { Core } = require('@walletconnect/core')
@@ -52,7 +59,7 @@ function proposalSummary (proposal, verifyContext) {
   return {
     id: proposal.id,
     proposer: proposal.proposer.metadata,
-    verify: (verifyContext && verifyContext.verified) || null
+    verify: verifyContext?.verified ?? null
   }
 }
 
@@ -99,8 +106,8 @@ async function createWalletConnectModule ({ config, emit }) {
       chainId: request.params.chainId,
       method: request.params.request.method,
       params: request.params.request.params,
-      peer: (session && session.peer && session.peer.metadata) || null,
-      verify: (request.verifyContext && request.verifyContext.verified) || null
+      peer: session?.peer?.metadata ?? null,
+      verify: request.verifyContext?.verified ?? null
     }
   }
 
