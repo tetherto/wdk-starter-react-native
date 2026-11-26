@@ -34,15 +34,23 @@ export interface Evm7702Extension {
 export async function sendDappTransaction(
   account: Evm7702Extension,
   tx: DappTransaction,
+  node: { rpcUrl: string | undefined; from: string },
   onSubmitted: () => void,
 ): Promise<string> {
   let userOpHash: string | undefined;
   try {
     userOpHash = (await account.sendTransaction(tx))?.hash;
   } catch (e: any) {
-    // The bundler simulates the call to estimate its gas, so a call that
-    // would revert is refused here, before anything is signed or sent.
-    if (/estimateUserOperationGas/.test(e?.message ?? '')) throw new Error('This transaction would fail on chain, so it was not sent.');
+    // The bundler's gas estimate fails the same way whether the call reverts
+    // or the bundler is unreachable, so ask the node which.
+    if (/estimateUserOperationGas/.test(e?.message ?? '')) {
+      const reason = await onChainFailure(node.rpcUrl, node.from, tx);
+      throw new Error(
+        reason
+          ? `This transaction would fail on chain (${reason}), so it was not sent.`
+          : 'The bundler did not accept this transaction, so it was not sent. Try again later.',
+      );
+    }
     throw e;
   }
   if (!userOpHash) throw new Error('The transaction could not be submitted.');
@@ -65,4 +73,37 @@ export async function sendDappTransaction(
   }
   if (!op.success) throw new Error(`The transaction was included in ${op.receipt.transactionHash} but the call reverted.`);
   return op.receipt.transactionHash;
+}
+
+/**
+ * Runs `tx` from `from` as an eth_call. Returns why it fails on chain, or
+ * null if it succeeds or the node gives no answer.
+ */
+async function onChainFailure(rpcUrl: string | undefined, from: string, tx: DappTransaction): Promise<string | null> {
+  if (!rpcUrl) return null;
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), 10_000);
+  try {
+    const res = await fetch(rpcUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'eth_call',
+        params: [{ from, to: tx.to, value: `0x${BigInt(tx.value).toString(16)}`, data: tx.data }, 'latest'],
+      }),
+      signal: abort.signal,
+    });
+    const { error } = await res.json();
+    const message: string = error?.message ?? '';
+    // Worded differently by geth ("insufficient funds") and reth ("OutOfFunds").
+    if (/insufficient funds|out ?of ?funds/i.test(message)) return 'not enough funds for its value';
+    if (error?.code === 3 || /revert/i.test(message)) return message || 'execution reverted';
+    return null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
 }

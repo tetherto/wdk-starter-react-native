@@ -70,10 +70,11 @@ The dApp's `to`, `value` and `data` are sent from that account through the
 bundler, with gas sponsored by the paymaster. The bundler returns a user
 operation hash, so the wallet waits for it to be included and answers with
 the real transaction hash. A call that would revert is refused before
-anything is sent (the bundler's gas estimate fails), and one that reverts
-once included is answered with an error. Failures after the bundler accepts
-the operation use JSON-RPC error -32003, not 5000 (user rejected). Details
-in `src/wdk/walletconnect/requests.ts` and `sendTransaction.ts`.
+anything is sent (the bundler's gas estimate fails and an `eth_call`
+confirms it), and one that reverts once included is answered with an
+error. Failures after the bundler accepts the operation use JSON-RPC error
+-32003, not 5000 (user rejected). Details in
+`src/wdk/walletconnect/requests.ts` and `sendTransaction.ts`.
 
 What a dApp may notice: the receipt of the returned hash has the bundler as
 `from` and the EntryPoint as `to`. The dApp's own contract events are in its

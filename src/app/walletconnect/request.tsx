@@ -6,7 +6,7 @@ import { Button, Card, Screen, ScreenHeader, Text } from '@/components';
 import { useAccounts } from '@/state/accounts';
 import { useToast } from '@/state/toast';
 import { useWalletConnect } from '@/state/walletConnect';
-import { networkDisplayName, type NetworkId } from '@/wdk/networks';
+import { CHAINS, networkDisplayName, type NetworkId } from '@/wdk/networks';
 import { DappSummary } from '@/wdk/walletconnect/DappSummary';
 import { networkForChain } from '@/wdk/walletconnect/chains';
 import { sendDappTransaction, type Evm7702Extension } from '@/wdk/walletconnect/sendTransaction';
@@ -142,7 +142,10 @@ function Signer({
 
   // What the dApp gets back: a signature, or the hash of the transaction.
   const approve = async (onSubmitted: () => void): Promise<string> => {
-    if (parsed.kind === 'transaction') return sendDappTransaction(account.extension(), parsed.tx, onSubmitted);
+    if (parsed.kind === 'transaction') {
+      const node = { rpcUrl: CHAINS[network].evm?.provider, from: parsed.address };
+      return sendDappTransaction(account.extension(), parsed.tx, node, onSubmitted);
+    }
     if (parsed.kind === 'message') {
       const result = await account.sign(parsed.message);
       if (!result.success || !result.signature) throw new Error(result.error ?? 'Signing failed.');
