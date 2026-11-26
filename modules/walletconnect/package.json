@@ -1,0 +1,14 @@
+{
+  "name": "wdk-module-walletconnect",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WalletConnect (Reown WalletKit) as a WDK worklet module. Runs inside the Bare worklet; the app drives it with useModule('walletconnect').",
+  "main": "index.js",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@reown/walletkit": "1.6.0",
+    "@walletconnect/core": "2.25.0",
+    "@walletconnect/utils": "2.25.0",
+    "ws": "7.5.13"
+  }
+}

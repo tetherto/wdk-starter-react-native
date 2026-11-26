@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WDK · WalletConnect test dApp</title>
+<style>
+  /* WDK brand tokens (tetherto/wdk-dev-website, src/app/globals.css) */
+  :root {
+    --bg: #0E0D0B; --surface: #1A1816; --card: #252220;
+    --border: #2A2622; --text: #FFFFFF; --text-2: #B0A99E; --muted: #706A60;
+    --accent: #FF4E00; --accent-hover: #E54500;
+    --success: #00C853; --warning: #FFAE00; --error: #FF4646;
+    --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif; }
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 64px; }
+
+  header { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
+  header img { height: 34px; }
+  header .title { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+  header .sub { color: var(--text-2); font-size: 13px; }
+
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+  .session { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; }
+  .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+  #wallet { font-size: 17px; font-weight: 600; margin-top: 2px; }
+  #address { font-family: var(--mono); font-size: 13px; color: var(--text-2); word-break: break-all; }
+  #methods { font-family: var(--mono); font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .controls { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
+
+  button { font: inherit; font-size: 14px; font-weight: 500; padding: 9px 18px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; transition: background .15s, border-color .15s; }
+  button:hover:not(:disabled) { border-color: var(--muted); }
+  button:disabled { opacity: .35; cursor: not-allowed; }
+  button.primary { background: var(--accent); border-color: var(--accent); }
+  button.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+  button.ghost { background: transparent; color: var(--text-2); }
+  select { font: inherit; font-size: 14px; background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 999px; padding: 8px 14px; }
+
+  #pairing { margin-top: 16px; }
+  #pairing p { margin: 0 0 8px; color: var(--text-2); font-size: 14px; }
+  #pairing .row-inline { display: flex; gap: 10px; }
+  textarea { flex: 1; height: 64px; resize: none; background: var(--bg); color: var(--text-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px; font: 12px/1.4 var(--mono); }
+
+  .note { color: var(--muted); font-size: 13px; margin: 14px 2px 0; }
+  .note strong { color: var(--warning); font-weight: 500; }
+
+  .group { margin-top: 30px; }
+  .group h2 { font-size: 13px; font-weight: 600; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 10px 2px; }
+  .test { display: flex; justify-content: space-between; align-items: center; gap: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 8px; }
+  .test-title { font-weight: 600; }
+  .test-expect { color: var(--text-2); font-size: 13.5px; margin-top: 2px; }
+  .test-side { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  .status { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--card); color: var(--muted); white-space: nowrap; }
+  .status.waiting { color: var(--warning); background: rgba(255, 174, 0, .1); }
+  .status.pass { color: var(--success); background: rgba(0, 200, 83, .1); }
+  .status.fail { color: var(--error); background: rgba(255, 70, 70, .1); }
+
+  .log-head { display: flex; justify-content: space-between; align-items: center; margin: 34px 2px 10px; }
+  .log-head h2 { font-size: 13px; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.08em; margin: 0; }
+  #log { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font: 12.5px/1.6 var(--mono); max-height: 420px; overflow: auto; }
+  #log:empty::before { content: "Nothing yet."; color: var(--muted); }
+  .row { padding: 2px 0; word-break: break-word; color: var(--text-2); }
+  .row .time { color: var(--muted); }
+  .row.ok { color: var(--success); } .row.bad { color: var(--error); }
+  .row a { color: var(--accent); text-decoration: none; }
+
+  @media (max-width: 640px) {
+    .session { grid-template-columns: 1fr; }
+    .controls { align-items: stretch; }
+    .test { flex-direction: column; align-items: stretch; }
+    .test-side { justify-content: space-between; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <img src="wdk-logo.svg" alt="WDK">
+    <div>
+      <div class="title">WalletConnect test dApp</div>
+      <div class="sub">Exercises every WalletConnect feature of the WDK starter wallet</div>
+    </div>
+  </header>
+
+  <div class="panel">
+    <div class="session">
+      <div>
+        <div class="label">Wallet</div>
+        <div id="wallet">Not connected</div>
+        <div id="address"></div>
+        <div id="methods"></div>
+      </div>
+      <div class="controls">
+        <button id="connect" class="primary">Connect</button>
+        <select id="chain" aria-label="Chain for requests"></select>
+        <button id="disconnect" class="ghost" hidden>Disconnect</button>
+      </div>
+    </div>
+    <div id="pairing" hidden>
+      <p>In the wallet, tap the link icon on the Wallet tab, paste this link and tap Connect.</p>
+      <div class="row-inline">
+        <textarea id="uri" readonly></textarea>
+        <button id="copy">Copy</button>
+      </div>
+    </div>
+  </div>
+  <p class="note">Each test says what to do in the wallet, then checks the answer itself. Transactions run on Sepolia only.
+    <strong>Gas is sponsored by the paymaster in the wallet's .env.</strong></p>
+
+  <div id="tests"></div>
+
+  <div class="log-head">
+    <h2>Log</h2>
+    <button id="clear" class="ghost">Clear</button>
+  </div>
+  <div id="log"></div>
+</div>
+<script type="module" src="dist/app.js"></script>
+</body>
+</html>

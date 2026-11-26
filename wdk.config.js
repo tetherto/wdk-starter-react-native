@@ -24,6 +24,12 @@ module.exports = {
     }
     // tron: still on hold — see config.ts's comment.
   },
+  // Worklet modules. See docs/WALLETCONNECT.md.
+  modules: {
+    walletconnect: {
+      package: 'wdk-module-walletconnect'
+    }
+  },
   preloadModules: [
     '@buildonspark/spark-frost-bare-addon'
   ]
