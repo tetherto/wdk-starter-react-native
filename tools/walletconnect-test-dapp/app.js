@@ -38,7 +38,8 @@ function log (text, cls = '', link) {
   $('log').prepend(row)
 }
 
-const errorText = (e) => e?.message || (typeof e === 'object' ? JSON.stringify(e) : String(e))
+// WalletConnect errors are not always Errors, and an Error stringifies to {}.
+const errorText = (e) => e?.message || (e?.code !== undefined ? `code ${e.code}` : String(e))
 
 // ── Session ───────────────────────────────────────────────────────────────
 
@@ -106,22 +107,14 @@ async function disconnect () {
   setSession(null)
 }
 
-const request = (method, params, chainId = activeChain()) =>
-  client.request({ topic: session.topic, chainId, request: { method, params } })
+const request = (method, params) =>
+  client.request({ topic: session.topic, chainId: activeChain(), request: { method, params } })
 
 // ── Checks ────────────────────────────────────────────────────────────────
 
-class Fail extends Error {}
-
-function expectRefusal (e, pattern) {
-  const text = errorText(e)
-  if (!pattern.test(text)) throw new Fail(`refused, but not for the expected reason: ${text}`)
-  return `refused as expected: ${text}`
-}
-
 async function signMessage (message) {
   const signature = await request('personal_sign', [toHex(message), address])
-  if (!(await verifyMessage({ address, message, signature }))) throw new Fail(`signature does not recover to ${address}`)
+  if (!(await verifyMessage({ address, message, signature }))) throw new Error(`signature does not recover to ${address}`)
   return signature
 }
 
@@ -152,13 +145,13 @@ function typedData (chainId) {
  * reverts, so its status alone proves nothing.
  */
 async function sendAndCheck (tx, check) {
-  const hash = await request('eth_sendTransaction', [{ from: address, ...tx }], SEPOLIA)
+  const hash = await request('eth_sendTransaction', [{ from: address, ...tx }])
   log(`Wallet returned ${hash}. Fetching the receipt…`, '', `${sepolia.blockExplorers.default.url}/tx/${hash}`)
   const receipt = await sepoliaClient.waitForTransactionReceipt({ hash, timeout: 60_000 })
   const op = parseEventLogs({ abi: entryPoint08Abi, eventName: 'UserOperationEvent', logs: receipt.logs })
     .find((e) => e.args.sender.toLowerCase() === address.toLowerCase())
-  if (!op) throw new Fail(`no user operation from ${address} in ${hash}`)
-  if (!op.args.success) throw new Fail(`the account's call reverted inside ${hash}`)
+  if (!op) throw new Error(`no user operation from ${address} in ${hash}`)
+  if (!op.args.success) throw new Error(`the account's call reverted inside ${hash}`)
   return (await check?.(receipt)) ?? `user operation succeeded in block ${receipt.blockNumber}, bundled by ${receipt.from}`
 }
 
@@ -193,9 +186,8 @@ const TESTS = [
       const chainId = Number(activeChain().split(':')[1])
       const data = typedData(chainId)
       const signature = await request('eth_signTypedData_v4', [address, JSON.stringify(data)])
-      const { EIP712Domain, ...types } = data.types
-      const valid = await verifyTypedData({ address, domain: data.domain, types, primaryType: data.primaryType, message: data.message, signature })
-      if (!valid) throw new Fail('typed-data signature does not recover to the address')
+      const valid = await verifyTypedData({ address, ...data, signature })
+      if (!valid) throw new Error('typed-data signature does not recover to the address')
       return 'signature valid'
     }
   },
@@ -204,7 +196,7 @@ const TESTS = [
     id: 'reject',
     title: 'Reject a signature',
     expect: 'Tap Reject. The dApp must receive the rejection.',
-    run: () => refused(signMessage('Please reject this one'), /reject/i)
+    run: () => refused(request('personal_sign', [toHex('Please reject this one'), address]), /reject/i)
   },
   {
     group: 'Transactions · Sepolia',
@@ -235,7 +227,7 @@ const TESTS = [
     id: 'unlimited',
     sepoliaOnly: true,
     title: 'Unlimited approval warning',
-    expect: 'The wallet must warn that this spends ALL of the token. Check the warning, then tap Reject.',
+    expect: 'The wallet must warn that this spends ALL of the token. Check the warning yourself (the page can only check that nothing was sent), then tap Reject.',
     run: () => refused(request('eth_sendTransaction', [{ from: address, to: TEST_USDT, data: approveData(maxUint256) }]), /reject/i)
   },
   {
@@ -264,10 +256,10 @@ const TESTS = [
     id: 'failing',
     sepoliaOnly: true,
     title: 'A call that would revert',
-    expect: 'Transfers more test USDT than exists. Tap Send: the wallet shows an error and nothing is sent. Then tap Reject.',
+    expect: 'Transfers more test USDT than exists. Tap Send: the wallet says it would fail and sends nothing. Then tap Reject.',
     run: () => refused(
       request('eth_sendTransaction', [{ from: address, to: TEST_USDT, data: transferData(address, maxUint256) }]),
-      /reject/i
+      /would fail on chain/i
     )
   }
 ]
@@ -276,9 +268,9 @@ const TESTS = [
 const expectApproval = (amount) => (receipt) => {
   const event = parseEventLogs({ abi: erc20Abi, eventName: 'Approval', logs: receipt.logs })
     .find((e) => e.args.owner.toLowerCase() === address.toLowerCase())
-  if (!event) throw new Fail('no Approval event from the account in the receipt')
+  if (!event) throw new Error('no Approval event from the account in the receipt')
   if (event.args.spender.toLowerCase() !== SPENDER.toLowerCase() || event.args.value !== amount) {
-    throw new Fail(`Approval is ${event.args.value} to ${event.args.spender}, expected ${amount} to ${SPENDER}`)
+    throw new Error(`Approval is ${event.args.value} to ${event.args.spender}, expected ${amount} to ${SPENDER}`)
   }
   return `Approval(${event.args.owner} → ${event.args.spender}, ${event.args.value}) emitted for the account`
 }
@@ -291,12 +283,19 @@ async function refused (promise, pattern) {
   try {
     await promise
   } catch (e) {
-    return expectRefusal(e, pattern)
+    const text = errorText(e)
+    if (!pattern.test(text)) throw new Error(`refused, but not for the expected reason: ${text}`)
+    return `refused as expected: ${text}`
   }
-  throw new Fail('the wallet answered instead of refusing')
+  throw new Error('the wallet answered instead of refusing')
 }
 
+// A second click while a test waits would send the wallet a second request.
+const running = new Set()
+
 async function runTest (test) {
+  if (running.has(test.id)) return
+  running.add(test.id)
   const status = $('status-' + test.id)
   status.className = 'status waiting'
   status.textContent = 'Waiting for the wallet…'
@@ -310,6 +309,8 @@ async function runTest (test) {
     status.className = 'status fail'
     status.textContent = 'Fail'
     log(`${test.title}: fail. ${errorText(e)}`, 'bad')
+  } finally {
+    running.delete(test.id)
   }
 }
 
@@ -365,7 +366,6 @@ async function init () {
     metadata: { name: 'WDK test dApp', description: 'WalletConnect test bench for the WDK starter wallet', url: location.origin, icons: [] }
   })
   client.on('session_delete', () => { log('The wallet disconnected the session'); setSession(null) })
-  client.on('session_event', ({ params }) => log(`Wallet event: ${params.event.name} ${JSON.stringify(params.event.data)}`))
   const existing = client.session.getAll().pop()
   setSession(existing ?? null)
   log(existing ? `Restored the session with ${existing.peer.metadata.name}` : 'Ready. Press Connect.')
