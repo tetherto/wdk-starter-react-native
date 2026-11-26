@@ -54,6 +54,8 @@ export interface WalletConnectApi {
   rejectSession(args: { id: number }): Promise<void>;
   respondRequest(args: { topic: string; id: number; result: unknown }): Promise<void>;
   rejectRequest(args: { topic: string; id: number; message?: string }): Promise<void>;
+  /** A sent transaction that then failed. */
+  failTransaction(args: { topic: string; id: number; message: string }): Promise<void>;
   disconnect(args: { topic: string }): Promise<void>;
   getSessions(): Promise<Session[]>;
   getPendingProposals(): Promise<SessionProposal[]>;

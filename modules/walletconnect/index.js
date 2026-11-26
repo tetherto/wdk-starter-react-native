@@ -154,6 +154,13 @@ async function createWalletConnectModule ({ config, emit }) {
       await kit.respondSessionRequest({ topic, response: { id, jsonrpc: '2.0', error } })
     },
 
+    // A sent transaction that then failed: EIP-1474 -32003. Not 5000, which
+    // dApps show as "user rejected"; not -32603, whose message WalletConnect drops.
+    async failTransaction ({ topic, id, message }) {
+      const error = { code: -32003, message }
+      await kit.respondSessionRequest({ topic, response: { id, jsonrpc: '2.0', error } })
+    },
+
     async disconnect ({ topic }) {
       await kit.disconnectSession({ topic, reason: getSdkError('USER_DISCONNECTED') })
     },

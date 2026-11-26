@@ -178,7 +178,7 @@ function Signer({
       // The operation is with the bundler, so a retry could send it twice.
       // Tell the dApp what happened and stop here.
       try {
-        await wc.rejectRequest({ topic: request.topic, id: request.id, message });
+        await wc.failTransaction({ topic: request.topic, id: request.id, message });
       } catch {
         // The request already expired on the dApp's side.
       }
