@@ -107,7 +107,9 @@ async function createWalletConnectModule ({ config, emit }) {
       method: request.params.request.method,
       params: request.params.request.params,
       peer: session?.peer?.metadata ?? null,
-      verify: request.verifyContext?.verified ?? null
+      verify: request.verifyContext?.verified ?? null,
+      // WalletConnect checks a request's chain and method, not its account.
+      accounts: Object.values(session?.namespaces ?? {}).flatMap((namespace) => namespace.accounts)
     }
   }
 

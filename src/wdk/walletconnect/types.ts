@@ -30,6 +30,8 @@ export interface SessionRequest {
   params: unknown;
   peer: PeerMetadata | null;
   verify: VerifySummary | null;
+  /** CAIP-10 accounts the session was approved for. */
+  accounts: string[];
 }
 
 export interface Session {

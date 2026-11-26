@@ -8,7 +8,7 @@ import { useToast } from '@/state/toast';
 import { useWalletConnect } from '@/state/walletConnect';
 import { CHAINS, networkDisplayName, type NetworkId } from '@/wdk/networks';
 import { DappSummary } from '@/wdk/walletconnect/DappSummary';
-import { networkForChain } from '@/wdk/walletconnect/chains';
+import { networkForChain, sessionAllows } from '@/wdk/walletconnect/chains';
 import { sendDappTransaction, type Evm7702Extension } from '@/wdk/walletconnect/sendTransaction';
 import { TransactionSummary } from '@/wdk/walletconnect/TransactionSummary';
 import { WALLETCONNECT_MODULE } from '@/wdk/walletconnect/moduleConfig';
@@ -65,15 +65,18 @@ export default function Request() {
   // Which of this wallet's accounts the dApp is asking to sign with. An EVM
   // address is the same on every EVM network, so only the index matters.
   const owner = parsed.kind === 'unsupported' ? undefined : getAccountInfoFromAddress(parsed.address);
+  const allowed = parsed.kind !== 'unsupported' && sessionAllows(request.accounts, request.chainId, parsed.address);
 
   const problem =
     parsed.kind === 'unsupported'
       ? parsed.reason
       : !network
         ? `This wallet has no network for ${request.chainId}.`
-        : !owner
-          ? 'The requested account is not one of this wallet’s loaded accounts.'
-          : undefined;
+        : !allowed
+          ? 'This app was not given access to the requested account.'
+          : !owner
+            ? 'The requested account is not one of this wallet’s loaded accounts.'
+            : undefined;
 
   return (
     // The buttons sit outside the scroll area so a long request can never
@@ -81,7 +84,7 @@ export default function Request() {
     <Screen>
       <ScreenHeader title={request.method === 'eth_sendTransaction' ? 'Transaction request' : 'Signature request'} />
 
-      {parsed.kind === 'unsupported' || !network || !owner ? (
+      {parsed.kind === 'unsupported' || !network || !allowed || !owner ? (
         <>
           <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
             <DappSummary peer={request.peer} verify={request.verify} />

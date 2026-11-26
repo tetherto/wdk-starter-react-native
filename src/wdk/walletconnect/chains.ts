@@ -39,3 +39,9 @@ export function supportedNamespacesFor(address: string): Record<string, Supporte
     },
   };
 }
+
+/** Whether a session approved for `accounts` (CAIP-10) covers `address` on `chainId`. */
+export function sessionAllows(accounts: string[], chainId: string, address: string): boolean {
+  const wanted = `${chainId}:${address}`.toLowerCase();
+  return accounts.some((account) => account.toLowerCase() === wanted);
+}
