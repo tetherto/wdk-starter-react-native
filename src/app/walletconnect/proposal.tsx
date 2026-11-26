@@ -6,9 +6,9 @@ import { Button, Card, Screen, ScreenHeader, Text } from '@/components';
 import { useToast } from '@/state/toast';
 import { useWalletConnect } from '@/state/walletConnect';
 import { useWdkAccount, useWdkAddressForNetwork } from '@/wdk/hooks/useWalletData';
-import { networkDisplayName } from '@/wdk/chains';
+import { networkDisplayName } from '@/wdk/networks';
 import { DappSummary } from '@/wdk/walletconnect/DappSummary';
-import { EVM_CHAINS, FIRST_EVM_NETWORK, networkForChain, supportedNamespacesFor } from '@/wdk/walletconnect/chains';
+import { EVM_NETWORKS, supportedNamespacesFor } from '@/wdk/walletconnect/chains';
 import { WALLETCONNECT_MODULE } from '@/wdk/walletconnect/moduleConfig';
 import type { WalletConnectApi } from '@/wdk/walletconnect/types';
 
@@ -24,7 +24,8 @@ export default function Proposal() {
   const proposal = useWalletConnect((s) => s.proposals.find((p) => p.id === proposalId));
 
   const account = useWdkAccount();
-  const { address } = useWdkAddressForNetwork(FIRST_EVM_NETWORK ?? '');
+  // Any EVM network works for the lookup: the address is the same on all of them.
+  const { address } = useWdkAddressForNetwork(EVM_NETWORKS[0] ?? '');
   const [busy, setBusy] = useState<'approve' | 'reject' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,7 +38,7 @@ export default function Proposal() {
     );
   }
 
-  const networks = EVM_CHAINS.map((chain) => networkDisplayName(networkForChain(chain) ?? chain)).join(', ');
+  const networks = EVM_NETWORKS.map(networkDisplayName).join(', ');
 
   const finish = (message: string) => {
     useWalletConnect.getState().removeProposal(proposal.id);

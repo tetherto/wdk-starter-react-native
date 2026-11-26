@@ -69,8 +69,9 @@ transaction that needs it.
 The dApp's `to`, `value` and `data` are sent from that account through the
 bundler, with gas sponsored by the paymaster. The bundler returns a user
 operation hash, so the wallet waits for it to be included and answers with
-the real transaction hash; a call that reverts inside it is answered with an
-error. Details in `src/wdk/walletconnect/requests.ts` and
+the real transaction hash. A call that would revert is refused before
+anything is sent (the bundler's gas estimate fails), and one that reverts
+once included is answered with an error. Details in `src/wdk/walletconnect/requests.ts` and
 `sendTransaction.ts`.
 
 What a dApp may notice: the receipt of the returned hash has the bundler as
@@ -97,7 +98,7 @@ policy is the place to limit what dApps can spend.
 
 ## Testing with the test dApp
 
-`tools/walletconnect-test-dapp` is a local web page, branded WDK, that plays
+`tools/walletconnect-test-dapp` is a local web page that plays
 the dApp side and checks every answer the wallet gives: signatures are
 verified, transaction hashes are looked up on Sepolia, and each case the
 wallet should refuse is expected to be refused.
@@ -109,5 +110,4 @@ npm run test-dapp     # builds the page and serves it on http://localhost:8765
 It uses the same `EXPO_PUBLIC_WALLETCONNECT_PROJECT_ID` as the wallet, read
 from `.env`. Press Connect, paste the link in the wallet, then run each test
 and follow what it says to do in the wallet. Transaction tests run on
-Sepolia only; they cost the user nothing, but each one uses paymaster
-sponsorship.
+Sepolia only.

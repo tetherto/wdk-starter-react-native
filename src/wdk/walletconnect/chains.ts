@@ -19,18 +19,13 @@ const NETWORK_BY_CHAIN = new Map<string, NetworkId>(
   ),
 );
 
-export const EVM_CHAINS = Array.from(NETWORK_BY_CHAIN.keys());
+const EVM_CHAINS = Array.from(NETWORK_BY_CHAIN.keys());
 
-/** Any EVM network works for address lookups: one address on all of them. */
-export const FIRST_EVM_NETWORK: NetworkId | undefined = NETWORK_BY_CHAIN.values().next().value;
+/** The configured EVM networks, in the order they are offered to a dApp. */
+export const EVM_NETWORKS = Array.from(NETWORK_BY_CHAIN.values());
 
 export function networkForChain(chainId: string): NetworkId | undefined {
   return NETWORK_BY_CHAIN.get(chainId);
-}
-
-export function nativeSymbolFor(network: NetworkId): string {
-  const definition = NETWORKS.find((n) => n.network === network);
-  return definition?.kind === 'evm' ? definition.evm.nativeSymbol : '';
 }
 
 /** What the wallet offers a dApp: every configured EVM network, for one address. */

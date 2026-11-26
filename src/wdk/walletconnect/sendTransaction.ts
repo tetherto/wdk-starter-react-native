@@ -1,10 +1,11 @@
-import type { DappTransaction } from './requests';
+import type { DappTransaction, TypedData } from './requests';
 
 /**
- * The 7702 gasless account methods used to answer `eth_sendTransaction`,
- * reached through `useAccount().extension()`.
+ * The 7702 gasless account methods the generic `useAccount()` doesn't expose
+ * directly, reached through its `extension()`.
  */
-export interface Evm7702SendExtension {
+export interface Evm7702Extension {
+  signTypedData(args: { domain: TypedData['domain']; types: TypedData['types']; message: TypedData['message'] }): Promise<string>;
   sendTransaction(tx: DappTransaction): Promise<{ hash: string }>;
   waitForTransaction(userOpHash: string): Promise<{
     finality: string;
@@ -31,15 +32,23 @@ export interface Evm7702SendExtension {
  * screen can stop offering Reject.
  */
 export async function sendDappTransaction(
-  account: Evm7702SendExtension,
+  account: Evm7702Extension,
   tx: DappTransaction,
   onSubmitted: () => void,
 ): Promise<string> {
-  const userOpHash = (await account.sendTransaction(tx))?.hash;
+  let userOpHash: string | undefined;
+  try {
+    userOpHash = (await account.sendTransaction(tx))?.hash;
+  } catch (e: any) {
+    // The bundler simulates the call to estimate its gas, so a call that
+    // would revert is refused here, before anything is signed or sent.
+    if (/estimateUserOperationGas/.test(e?.message ?? '')) throw new Error('This transaction would fail on chain, so it was not sent.');
+    throw e;
+  }
   if (!userOpHash) throw new Error('The transaction could not be submitted.');
   onSubmitted();
 
-  let result: Awaited<ReturnType<Evm7702SendExtension['waitForTransaction']>>;
+  let result: Awaited<ReturnType<Evm7702Extension['waitForTransaction']>>;
   try {
     result = await account.waitForTransaction(userOpHash);
   } catch (e: any) {

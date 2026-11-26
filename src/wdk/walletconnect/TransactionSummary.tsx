@@ -3,8 +3,7 @@ import { View } from 'react-native';
 import BigNumber from 'bignumber.js';
 import { Card, Text } from '@/components';
 import { ASSETS } from '../assets';
-import type { NetworkId } from '../networks';
-import { nativeSymbolFor } from './chains';
+import { nativeSymbolFor, type NetworkId } from '../networks';
 import { decodeCall, type DappTransaction } from './requests';
 
 function formatUnits(amount: bigint | string, decimals: number): string {

@@ -357,6 +357,10 @@ export function indexerBlockchainFor(network: string): string | null {
   return BY_KEY[network]?.indexerBlockchain ?? null;
 }
 
+export function nativeSymbolFor(network: string): string {
+  return BY_KEY[network]?.evm?.nativeSymbol ?? '';
+}
+
 // ── Assets, flattened out of the per-network entries above ─────────────
 
 export const assetConfigs: AppAssetConfig[] = NETWORKS.flatMap((n) =>

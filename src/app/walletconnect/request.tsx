@@ -6,20 +6,14 @@ import { Button, Card, Screen, ScreenHeader, Text } from '@/components';
 import { useAccounts } from '@/state/accounts';
 import { useToast } from '@/state/toast';
 import { useWalletConnect } from '@/state/walletConnect';
-import { networkDisplayName } from '@/wdk/chains';
-import type { NetworkId } from '@/wdk/networks';
+import { networkDisplayName, type NetworkId } from '@/wdk/networks';
 import { DappSummary } from '@/wdk/walletconnect/DappSummary';
 import { networkForChain } from '@/wdk/walletconnect/chains';
-import { sendDappTransaction, type Evm7702SendExtension } from '@/wdk/walletconnect/sendTransaction';
+import { sendDappTransaction, type Evm7702Extension } from '@/wdk/walletconnect/sendTransaction';
 import { TransactionSummary } from '@/wdk/walletconnect/TransactionSummary';
 import { WALLETCONNECT_MODULE } from '@/wdk/walletconnect/moduleConfig';
-import { parseRequest, signableTypes, type ParsedRequest, type TypedData } from '@/wdk/walletconnect/requests';
+import { parseRequest, signableTypes, type ParsedRequest } from '@/wdk/walletconnect/requests';
 import type { SessionRequest, WalletConnectApi } from '@/wdk/walletconnect/types';
-
-/** The chain-specific account method the generic hook doesn't expose directly. */
-interface EvmSigningExtension {
-  signTypedData(args: { domain: TypedData['domain']; types: TypedData['types']; message: TypedData['message'] }): Promise<string>;
-}
 
 export default function Request() {
   const router = useRouter();
@@ -102,7 +96,7 @@ export default function Request() {
           network={network}
           accountIndex={owner.accountIndex}
           rejecting={rejecting}
-          onReject={() => onReject()}
+          onReject={onReject}
           onDone={finish}
         />
       )}
@@ -128,11 +122,12 @@ function Signer({
   network: NetworkId;
   accountIndex: number;
   rejecting: boolean;
-  onReject: () => void;
+  /** `reason` is passed on to the dApp. */
+  onReject: (reason?: string) => void;
   onDone: (toast: string) => void;
 }) {
   const wc = useModule<WalletConnectApi>(WALLETCONNECT_MODULE);
-  const account = useAccount<EvmSigningExtension & Evm7702SendExtension>({ network, accountIndex });
+  const account = useAccount<Evm7702Extension>({ network, accountIndex });
   const accountName = useAccounts((s) => s.names[accountIndex]) ?? `Account ${accountIndex + 1}`;
   const [signing, setSigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -265,7 +260,8 @@ function Signer({
             disabled={!account.address || rejecting}
           />
           {!submitted && (
-            <Button label="Reject" variant="secondary" onPress={onReject} loading={rejecting} disabled={signing} />
+            // A shown error (e.g. the call would revert) tells the dApp why.
+            <Button label="Reject" variant="secondary" onPress={() => onReject(error ?? undefined)} loading={rejecting} disabled={signing} />
           )}
         </>
       )}
