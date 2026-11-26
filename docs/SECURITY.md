@@ -60,6 +60,15 @@ screen immediately after password entry (cloud-backup) reuse it without a
 second prompt. It's cleared the instant the wallet locks
 (`AutoLockOnBackground`) and is simply empty again after any cold start.
 
+## In-memory pending recovery phrase
+
+`src/state/pendingMnemonic.ts` holds the phrase generated on `seed-hidden`
+until `password.tsx` commits it, in the same kind of plain Zustand store,
+**never persisted**. It replaced route params because the app handles
+`wdkstarterreactnative://` links and any route param can come from one: a
+link could hand the password screen someone else's phrase (#63). The
+onboarding layout clears it when onboarding ends.
+
 ## The lock/unlock chain, and real bugs it took to get right
 
 Three components work together: `AutoLockOnBackground` (calls `lock()` on

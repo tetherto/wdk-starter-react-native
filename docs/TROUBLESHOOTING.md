@@ -80,6 +80,17 @@ See `SECURITY.md` — this is self-healed in `importWallet()`, but if you see
 it elsewhere, the fix is the same pattern (catch the specific error, call
 `deleteWallet`, retry once).
 
+**Symptom:** a `wdkstarterreactnative://` link to the password screen with
+a `mnemonic` in its query string replaced the wallet on the device with
+that phrase, although the person only chose a new password.
+**Cause:** the create-wallet screens passed the generated phrase along in
+route params, and `password.tsx` committed whatever `mnemonic` param it
+got, so an inbound link could supply one. If a wallet already existed,
+`importWallet()`'s "already exists" self-heal (above) deleted it first.
+Fixed by keeping the phrase in the in-memory `state/pendingMnemonic.ts`
+store, which only `seed-hidden` writes. Don't pass secrets, or anything a
+screen trusts, through route params: any param can come from a link.
+
 **Symptom:** after finishing onboarding (password screen), the app briefly
 shows the unlock screen instead of continuing to cloud-backup.
 **Cause:** `WdkSessionGate` was reacting to *any* arrival at a locked-ish

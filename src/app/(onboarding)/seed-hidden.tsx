@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Eye } from 'lucide-react-native';
 import { Screen, ScreenHeader, Text, Button, Pill, SeedWordGrid } from '@/components';
 import { useWalletActions } from '@/wdk/hooks/useWalletActions';
+import { usePendingMnemonic } from '@/state/pendingMnemonic';
 import { useTheme } from '@/theme';
 import { useResponsive } from '@/theme/responsive';
 
@@ -20,6 +21,7 @@ export default function SeedHidden() {
   const theme = useTheme();
   const { moderateScale } = useResponsive();
   const { generateSeed } = useWalletActions();
+  const setPendingMnemonic = usePendingMnemonic((s) => s.setMnemonic);
   const [wordCount, setWordCount] = useState<12 | 24>(12);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +31,9 @@ export default function SeedHidden() {
     setError(null);
     try {
       const mnemonic = await generateSeed(wordCount);
-      router.push({ pathname: '/(onboarding)/seed-revealed', params: { mnemonic } });
+      // Kept in memory, not in route params: see state/pendingMnemonic.ts.
+      setPendingMnemonic(mnemonic);
+      router.push('/(onboarding)/seed-revealed');
     } catch (e: any) {
       setError(e?.message ?? 'Failed to generate recovery phrase');
     } finally {
