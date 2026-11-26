@@ -23,7 +23,7 @@
     "@tetherto/wdk-react-native-core": "1.0.0-beta.17",
     "@tetherto/wdk-wallet-evm-7702-gasless": "1.0.0-beta.5",
     "@tetherto/wdk-utils": "^1.0.0-beta.7",
-    "@tetherto/wdk-wallet-btc": "^1.0.0-beta.8",
+    "@tetherto/wdk-wallet-btc": "^1.0.0-beta.18",
     "@tetherto/wdk-wallet-spark": "^1.0.0-beta.17",
     "@tetherto/wdk-pricing-coingecko-http": "1.0.0-beta.3",
     "@tetherto/wdk-indexer-http": "1.0.1",
